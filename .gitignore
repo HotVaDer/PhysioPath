@@ -1,0 +1,42 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Secrets
+.env
+.env.*
+*.key
+
+# Audio and video recordings (may contain patient or interview data)
+*.m4a
+*.mp3
+*.wav
+*.ogg
+*.webm
+*.mp4
+*.mov
+
+# Python / Node
+__pycache__/
+.venv/
+node_modules/
+dist/
+build/
+
+# ---- Personal / research data: stays local, never pushed ----
+# Real contacts and tracker (header-only *.template.csv copies are tracked)
+07-outreach/contacts.csv
+01-research/interview-tracker.csv
+
+# Interview and observation notes (only the templates are tracked)
+01-research/interviews/*
+!01-research/interviews/_template.md
+01-research/observations/*
+!01-research/observations/_template.md
+
+# Pilot data, signed consent forms, any exports with real people's data
+04-pilot/data/
+06-privacy-legal/signed/
+*.private.*
+private/
