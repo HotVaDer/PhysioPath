@@ -1,0 +1,162 @@
+@import "tailwindcss";
+
+/* ---------- Look ----------
+   Taken from Stylianos's portfolio (hotvader.github.io):
+   - dark mode is the portfolio's hero: near-black, off-white, racing orange, mono labels;
+   - light mode is its notebook paper: cream paper, dark ink, the same orange.
+   The device setting picks one. Colours are named by their job, not their look.
+   Checked: every text colour ≥7:1 (WCAG AAA) on the backgrounds it's used on; field borders
+   and the focus ring ≥3:1. */
+
+/* ---------- Light: notebook paper ---------- */
+:root {
+  color-scheme: light;
+  --background: #f3efe5; /* paper */
+  --surface: #faf8f2; /* fields, panels */
+  --surface-muted: #ebe5d7; /* subtle areas */
+  --foreground: #24211b; /* main text            14:1 */
+  --muted: #48422f; /* secondary text, labels  ≥7.9:1 */
+  --border: #ddd5c3; /* decorative lines only */
+  --border-strong: #8a8170; /* field borders         3.4:1 */
+  --primary: #ff6e3a; /* racing orange: main buttons, tags */
+  --on-primary: #0b0b0c; /* text on orange        7.1:1 */
+  --primary-text: #862608; /* orange as text (links, quiet buttons)  8:1 */
+  --focus: #862608; /* focus ring: orange is too light on paper */
+  --warning: #5c3a00;
+  --warning-bg: #f6e6b4;
+  --danger: #841d0b;
+  --danger-bg: #f7dcd2;
+  --success: #174a22;
+  --success-bg: #dde9cf;
+}
+
+/* ---------- Dark: the portfolio's hero ---------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --background: #0b0b0c;
+    --surface: #131315;
+    --surface-muted: #1b1b1e;
+    --foreground: #ecebe6; /*                      16:1 */
+    --muted: #a9a8a2; /* lighter than the portfolio's grey, for ≥7:1 */
+    --border: #262628;
+    --border-strong: #706f6a; /*                   3.7:1 */
+    --primary: #ff6e3a;
+    --on-primary: #0b0b0c;
+    --primary-text: #ff8a5c; /*                    8:1 */
+    --focus: #ff6e3a;
+    --warning: #f5c400;
+    --warning-bg: #231d05;
+    --danger: #ff8f7a;
+    --danger-bg: #2a1210;
+    --success: #5fd97a;
+    --success-bg: #0e2214;
+  }
+}
+
+/* Make the colours and fonts available as Tailwind classes: bg-surface, text-muted, font-mono… */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-text: var(--primary-text);
+  --color-focus: var(--focus);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+}
+
+/* ---------- Text size ----------
+   112.5% = 18px on default browser settings. Being a percentage, it grows further
+   for users who set larger text in their browser, and zoom to 200% stays clean. */
+html {
+  font-size: 112.5%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  line-height: 1.6;
+}
+
+/* Small mono label in capitals, like the portfolio's "SECTOR 1 · THE NOTEBOOK".
+   0.8rem = 14.4px: the smallest text in the app. */
+@utility label-mono {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+/* ---------- Start lights (the Spinner) ----------
+   The portfolio's five race start lights: they come on one by one, stay on, then all go out,
+   over and over. Always the dark housing, like real ones. Decorative: the Spinner's text says what's happening. */
+.start-lights {
+  display: flex;
+  gap: 6px;
+}
+.start-lights > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 2.5rem;
+  border: 1px solid #2a2a2e;
+  border-radius: 6px;
+  background: #151517;
+}
+.start-lights > span::after {
+  content: "";
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: #ff2a1a;
+  box-shadow: 0 0 10px 2px rgb(255 42 26 / 0.6);
+  opacity: 0.12;
+  animation: 2.4s linear infinite;
+}
+.start-lights > span:nth-child(1)::after { animation-name: start-light-1; }
+.start-lights > span:nth-child(2)::after { animation-name: start-light-2; }
+.start-lights > span:nth-child(3)::after { animation-name: start-light-3; }
+.start-lights > span:nth-child(4)::after { animation-name: start-light-4; }
+.start-lights > span:nth-child(5)::after { animation-name: start-light-5; }
+@keyframes start-light-1 { 0%, 4% { opacity: 0.12; } 5%, 84% { opacity: 1; } 85%, 100% { opacity: 0.12; } }
+@keyframes start-light-2 { 0%, 17% { opacity: 0.12; } 18%, 84% { opacity: 1; } 85%, 100% { opacity: 0.12; } }
+@keyframes start-light-3 { 0%, 30% { opacity: 0.12; } 31%, 84% { opacity: 1; } 85%, 100% { opacity: 0.12; } }
+@keyframes start-light-4 { 0%, 43% { opacity: 0.12; } 44%, 84% { opacity: 1; } 85%, 100% { opacity: 0.12; } }
+@keyframes start-light-5 { 0%, 56% { opacity: 0.12; } 57%, 84% { opacity: 1; } 85%, 100% { opacity: 0.12; } }
+@media (prefers-reduced-motion: reduce) {
+  .start-lights > span::after { opacity: 1; } /* no sequence: all lights simply on */
+}
+
+/* ---------- Keyboard focus ----------
+   A clear ring around whatever the keyboard is on (keyboard only, not mouse clicks). */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+/* ---------- Less motion ----------
+   Respect the device's "reduce motion" setting (common for dizziness / vestibular issues). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
