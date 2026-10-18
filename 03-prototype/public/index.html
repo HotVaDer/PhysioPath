@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PhysioPath Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f3f2ee; --surface: #ffffff; --surface-2: #f9f8f5; --hover: #f0efea; --border: #e6e4dd; --border-strong: #d4d1c8;
+  --text: #1a1a17; --text-2: #55544e; --text-3: #8a8981;
+  --accent: #0d7a69; --accent-hover: #0a6758; --accent-soft: #e1f2ee; --on-accent: #ffffff;
+  --amber: #9a5c00; --amber-soft: #fdf1dc; --red: #c0352a; --red-soft: #fbe9e6; --green: #1d7f45; --green-soft: #e3f4e8;
+  --shadow-sm: 0 1px 2px rgba(20, 20, 15, .07);
+  --shadow: 0 1px 3px rgba(20, 20, 15, .05), 0 10px 30px rgba(20, 20, 15, .06);
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f100f; --surface: #171817; --surface-2: #1c1d1b; --hover: #232422; --border: #2a2b29; --border-strong: #3b3c39;
+    --text: #ecece8; --text-2: #b0afa8; --text-3: #7f7e78;
+    --accent: #3cc4ab; --accent-hover: #5ad3bc; --accent-soft: #14332e; --on-accent: #06201b;
+    --amber: #f2b552; --amber-soft: #352710; --red: #ff8a7a; --red-soft: #3a1a15; --green: #6fd896; --green-soft: #15301f;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+    --shadow: 0 1px 3px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .3);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--hover); padding: 1px 6px; border-radius: 5px; }
+kbd { font: 500 11px var(--font); padding: 1px 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 5px; color: var(--text-3); background: var(--surface); }
+.muted { color: var(--text-3); }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.between { justify-content: space-between; }
+.hidden { display: none !important; }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font-size: 13.5px; font-weight: 550; text-decoration: none; white-space: nowrap; transition: background .12s, border-color .12s; }
+.btn:hover { background: var(--hover); }
+.btn:active { transform: translateY(1px); }
+.btn-sm { height: 32px; padding: 0 11px; font-size: 13px; }
+.btn-lg { height: 44px; padding: 0 20px; font-size: 14.5px; border-radius: 10px; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); box-shadow: var(--shadow-sm); }
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--text-2); }
+.btn-ghost:hover { background: var(--hover); color: var(--text); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+/* top bar */
+.topbar { display: flex; align-items: center; gap: 16px; padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.brand { display: flex; align-items: center; gap: 11px; }
+.logo { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(140deg, #0d7a69, #19a58d); color: #fff; display: grid; place-items: center; }
+.brand-name { font-weight: 650; font-size: 15px; line-height: 1.2; }
+.brand-sub { font-size: 12px; color: var(--text-3); }
+.pill { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 550; }
+.pill-warn { background: var(--amber-soft); color: var(--amber); }
+.topbar .pill { margin-left: auto; }
+
+.banner { max-width: 1320px; margin: 16px auto 0; padding: 0 24px; }
+.banner > div { display: flex; gap: 10px; align-items: flex-start; padding: 12px 16px; border-radius: 11px; background: var(--amber-soft); }
+.banner svg { color: var(--amber); flex: none; margin-top: 2px; }
+.banner b { color: var(--amber); }
+.banner > div + div { margin-top: 8px; }
+.banner:empty { display: none; }
+
+/* layout */
+.grid { max-width: 1320px; margin: 0 auto; padding: 20px 24px 48px; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 20px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 22px 24px 24px; }
+/* Fits below the top bar so the approve button is always on screen. */
+.panel-right { position: sticky; top: 20px; display: flex; flex-direction: column; max-height: calc(100vh - 110px); padding: 0; overflow: hidden; }
+.step { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.step-n { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; }
+.step h2 { margin: 0; font-size: 16px; font-weight: 650; }
+
+/* recorder */
+.recorder { display: flex; align-items: center; gap: 18px; padding: 18px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border); }
+.rec-btn { position: relative; width: 72px; height: 72px; border-radius: 50%; border: 0; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; flex: none; box-shadow: 0 6px 18px rgba(13, 122, 105, .3); transition: transform .1s, background .15s; }
+.rec-btn:hover { transform: scale(1.04); }
+.rec-btn.recording { background: var(--red); box-shadow: 0 6px 18px rgba(192, 53, 42, .35); }
+.rec-btn.recording::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 3px solid var(--red); opacity: .5; animation: pulse 1.4s ease-out infinite; }
+.rec-btn:disabled { opacity: .6; cursor: progress; transform: none; }
+@keyframes pulse { from { transform: scale(.95); opacity: .6; } to { transform: scale(1.25); opacity: 0; } }
+.rec-text b { display: block; font-size: 15px; }
+.rec-time { font-variant-numeric: tabular-nums; }
+.alt-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 18px; }
+.field { width: 100%; border: 1px solid var(--border-strong); background: var(--surface); border-radius: 10px; padding: 9px 12px; outline: none; transition: border-color .12s, box-shadow .12s; }
+.field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+select.field { width: auto; height: 32px; padding: 0 10px; border-radius: 9px; font-size: 13px; font-weight: 550; }
+.lbl { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.lbl-sm { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); margin-bottom: 6px; }
+#transcript { min-height: 200px; resize: vertical; font-size: 15px; line-height: 1.65; }
+.go-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.seg { display: inline-flex; padding: 3px; background: var(--hover); border-radius: 10px; gap: 2px; }
+.seg button { border: 0; background: transparent; height: 30px; padding: 0 12px; border-radius: 7px; font-size: 13px; font-weight: 550; color: var(--text-2); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.timings { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.timing { display: inline-flex; gap: 6px; align-items: center; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--hover); font-size: 12.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.timing b { color: var(--text); }
+.timing.total { background: var(--green-soft); color: var(--green); }
+.timing.total b { color: var(--green); }
+
+/* right panel */
+.r-head { padding: 22px 24px 0; }
+.r-body { flex: 1; overflow-y: auto; padding: 0 24px 24px; }
+.r-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 14px 24px; border-top: 1px solid var(--border); background: var(--surface-2); }
+.empty { text-align: center; padding: 70px 30px 80px; color: var(--text-2); }
+.empty-ic { width: 64px; height: 64px; border-radius: 18px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; margin: 0 auto 16px; }
+.empty h3 { color: var(--text); margin: 0 0 6px; font-size: 17px; }
+.empty p { margin: 0 auto; max-width: 380px; }
+.loading .spinner { width: 34px; height: 34px; border-width: 3px; margin: 0 auto 18px; color: var(--accent); }
+.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.questions { border-radius: 12px; background: var(--amber-soft); padding: 13px 16px; margin-bottom: 16px; }
+.questions h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 14px; color: var(--amber); }
+.questions ul { margin: 0; padding-left: 20px; }
+.questions li { margin: 3px 0; }
+.tabs { display: flex; gap: 16px; border-bottom: 1px solid var(--border); margin: 0 0 18px; }
+.tab { border: 0; background: none; padding: 10px 2px 12px; font-size: 14px; font-weight: 550; color: var(--text-3); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+
+.f { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.f input { width: 100%; }
+.f > span { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.f input, .f textarea { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 9px; padding: 8px 11px; outline: none; min-width: 0; transition: border-color .12s, box-shadow .12s; }
+.f textarea { resize: none; overflow: hidden; line-height: 1.55; }
+.f input:focus, .f textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.f input.missing { border-color: var(--amber); background: var(--amber-soft); }
+.f input.missing::placeholder { color: var(--amber); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.ex-card { border: 1px solid var(--border); border-radius: 13px; padding: 14px; margin-bottom: 10px; background: var(--surface-2); }
+.ex-top { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
+.ex-num { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; margin-bottom: 4px; }
+.ex-top .f { flex: 1; }
+.ex-grid { display: grid; grid-template-columns: 70px 1fr 1fr 1.4fr; gap: 8px; margin-bottom: 8px; }
+.sec-title { font-size: 13px; font-weight: 650; margin: 20px 0 10px; }
+.lists { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.hint { font-size: 12px; color: var(--text-3); font-weight: 400; }
+.note-grid { display: grid; gap: 12px; }
+.note-grid textarea:placeholder-shown { background: var(--surface-2); }
+
+.done { text-align: center; padding: 56px 30px; }
+.done-ic { width: 60px; height: 60px; border-radius: 50%; background: var(--green-soft); color: var(--green); display: grid; place-items: center; margin: 0 auto 16px; }
+.done h3 { margin: 0 0 6px; font-size: 19px; }
+.done p { color: var(--text-2); margin: 0 0 22px; }
+.done .row { justify-content: center; }
+
+#toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 8px); padding: 10px 16px; border-radius: 11px; background: var(--text); color: var(--bg); font-weight: 550; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; z-index: 20; max-width: calc(100vw - 32px); }
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#toast.err { background: var(--red); color: #fff; }
+
+@media (max-width: 1000px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .panel-right { position: static; max-height: none; }
+  .r-body { overflow: visible; }
+}
+@media (max-width: 640px) {
+  .topbar, .grid, .banner { padding-left: 16px; padding-right: 16px; }
+  .two, .lists { grid-template-columns: 1fr; }
+  .ex-grid { grid-template-columns: 1fr 1fr; }
+  .topbar .pill span { display: none; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/><path d="M7 18h4a4 4 0 0 0 4-4v-4a4 4 0 0 1 4-4"/></svg></div>
+    <div><div class="brand-name">PhysioPath</div><div class="brand-sub">Demo · φωνή → πρόγραμμα</div></div>
+  </div>
+  <span class="pill pill-warn" title="Μην χρησιμοποιείτε πραγματικά στοιχεία ασθενών">⚠︎ <span>Μόνο φανταστικοί ασθενείς</span></span>
+</header>
+<div id="banner" class="banner"></div>
+
+<main class="grid">
+  <section class="panel" aria-labelledby="s1">
+    <div class="step"><span class="step-n">1</span><h2 id="s1">Φωνητική σημείωση</h2></div>
+    <div class="recorder">
+      <button id="rec" class="rec-btn" type="button" aria-label="Έναρξη ηχογράφησης"></button>
+      <div class="rec-text">
+        <b id="recLabel">Πατήστε και μιλήστε</b>
+        <span id="recSub" class="muted">Όπως θα το λέγατε στο τέλος της συνεδρίας</span>
+      </div>
+    </div>
+    <div class="alt-row">
+      <label class="btn btn-sm" tabindex="0">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+        Ανέβασμα αρχείου<input id="file" type="file" accept="audio/*,video/*" hidden>
+      </label>
+      <select id="sample" class="field" aria-label="Δείγμα σημείωσης"><option value="">Ή επιλέξτε δείγμα…</option></select>
+    </div>
+    <label class="lbl" for="transcript">Κείμενο <span class="hint">· μπορείτε να το διορθώσετε</span></label>
+    <textarea id="transcript" class="field" placeholder="Το κείμενο της ηχογράφησης θα εμφανιστεί εδώ. Μπορείτε επίσης να γράψετε ή να επικολλήσετε."></textarea>
+    <div class="go-row">
+      <div>
+        <div class="lbl-sm">Γλώσσα κλινικής σημείωσης</div>
+        <div class="seg" role="group" aria-label="Γλώσσα κλινικής σημείωσης">
+          <button type="button" data-lang="el" aria-pressed="true">Ελληνικά</button>
+          <button type="button" data-lang="en" aria-pressed="false">English</button>
+        </div>
+      </div>
+      <button id="generate" type="button" class="btn btn-primary btn-lg">Δημιουργία προγράμματος
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </button>
+    </div>
+    <div class="timings" id="timings" aria-live="polite"></div>
+  </section>
+
+  <section class="panel panel-right" id="right" aria-labelledby="s2"></section>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const ICON = {
+  mic: '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>',
+  stop: '<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  doc: '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>',
+  alert: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+  check: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
+  copy: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>',
+  external: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
+  plus: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
+  trash: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+};
+
+const NOTE_LABELS = {
+  el: { patient: "Ασθενής", body_area: "Περιοχή", stage: "Στάδιο", subjective: "Υποκειμενικά (S)", objective: "Αντικειμενικά (O)", treatment_today: "Θεραπεία σήμερα", home_program: "Πρόγραμμα στο σπίτι", precautions: "Προφυλάξεις", plan: "Πλάνο" },
+  en: { patient: "Patient", body_area: "Area", stage: "Stage", subjective: "Subjective (S)", objective: "Objective (O)", treatment_today: "Treatment today", home_program: "Home exercise program", precautions: "Precautions", plan: "Plan" },
+};
+const LISTS = [
+  ["after_exercises", "Μετά τις ασκήσεις"],
+  ["avoid", "Αποφύγετε"],
+  ["contact_if", "Πάρτε μας τηλέφωνο αν"],
+  ["other", "Άλλες οδηγίες"],
+];
+
+const S = {
+  state: "empty", // empty | loading | result | approved
+  noteLang: "el", noteLangUsed: "el",
+  result: null, tab: "program", approvedUrl: null,
+  timings: {}, recording: false, busy: false,
+};
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
+const fmt = (n) => n.toLocaleString("el-GR", { maximumFractionDigits: 1 });
+const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+let toastTimer;
+function toast(msg, err = false) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.className = "show" + (err ? " err" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (t.className = ""), err ? 7000 : 2200);
+}
+
+async function api(path, body, contentType = "application/json") {
+  const res = await fetch(path, body === undefined ? {} : {
+    method: "POST", headers: { "Content-Type": contentType },
+    body: contentType === "application/json" ? JSON.stringify(body) : body,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+// ---------- step 1: recording / transcript ----------
+
+let recorder, chunks = [], recStart = 0, recTimer;
+const MAX_REC_SECONDS = 180;
+
+function renderRecorder(mode) {
+  const btn = $("#rec");
+  btn.classList.toggle("recording", mode === "recording");
+  btn.disabled = mode === "transcribing";
+  btn.innerHTML = mode === "recording" ? ICON.stop : mode === "transcribing" ? '<span class="spinner" style="width:26px;height:26px;border-width:3px"></span>' : ICON.mic;
+  btn.setAttribute("aria-label", mode === "recording" ? "Τέλος ηχογράφησης" : "Έναρξη ηχογράφησης");
+  const label = { idle: "Πατήστε και μιλήστε", recording: "Ηχογράφηση…", transcribing: "Μεταγραφή…" }[mode];
+  const sub = {
+    idle: "Όπως θα το λέγατε στο τέλος της συνεδρίας",
+    recording: `<span class="rec-time" id="recTime">0:00</span> · πατήστε ξανά για τέλος`,
+    transcribing: "Ο ήχος μένει σε αυτόν τον υπολογιστή",
+  }[mode];
+  $("#recLabel").textContent = label;
+  $("#recSub").innerHTML = sub;
+}
+
+async function toggleRecording() {
+  if (recorder?.state === "recording") return recorder.stop();
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch { return toast("Δεν δόθηκε πρόσβαση στο μικρόφωνο. Επιτρέψτε την από τη γραμμή διευθύνσεων.", true); }
+  recorder = new MediaRecorder(stream);
+  chunks = [];
+  recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+  recorder.onstop = () => {
+    stream.getTracks().forEach((t) => t.stop());
+    clearInterval(recTimer);
+    S.timings.recording = (Date.now() - recStart) / 1000;
+    uploadAudio(new Blob(chunks, { type: recorder.mimeType || "audio/webm" }));
+  };
+  recorder.start();
+  recStart = Date.now();
+  renderRecorder("recording");
+  recTimer = setInterval(() => {
+    const s = (Date.now() - recStart) / 1000;
+    const el = $("#recTime"); if (el) el.textContent = mmss(s);
+    if (s >= MAX_REC_SECONDS) recorder.stop();
+  }, 250);
+}
+
+async function uploadAudio(blob) {
+  renderRecorder("transcribing");
+  try {
+    const type = (blob.type || "application/octet-stream").split(";")[0];
+    const data = await api("/api/transcribe", blob, type);
+    $("#transcript").value = data.text;
+    $("#sample").value = "";
+    S.timings.transcribe = data.seconds;
+    delete S.timings.generate;
+    renderTimings();
+    $("#generate").focus();
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    renderRecorder("idle");
+  }
+}
+
+function renderTimings() {
+  const t = S.timings, items = [];
+  if (t.recording) items.push(`Ηχογράφηση <b>${mmss(t.recording)}</b>`);
+  if (t.transcribe != null) items.push(`Μεταγραφή <b>${fmt(t.transcribe)} δευτ.</b>`);
+  if (t.generate != null) items.push(`Πρόγραμμα <b>${fmt(t.generate)} δευτ.</b>`);
+  const processing = (t.transcribe || 0) + (t.generate || 0);
+  $("#timings").innerHTML = items.map((i) => `<span class="timing">${i}</span>`).join("") +
+    (t.generate != null ? `<span class="timing total">Έτοιμο σε <b>${fmt(processing)} δευτ.</b> μετά την ηχογράφηση</span>` : "");
+}
+
+async function generateProgram() {
+  const transcript = $("#transcript").value.trim();
+  if (!transcript) return toast("Ηχογραφήστε, γράψτε ή επιλέξτε πρώτα ένα δείγμα.", true);
+  if (S.busy) return;
+  S.busy = true; S.state = "loading"; renderRight();
+  $("#generate").disabled = true;
+  try {
+    const data = await api("/api/generate", { transcript, noteLang: S.noteLang });
+    S.result = data.result;
+    S.noteLangUsed = S.noteLang;
+    S.timings.generate = data.seconds;
+    S.state = "result"; S.tab = "program";
+  } catch (err) {
+    S.state = S.result ? "result" : "empty";
+    toast(err.message, true);
+  } finally {
+    S.busy = false;
+    $("#generate").disabled = false;
+    renderTimings(); renderRight();
+  }
+}
+
+// ---------- step 2: review & approve ----------
+
+function getPath(path) { return path.split(".").reduce((o, k) => o?.[k], S.result); }
+function setPath(path, value) {
+  const keys = path.split("."), last = keys.pop();
+  keys.reduce((o, k) => o[k], S.result)[last] = value;
+}
+
+function input(path, label, { kind = "text", placeholder = "", flag = false } = {}) {
+  const v = getPath(path);
+  const missing = flag && (v == null || v === "");
+  return `<label class="f"><span>${label}</span><input data-path="${path}" data-kind="${kind}" value="${esc(v ?? "")}"
+    placeholder="${esc(missing ? "Λείπει" : placeholder)}" class="${missing ? "missing" : ""}" ${kind === "int" ? 'inputmode="numeric"' : ""}></label>`;
+}
+
+function textarea(path, label, { kind = "text", placeholder = "" } = {}) {
+  const v = getPath(path);
+  const value = kind === "lines" ? (v || []).join("\n") : v ?? "";
+  return `<label class="f"><span>${label}</span><textarea rows="1" data-path="${path}" data-kind="${kind}" placeholder="${esc(placeholder)}">${esc(value)}</textarea></label>`;
+}
+
+function programTab() {
+  const p = S.result.program;
+  return `
+    <div class="two">
+      ${input("program.title", "Τίτλος")}
+      ${input("program.patient_first_name", "Όνομα ασθενή", { placeholder: "—" })}
+    </div>
+    <div class="sec-title">Ασκήσεις <span class="hint">· τα πορτοκαλί πεδία δεν αναφέρθηκαν στη σημείωση</span></div>
+    ${p.exercises.map((_, i) => `
+      <div class="ex-card">
+        <div class="ex-top">
+          <span class="ex-num">${i + 1}</span>
+          ${input(`program.exercises.${i}.name`, "Άσκηση")}
+          <button type="button" class="btn btn-ghost btn-sm" data-remove="${i}" title="Αφαίρεση άσκησης" aria-label="Αφαίρεση άσκησης ${i + 1}">${ICON.trash}</button>
+        </div>
+        <div class="ex-grid">
+          ${input(`program.exercises.${i}.sets`, "Σετ", { kind: "int", flag: true })}
+          ${input(`program.exercises.${i}.reps`, "Επαναλήψεις", { flag: true })}
+          ${input(`program.exercises.${i}.hold`, "Κράτημα", { placeholder: "—" })}
+          ${input(`program.exercises.${i}.frequency`, "Πόσο συχνά", { flag: true })}
+        </div>
+        ${textarea(`program.exercises.${i}.notes`, "Σημειώσεις", { placeholder: "—" })}
+      </div>`).join("")}
+    <button type="button" class="btn btn-sm" data-action="add-exercise">${ICON.plus} Προσθήκη άσκησης</button>
+    <div class="sec-title">Οδηγίες <span class="hint">· μία ανά γραμμή</span></div>
+    <div class="lists">
+      ${LISTS.map(([key, label]) => textarea(`program.${key}`, label, { kind: "lines", placeholder: "—" })).join("")}
+    </div>
+    <div class="two" style="margin-top:12px">${input("program.next_appointment", "Επόμενο ραντεβού", { placeholder: "—" })}</div>`;
+}
+
+function noteTab() {
+  const labels = NOTE_LABELS[S.noteLangUsed];
+  return `
+    <div class="note-grid">
+      ${Object.entries(labels).map(([key, label]) => textarea(`note.${key}`, label, { placeholder: S.noteLangUsed === "en" ? "Not mentioned" : "Δεν αναφέρθηκε" })).join("")}
+    </div>`;
+}
+
+function noteAsText() {
+  const labels = NOTE_LABELS[S.noteLangUsed];
+  return Object.entries(labels).filter(([k]) => S.result.note[k]).map(([k, l]) => `${l}: ${S.result.note[k]}`).join("\n");
+}
+
+function renderRight() {
+  const el = $("#right");
+  const head = (title) => `<div class="r-head"><div class="step"><span class="step-n">2</span><h2 id="s2">${title}</h2></div></div>`;
+
+  if (S.state === "empty" || S.state === "loading") {
+    const loading = S.state === "loading";
+    el.innerHTML = head("Έλεγχος & έγκριση") + `
+      <div class="r-body"><div class="empty ${loading ? "loading" : ""}">
+        ${loading ? '<div class="spinner"></div><h3>Γράφεται το πρόγραμμα…</h3><p>Συνήθως 5–15 δευτερόλεπτα. Μόνο το κείμενο στέλνεται, όχι ο ήχος.</p>'
+          : `<div class="empty-ic">${ICON.doc}</div><h3>Το πρόγραμμα θα εμφανιστεί εδώ</h3><p>Ηχογραφήστε μια σημείωση ή επιλέξτε δείγμα, και πατήστε <b>Δημιουργία προγράμματος</b>. Θα ελέγξετε τα πάντα πριν φτάσουν στον ασθενή.</p>`}
+      </div></div>`;
+    return;
+  }
+
+  if (S.state === "approved") {
+    el.innerHTML = head("Εγκρίθηκε") + `
+      <div class="r-body"><div class="done">
+        <div class="done-ic">${ICON.check}</div>
+        <h3>Το πρόγραμμα είναι έτοιμο για τον ασθενή</h3>
+        <p>Στην πραγματική εφαρμογή ο ασθενής θα λάμβανε αυτόν τον σύνδεσμο με SMS ή WhatsApp.</p>
+        <div class="row">
+          <a class="btn btn-primary btn-lg" href="${esc(S.approvedUrl)}" target="_blank" rel="noopener">${ICON.external} Άνοιγμα σελίδας ασθενή</a>
+          <button type="button" class="btn btn-lg" data-action="back">Πίσω στην επεξεργασία</button>
+          <button type="button" class="btn btn-ghost btn-lg" data-action="new">Νέα σημείωση</button>
+        </div>
+      </div></div>`;
+    return;
+  }
+
+  const qs = S.result.missing_or_unclear.filter(Boolean);
+  el.innerHTML = head("Έλεγχος & έγκριση") + `
+    <div class="r-body">
+      ${qs.length ? `<div class="questions"><h3>${ICON.alert} Ερωτήσεις για εσάς (${qs.length})</h3><ul>${qs.map((q) => `<li>${esc(q)}</li>`).join("")}</ul></div>` : ""}
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" class="tab" data-tab="program" aria-selected="${S.tab === "program"}">Πρόγραμμα ασθενή</button>
+        <button type="button" role="tab" class="tab" data-tab="note" aria-selected="${S.tab === "note"}">Κλινική σημείωση</button>
+      </div>
+      ${S.tab === "program" ? programTab() : noteTab()}
+    </div>
+    <div class="r-foot">
+      ${S.tab === "note"
+        ? `<button type="button" class="btn btn-ghost" data-action="copy-note">${ICON.copy} Αντιγραφή σημείωσης</button>`
+        : `<span class="hint">Τίποτα δεν φτάνει στον ασθενή χωρίς την έγκρισή σας.</span>`}
+      <button type="button" class="btn btn-primary btn-lg" data-action="approve">${ICON.check.replace('width="28" height="28"', 'width="17" height="17"')} Έγκριση & σελίδα ασθενή</button>
+    </div>`;
+  el.querySelectorAll("textarea").forEach(autosize);
+}
+
+function autosize(t) { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; }
+
+async function approve() {
+  try {
+    const { url } = await api("/api/approve", { program: S.result.program, note: S.result.note });
+    S.approvedUrl = url; S.state = "approved"; renderRight();
+    window.open(url, "_blank", "noopener");
+  } catch (err) { toast(err.message, true); }
+}
+
+// ---------- events ----------
+
+$("#rec").addEventListener("click", toggleRecording);
+$("#generate").addEventListener("click", generateProgram);
+$("#file").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (file) { S.timings = {}; uploadAudio(file); }
+  e.target.value = "";
+});
+$("#sample").addEventListener("change", (e) => {
+  const opt = e.target.selectedOptions[0];
+  if (!opt.value) return;
+  $("#transcript").value = opt.dataset.text;
+  S.timings = {}; renderTimings();
+});
+$("#transcript").addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); generateProgram(); }
+});
+document.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => {
+  S.noteLang = b.dataset.lang;
+  document.querySelectorAll("[data-lang]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+}));
+document.querySelector(".alt-row label").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#file").click(); }
+});
+
+$("#right").addEventListener("input", (e) => {
+  const t = e.target, path = t.dataset.path;
+  if (!path) return;
+  const raw = t.value;
+  const kind = t.dataset.kind;
+  let value;
+  if (kind === "int") value = raw.trim() === "" ? null : Number.parseInt(raw, 10) || null;
+  else if (kind === "lines") value = raw.split("\n").map((s) => s.trim()).filter(Boolean);
+  else value = raw.trim() === "" ? (path.endsWith(".name") || path === "program.title" ? "" : null) : raw;
+  setPath(path, value);
+  if (t.classList.contains("missing") && raw.trim()) { t.classList.remove("missing"); t.placeholder = ""; }
+  if (t.tagName === "TEXTAREA") autosize(t);
+});
+
+$("#right").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.tab) { S.tab = b.dataset.tab; return renderRight(); }
+  if (b.dataset.remove != null) { S.result.program.exercises.splice(+b.dataset.remove, 1); return renderRight(); }
+  switch (b.dataset.action) {
+    case "add-exercise":
+      S.result.program.exercises.push({ name: "", sets: null, reps: null, hold: null, frequency: null, notes: null });
+      renderRight();
+      return document.querySelector(`[data-path="program.exercises.${S.result.program.exercises.length - 1}.name"]`)?.focus();
+    case "copy-note":
+      return navigator.clipboard.writeText(noteAsText()).then(() => toast("Η σημείωση αντιγράφηκε"), () => toast("Δεν ήταν δυνατή η αντιγραφή", true));
+    case "approve": return approve();
+    case "back": S.state = "result"; return renderRight();
+    case "new":
+      S.state = "empty"; S.result = null; S.timings = {};
+      $("#transcript").value = ""; $("#sample").value = "";
+      renderTimings(); renderRight(); return $("#rec").focus();
+  }
+});
+
+// ---------- start ----------
+
+(async function init() {
+  renderRecorder("idle");
+  renderRight();
+  try {
+    const [status, samples] = await Promise.all([api("/api/status"), api("/api/samples")]);
+    $("#sample").innerHTML = '<option value="">Ή επιλέξτε δείγμα…</option>' +
+      samples.map((s) => `<option value="${esc(s.id)}" data-text="${esc(s.text)}">Δείγμα ${esc(s.id)}: ${esc(s.title)}</option>`).join("");
+    const warnings = [];
+    if (!status.apiKey) warnings.push("<b>Λείπει το κλειδί Claude API.</b> Προσθέστε το στο <code>03-prototype/.env</code> και επανεκκινήστε με <code>npm start</code>. Η ηχογράφηση και η μεταγραφή λειτουργούν ήδη.");
+    if (!status.whisper) warnings.push("<b>Λείπει το μοντέλο Whisper.</b> Τρέξτε <code>npm run download-model</code>.");
+    $("#banner").innerHTML = warnings.map((w) => `<div>${ICON.alert}<span>${w}</span></div>`).join("");
+  } catch (err) { toast("Δεν ήταν δυνατή η σύνδεση με τον server: " + err.message, true); }
+})();
+</script>
+</body>
+</html>
