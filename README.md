@@ -1,6 +1,6 @@
 # PhysioPath
 
-Voice note from the physio → home exercise program for the patient + clinical note for the clinic. Greek first, for small practices in Cyprus and Greece.
+The physio's assistant during the session: the physio speaks today's exercises, the patient follows them on a phone or tablet, the physio sees the whole room. At the end: home program for the patient + clinical note for the clinic. Greek first, for physiotherapists in Cyprus and Greece.
 
 **The physio decides, the AI writes.**
 
