@@ -1,4 +1,4 @@
-// The icons the demo uses (outline style, same as the old screen).
+// The icons the app uses (outline style).
 // Always decorative: every place that shows an icon also shows text, so screen readers skip it.
 import type { SVGProps } from "react";
 
@@ -126,5 +126,36 @@ export const ArrowRightIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M5 12h14" />
     <path d="m12 5 7 7-7 7" />
+  </Icon>
+);
+
+export const PlayIcon = (p: IconProps) => (
+  <Icon strokeWidth={2.4} {...p}>
+    <path d="M7 4.5v15l12-7.5z" />
+  </Icon>
+);
+
+// Circular arrow: "start again" (the hold timer).
+export const RestartIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
+    <path d="M3.5 3.5v5h5" />
+  </Icon>
+);
+
+// Speech bubble: "I need the physio".
+export const ChatIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M20.5 11.5a8.5 8.5 0 0 1-12.3 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5z" />
+  </Icon>
+);
+
+// A finger tapping: "press a box".
+export const TapIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11" />
+    <path d="M12 10.5V9a1.5 1.5 0 0 1 3 0v2" />
+    <path d="M15 10.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1a6 6 0 0 1-4.7-2.3L4 15.8a1.5 1.5 0 0 1 2.3-1.9L9 16" />
+    <path d="M5 4.5a5 5 0 0 1 3-1.6M16 2.9a5 5 0 0 1 3 1.6" />
   </Icon>
 );

@@ -2,7 +2,8 @@
 // The patient's program, made for older people reading on a phone or on paper:
 // - bigger text (20px), and a control to make it bigger still, remembered on this phone;
 // - doses written out in full ("3 σετ × 10 επαναλήψεις");
-// - a big "Το έκανα σήμερα" button per exercise, remembered for today;
+// - one card per exercise with a big "Το έκανα σήμερα" button, remembered for today;
+// - «Αποφύγετε» and «Πάρτε μας τηλέφωνο αν» on soft amber and red panels;
 // - a print button, and a print layout without the buttons.
 import { useEffect, useState } from "react";
 
@@ -20,9 +21,14 @@ function InfoSection({ title, items, tone = "plain" }: { title: string; items: s
   const clean = items.map((item) => item.trim()).filter(Boolean);
   if (!clean.length) return null;
   return (
-    <section className={cx("border-l-4 pl-5", tone === "warning" ? "border-warning" : tone === "danger" ? "border-danger" : "border-foreground")}>
-      <h2 className={cx("text-2xl font-bold", tone === "warning" && "text-warning", tone === "danger" && "text-danger")}>{title}</h2>
-      <ul className="mt-2 list-disc space-y-1 pl-6 text-lg">
+    <section
+      className={cx(
+        "rounded-card p-5",
+        tone === "warning" ? "bg-warning-bg" : tone === "danger" ? "bg-danger-bg" : "border border-border bg-surface",
+      )}
+    >
+      <h2 className={cx("text-[1.1rem] font-bold", tone === "warning" && "text-warning", tone === "danger" && "text-danger")}>{title}</h2>
+      <ul className="mt-1.5 list-disc space-y-1 pl-6">
         {clean.map((item) => (
           <li key={item}>{item}</li>
         ))}
@@ -58,110 +64,92 @@ export function PatientProgramView({ id, program, clinicName }: PatientProgramVi
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pt-6 pb-16">
-      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border pb-4">
-        <p className="flex items-center gap-3">
+    <div className="mx-auto max-w-xl px-4 pt-5 pb-16 leading-[1.45]">
+      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-b border-border pb-3 text-[0.8rem]">
+        <p className="flex items-center gap-2.5">
           <BrandMark />
-          <span className="label-mono">{clinicName ?? "PhysioPath"}</span>
+          <span className="font-bold">{clinicName ?? "PhysioPath"}</span>
         </p>
-        <p className="label-mono text-muted">Δείγμα · φανταστικός ασθενής</p>
+        <p className="text-muted">Δείγμα · φανταστικός ασθενής</p>
       </header>
 
-      <div className="mt-6 flex flex-wrap items-end justify-between gap-4 print:hidden">
-        <TextSizeControl value={textSize} onChange={changeTextSize} />
-        <Button icon={<PrinterIcon />} onClick={() => window.print()}>
-          Εκτύπωση
-        </Button>
-      </div>
+      <main id="main" className="mt-5 flex flex-col gap-5">
+        <div className="flex flex-col gap-1.5">
+          {program.patient_first_name && <p className="label text-muted">Για: {program.patient_first_name}</p>}
+          <h1 className="text-[1.6rem] leading-[1.12] font-bold">Το πρόγραμμά σας για το σπίτι</h1>
+          <p className="text-[0.95rem] text-muted">{program.title}</p>
+        </div>
 
-      <main id="main" className="mt-12">
-        {program.patient_first_name && (
-          <p>
-            <span className="label-mono text-muted">Για</span> <span className="text-xl font-semibold">{program.patient_first_name}</span>
-          </p>
-        )}
-        <h1 className="mt-2 text-5xl leading-[0.95] font-extrabold tracking-tight italic">
-          Το πρόγραμμά σας
-          <span aria-hidden="true" className="text-primary">
-            .
-          </span>
-        </h1>
-        <p className="mt-3 text-xl text-muted">{program.title}</p>
+        <div className="flex flex-wrap items-end justify-between gap-4 print:hidden">
+          <TextSizeControl value={textSize} onChange={changeTextSize} />
+          <Button icon={<PrinterIcon />} onClick={() => window.print()}>
+            Εκτύπωση
+          </Button>
+        </div>
 
         {exercises.length > 0 && (
-          <>
-            <div className="mt-10 border-y border-border py-4 print:hidden">
-              <p aria-live="polite" className="text-lg">
-                <span className="label-mono text-muted">Σήμερα</span>{" "}
-                <span className="text-xl font-bold tabular-nums">
+          <section aria-labelledby="exercises-heading" className="flex flex-col gap-3">
+            <h2 id="exercises-heading" className="text-[1.2rem] font-bold">
+              Ασκήσεις
+            </h2>
+            <div className="print:hidden">
+              <p aria-live="polite">
+                <span className="label text-muted">Σήμερα</span>{" "}
+                <span className="font-bold">
                   {done.length} από {exercises.length}
                 </span>{" "}
                 ασκήσεις
               </p>
-              <div aria-hidden="true" className="mt-3 h-2 bg-surface-muted">
-                <div className="h-full bg-primary transition-[width]" style={{ width: `${(done.length / exercises.length) * 100}%` }} />
+              <div aria-hidden="true" className="mt-2 h-2.5 overflow-hidden rounded-full bg-surface-muted">
+                <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${(done.length / exercises.length) * 100}%` }} />
               </div>
             </div>
 
-            <ol className="mt-4">
+            <ol className="flex flex-col gap-3">
               {exercises.map((exercise, index) => {
                 const isDone = done.includes(index);
                 return (
-                  <li key={index} className="border-b border-border py-8">
-                    <div className="flex items-start gap-4">
-                      <span aria-hidden="true" className="label-mono mt-1 rounded-xs bg-primary px-2 py-0.5 text-on-primary">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <h2 className="text-2xl leading-tight font-bold">{exercise.name}</h2>
-                        <ul className="mt-3 space-y-1 text-xl font-semibold">
-                          {doseLines(exercise).map((line) => (
-                            <li key={line}>{line}</li>
-                          ))}
-                        </ul>
-                        {!isBlank(exercise.notes) && <p className="mt-3 text-lg text-muted">{exercise.notes}</p>}
-                        <button
-                          type="button"
-                          aria-pressed={isDone}
-                          onClick={() => toggleDone(index)}
-                          className={cx(
-                            "mt-5 inline-flex min-h-14 items-center gap-3 rounded-sm border-2 px-5 text-lg font-semibold print:hidden",
-                            isDone ? "border-success bg-success-bg text-success" : "border-border-strong hover:bg-surface-muted",
-                          )}
-                        >
-                          <span
-                            aria-hidden="true"
-                            className={cx("grid size-7 place-items-center rounded-xs border-2", isDone ? "border-success bg-success text-background" : "border-border-strong")}
-                          >
-                            {isDone && <CheckIcon size={18} />}
-                          </span>
-                          Το έκανα σήμερα
-                          <span className="sr-only">: {exercise.name}</span>
-                        </button>
-                      </div>
-                    </div>
+                  <li key={index} className="flex flex-col gap-2.5 rounded-card border border-border bg-surface p-4 break-inside-avoid">
+                    <h3 className="text-[1.2rem] leading-[1.15] font-bold">{exercise.name}</h3>
+                    <ul>
+                      {doseLines(exercise).map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                    {!isBlank(exercise.notes) && <p className="text-muted">{exercise.notes}</p>}
+                    <button
+                      type="button"
+                      aria-pressed={isDone}
+                      onClick={() => toggleDone(index)}
+                      className={cx(
+                        "flex min-h-[2.8rem] items-center justify-center gap-2 rounded-full border-2 px-4 text-[0.95rem] font-bold print:hidden",
+                        isDone ? "border-primary bg-success-bg text-primary-text" : "border-border-strong bg-surface text-foreground hover:bg-surface-muted",
+                      )}
+                    >
+                      {isDone && <CheckIcon size={22} />}
+                      Το έκανα σήμερα
+                      <span className="sr-only">: {exercise.name}</span>
+                    </button>
                   </li>
                 );
               })}
             </ol>
-          </>
+          </section>
         )}
 
-        <div className="mt-12 space-y-10">
-          <InfoSection title="Μετά τις ασκήσεις" items={program.after_exercises} />
-          <InfoSection title="Αποφύγετε" items={program.avoid} tone="warning" />
-          <InfoSection title="Πάρτε μας τηλέφωνο αν" items={program.contact_if} tone="danger" />
-          <InfoSection title="Άλλες οδηγίες" items={program.other} />
-          {!isBlank(program.next_appointment) && (
-            <section className="border-l-4 border-primary pl-5">
-              <h2 className="text-2xl font-bold">Επόμενο ραντεβού</h2>
-              <p className="mt-2 text-xl font-semibold">{program.next_appointment}</p>
-            </section>
-          )}
-        </div>
+        <InfoSection title="Μετά τις ασκήσεις" items={program.after_exercises} />
+        <InfoSection title="Αποφύγετε" items={program.avoid} tone="warning" />
+        <InfoSection title="Πάρτε μας τηλέφωνο αν" items={program.contact_if} tone="danger" />
+        <InfoSection title="Άλλες οδηγίες" items={program.other} />
+        {!isBlank(program.next_appointment) && (
+          <section className="border-t border-border pt-4">
+            <h2 className="text-[1.1rem] font-bold">Επόμενο ραντεβού</h2>
+            <p>{program.next_appointment}</p>
+          </section>
+        )}
       </main>
 
-      <footer className="mt-16 border-t border-border pt-6 text-muted">
+      <footer className="mt-10 border-t border-border pt-5 text-[0.85rem] text-muted">
         Το πρόγραμμα το ετοίμασε και το ενέκρινε ο φυσιοθεραπευτής σας. Για οποιαδήποτε απορία, ρωτήστε στο φυσιοθεραπευτήριο.
       </footer>
     </div>

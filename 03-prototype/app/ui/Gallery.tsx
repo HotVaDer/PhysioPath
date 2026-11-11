@@ -39,15 +39,15 @@ function Entry({ name, purpose, usedIn, children }: { name: (typeof ENTRIES)[num
     <section id={name.toLowerCase()} aria-labelledby={headingId} className="scroll-mt-6 border-t border-border pt-10">
       <div className="grid gap-x-12 gap-y-6 lg:grid-cols-[18rem_1fr]">
         <div>
-          <p className="label-mono flex items-center gap-3 text-muted">
-            <span className="rounded-xs bg-primary px-2 py-0.5 text-on-primary">{number(name)}</span> Component
+          <p className="label flex items-center gap-3 text-muted">
+            <span className="rounded-full bg-primary px-2 py-0.5 text-on-primary">{number(name)}</span> Component
           </p>
-          <h2 id={headingId} className="mt-3 text-3xl font-extrabold tracking-tight italic">
+          <h2 id={headingId} className="mt-3 text-3xl font-bold">
             {name}
           </h2>
           <p className="mt-2 text-muted">{purpose}</p>
           <p className="mt-4">
-            <span className="label-mono block text-muted">Used in</span>
+            <span className="label block text-muted">Used in</span>
             <span className="mt-0.5 block">{usedIn}</span>
           </p>
         </div>
@@ -59,11 +59,11 @@ function Entry({ name, purpose, usedIn, children }: { name: (typeof ENTRIES)[num
   );
 }
 
-// One example: a small mono caption, then the component.
+// One example: a small caption, then the component.
 function Example({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
-      <p lang="en" className="label-mono mb-2.5 text-muted">
+      <p lang="en" className="label mb-2.5 text-muted">
         <span aria-hidden="true" className="text-primary-text">
           ›{" "}
         </span>
@@ -85,7 +85,7 @@ export function Gallery() {
         <ul className="flex flex-wrap gap-x-6 gap-y-2">
           {ENTRIES.map((name) => (
             <li key={name}>
-              <a href={`#${name.toLowerCase()}`} className="label-mono text-muted no-underline hover:text-primary-text">
+              <a href={`#${name.toLowerCase()}`} className="label text-muted no-underline hover:text-primary-text">
                 <span className="text-primary-text">{number(name)}</span> {name}
               </a>
             </li>
@@ -94,7 +94,7 @@ export function Gallery() {
       </nav>
 
       <div className="mt-16 space-y-16">
-        <Entry name="Button" purpose="Every action. Each page has one orange main action; everything else is secondary or quiet." usedIn="Every page">
+        <Entry name="Button" purpose="Every action. Each page has one teal main action; everything else is secondary or quiet." usedIn="Every page">
           <Example label="Main · secondary · quiet">
             <div className="flex flex-wrap items-center gap-3">
               <Button variant="primary" size="lg" icon={<CheckIcon />}>
@@ -160,7 +160,7 @@ export function Gallery() {
           </Example>
         </Entry>
 
-        <Entry name="SegmentedControl" purpose="Pick one of 2–3 options. Real radio buttons, so arrow keys work; the chosen one is orange with a ✓." usedIn="Record page: note language · Patient page: text size">
+        <Entry name="SegmentedControl" purpose="Pick one of 2–3 options. Real radio buttons, so arrow keys work; the chosen one is teal with a ✓." usedIn="Record page: note language · Patient page: text size">
           <Example label="Two options">
             <SegmentedControl
               legend="Γλώσσα κλινικής σημείωσης"
@@ -176,9 +176,9 @@ export function Gallery() {
             <SegmentedControl
               legend="Μέγεθος γραμμάτων"
               options={[
-                { value: "normal", label: "Κανονικά" },
-                { value: "large", label: "Μεγάλα" },
-                { value: "xlarge", label: "Πολύ μεγάλα" },
+                { value: "normal", label: "Μικρά" },
+                { value: "large", label: "Μεσαία" },
+                { value: "xlarge", label: "Μεγάλα" },
               ]}
               value={textSize}
               onChange={setTextSize}
@@ -211,7 +211,7 @@ export function Gallery() {
           </Example>
         </Entry>
 
-        <Entry name="Card" purpose="One part of a page: a hairline and a section label, no box. Screen readers can jump between them." usedIn="Every page">
+        <Entry name="Card" purpose="One part of a page: a white card with soft corners and a titled heading. Screen readers can jump between them." usedIn="Every page">
           <Example label="With a tag">
             <Card title="Ασκήσεις" tag="S1" headingLevel={3}>
               <p>Εδώ μπαίνει το περιεχόμενο της ενότητας.</p>
@@ -219,7 +219,7 @@ export function Gallery() {
           </Example>
         </Entry>
 
-        <Entry name="Spinner" purpose="Shown while waiting: the start lights come on one by one. The text says what's happening, so it works without the animation too." usedIn="Record page: while transcribing and writing">
+        <Entry name="Spinner" purpose="Shown while waiting: a calm teal ring turning slowly. The text says what's happening, so it works without the animation too." usedIn="Record page: while transcribing and writing">
           <Example label="Waiting">
             <Spinner label="Γράφεται το πρόγραμμα…">Συνήθως 5–15 δευτερόλεπτα.</Spinner>
           </Example>
@@ -231,7 +231,7 @@ export function Gallery() {
           </Example>
         </Entry>
 
-        <Entry name="TimingStrip" purpose="A row of measurements, like a race timing screen. Shows how fast the demo was." usedIn="Record page, after the program is ready">
+        <Entry name="TimingStrip" purpose="A row of measurements on a soft panel. Shows how fast the demo was." usedIn="Record page, after the program is ready">
           <Example label="After a voice note">
             <TimingStrip
               items={[

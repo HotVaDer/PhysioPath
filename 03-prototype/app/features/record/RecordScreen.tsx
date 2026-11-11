@@ -91,26 +91,26 @@ export function RecordScreen({ samples }: { samples: Sample[] }) {
             {recording ? "Τέλος ηχογράφησης" : "Έναρξη ηχογράφησης"}
           </Button>
           {recording ? (
-            <p className="flex items-center gap-3 font-mono">
+            <p className="flex items-center gap-3 font-semibold">
               <span aria-hidden="true" className="size-3 animate-pulse rounded-full bg-danger" />
-              <span className="label-mono text-danger">Ηχογράφηση</span>
+              <span className="label text-danger">Ηχογράφηση</span>
               {/* The timer is not announced: a screen reader would read it out every second. */}
               <span className="text-2xl tabular-nums">{formatClock(recorder.elapsed)}</span>
               <span className="text-muted">/ {formatClock(MAX_RECORDING_SECONDS)}</span>
             </p>
           ) : (
-            <p className="font-mono text-muted">Πατήστε και μιλήστε. Πατήστε ξανά για τέλος.</p>
+            <p className="text-muted">Πατήστε και μιλήστε. Πατήστε ξανά για τέλος.</p>
           )}
         </div>
 
         {recording && (
           <div className="mt-6 max-w-xl">
-            <p className="label-mono text-muted">Ένταση φωνής</p>
+            <p className="label text-muted">Ένταση φωνής</p>
             {/* One thick outlined box that fills with the voice, easy to see at arm's length.
                 For the eyes only; the warning below says the same in words. */}
-            <div aria-hidden="true" className="mt-2 h-8 rounded-xs border-2 border-border-strong p-0.5">
+            <div aria-hidden="true" className="mt-2 h-8 rounded-full border-2 border-border-strong p-1">
               <div
-                className={cx("h-full rounded-xs transition-[width] duration-75", recorder.tooQuiet ? "bg-warning" : "bg-primary")}
+                className={cx("h-full rounded-full transition-[width] duration-75", recorder.tooQuiet ? "bg-warning" : "bg-primary")}
                 style={{ width: `${Math.max(2, recorder.level * 100)}%` }}
               />
             </div>
@@ -130,7 +130,7 @@ export function RecordScreen({ samples }: { samples: Sample[] }) {
 
         <div className="mt-10 grid gap-x-12 gap-y-8 lg:grid-cols-[auto_1fr]">
           <div>
-            <p className="label-mono text-muted">Ή από αρχείο</p>
+            <p className="label text-muted">Ή από αρχείο</p>
             <Button icon={<UploadIcon />} disabled={busy !== null || recording} onClick={() => fileInput.current?.click()} className="mt-3">
               Ανέβασμα αρχείου ήχου
             </Button>
@@ -149,8 +149,8 @@ export function RecordScreen({ samples }: { samples: Sample[] }) {
 
           {samples.length > 0 && (
             <div>
-              <p className="label-mono text-muted">Ή με ένα δείγμα (φανταστικοί ασθενείς)</p>
-              {/* A list like the portfolio's repo list: one row per sample between dashed lines. */}
+              <p className="label text-muted">Ή με ένα δείγμα (φανταστικοί ασθενείς)</p>
+              {/* One row per sample between dashed lines. */}
               <ul className="mt-3 border-t border-dashed border-border-strong">
                 {samples.map((sample) => (
                   <li key={sample.id} className="border-b border-dashed border-border-strong">
@@ -163,7 +163,7 @@ export function RecordScreen({ samples }: { samples: Sample[] }) {
                       }}
                       className="group flex min-h-12 w-full items-center gap-4 py-2 text-left hover:text-primary-text disabled:cursor-not-allowed disabled:text-muted"
                     >
-                      <span className="label-mono w-24 shrink-0 text-primary-text group-disabled:text-muted">Δείγμα {sample.id}</span>
+                      <span className="label w-24 shrink-0 text-primary-text group-disabled:text-muted">Δείγμα {sample.id}</span>
                       <span className="flex-1 font-semibold">{sample.title}</span>
                       <ArrowRightIcon size={18} className="shrink-0 transition-transform group-hover:translate-x-1" />
                     </button>

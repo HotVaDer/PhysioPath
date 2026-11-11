@@ -34,8 +34,8 @@ export function useField(id: string | undefined, { hint, error, missing }: Field
 // says it in words too.
 export function controlClasses({ error, missing }: FieldMessages, className?: string) {
   return cx(
-    "w-full rounded-sm border bg-surface px-3 py-2 text-base text-foreground placeholder:text-muted",
-    error ? "border-danger border-l-4" : missing ? "border-warning border-l-4 bg-warning-bg" : "border-border-strong",
+    "w-full rounded-tile border-2 bg-surface px-4 py-2.5 text-base text-foreground placeholder:text-muted",
+    error ? "border-danger border-l-6" : missing ? "border-warning border-l-6 bg-warning-bg" : "border-border-strong",
     className,
   );
 }
@@ -49,7 +49,7 @@ type FieldProps = FieldMessages & {
 export function Field({ label, hint, error, missing, ids, children }: FieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={ids.fieldId} className="label-mono text-muted">
+      <label htmlFor={ids.fieldId} className="label text-muted">
         {label}
       </label>
       {hint && (

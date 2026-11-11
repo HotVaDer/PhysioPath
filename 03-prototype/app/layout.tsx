@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Source_Sans_3 } from "next/font/google";
 
 import "./globals.css";
 
-// Fonts are self-hosted (no requests to Google from the user's browser), both with Greek letters.
-// Inter for text (italic too, for the big headings), JetBrains Mono for the small capital labels.
-// The portfolio uses DM Mono, but it has no Greek. globals.css picks them up via the CSS variables.
-const inter = Inter({ subsets: ["latin", "greek"], style: ["normal", "italic"], variable: "--font-inter" });
-const mono = JetBrains_Mono({ subsets: ["latin", "greek"], weight: ["400", "500"], variable: "--font-jetbrains-mono" });
+// Source Sans 3: one calm, very legible family with full Greek, self-hosted (no requests to Google
+// from the user's browser). Only the weights the design uses. globals.css picks it up via the CSS variable.
+const sourceSans = Source_Sans_3({ subsets: ["latin", "greek"], weight: ["400", "600", "700"], variable: "--font-source-sans" });
 
 // Browser tab title. Each page sets its own name, e.g. "Έλεγχος · PhysioPath".
 export const metadata: Metadata = {
@@ -18,7 +16,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     // suppressHydrationWarning: the patient page sets the text size on <html> before React starts (see app/p/[id]).
-    <html lang="el" className={`${inter.variable} ${mono.variable}`} suppressHydrationWarning>
+    <html lang="el" className={sourceSans.variable} suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         {/* Hidden until a keyboard user presses Tab: lets them jump past the header straight to the content. */}
         <a

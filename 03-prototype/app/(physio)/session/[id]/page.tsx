@@ -32,7 +32,7 @@ export default async function SessionStartPage(props: PageProps<"/session/[id]">
 
       <div className="grid items-start gap-12 md:grid-cols-[auto_1fr]">
         <section aria-labelledby="qr-heading">
-          <h2 id="qr-heading" className="label-mono text-muted">
+          <h2 id="qr-heading" className="label text-muted">
             Στο κινητό του ασθενή
           </h2>
           {reachableFromPhones ? (
@@ -43,7 +43,7 @@ export default async function SessionStartPage(props: PageProps<"/session/[id]">
                 width={288}
                 height={288}
                 alt={`Κωδικός QR για τις σημερινές ασκήσεις${name ? ` (${name})` : ""}`}
-                className="mt-3 rounded-sm bg-white p-2"
+                className="mt-3 rounded-tile bg-white p-2"
               />
               <p className="mt-3 max-w-[18rem] text-muted">Ο ασθενής σκανάρει τον κωδικό με την κάμερα του κινητού του (στο ίδιο Wi-Fi).</p>
               <p className="mt-2 max-w-[18rem] font-mono text-sm break-all">{url}</p>
@@ -57,7 +57,7 @@ export default async function SessionStartPage(props: PageProps<"/session/[id]">
         </section>
 
         <section aria-labelledby="here-heading">
-          <h2 id="here-heading" className="label-mono text-muted">
+          <h2 id="here-heading" className="label text-muted">
             Ή σε αυτή τη συσκευή
           </h2>
           <p className="mt-3 max-w-md">Για tablet του φυσιοθεραπευτηρίου, ή όταν το κινητό του ασθενή δεν βοηθάει.</p>

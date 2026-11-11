@@ -52,9 +52,10 @@ export function TextSizeControl({ value, onChange }: { value: TextSize; onChange
     <SegmentedControl<TextSize>
       legend="Μέγεθος γραμμάτων"
       options={[
-        { value: "normal", label: "Κανονικά" },
-        { value: "large", label: "Μεγάλα" },
-        { value: "xlarge", label: "Πολύ μεγάλα" },
+        // Each choice is shown at (roughly) its own size, so the patient sees what they'll get.
+        { value: "normal", label: <span className="text-[0.85em]">Μικρά</span> },
+        { value: "large", label: <span className="text-[1em]">Μεσαία</span> },
+        { value: "xlarge", label: <span className="text-[1.15em]">Μεγάλα</span> },
       ]}
       value={value}
       onChange={onChange}

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DraftProvider } from "@/app/context/DraftContext";
@@ -46,12 +46,26 @@ describe("RoomBoard", () => {
   it("shows each patient's progress and who needs the physio, in words", () => {
     renderBoard([working, inPain, finished]);
     expect(screen.getByText("3 ασθενείς · 1 χρειάζεται εσάς")).toBeInTheDocument();
-    expect(screen.getByText(/Ασκείται/)).toBeInTheDocument();
-    expect(screen.getByText("Χρειάζεται εσάς · Πόνος")).toBeInTheDocument();
-    expect(screen.getByText("πριν από 3 λεπτά")).toBeInTheDocument();
-    expect(screen.getByText("Τελείωσε")).toBeInTheDocument();
-    expect(screen.getByText(/σετ 2 από 2/)).toBeInTheDocument(); // Γιώργος: wall slides, second set
+    const card = (name: string) => within(screen.getByRole("article", { name }));
+
+    expect(card("Γιώργος").getByText("Ασκείται")).toBeInTheDocument();
+    expect(card("Γιώργος").getByText("Σετ 2 από 2")).toBeInTheDocument(); // wall slides, second set
+    expect(card("Γιώργος").getByText("Ασκήσεις: τώρα η 1 από 2")).toBeInTheDocument(); // the numbered boxes, in words
+    expect(card("Ελένη").getByText("Χρειάζεται εσάς · Πόνος")).toBeInTheDocument();
+    expect(card("Ελένη").getByText("πριν από 3 λεπτά")).toBeInTheDocument();
+    expect(card("Μαρία").getByText("Τελείωσε")).toBeInTheDocument();
+    expect(card("Μαρία").getByText("Ασκήσεις: και οι 2 έγιναν")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Το είδα" })).toBeInTheDocument(); // only for the call
+  });
+
+  it("sums up the room and lists who is waiting, in the order they called", () => {
+    const question: Session = applyPatientAction(session("Ανδρέας", "2026-10-18-aaaaaaa4"), { type: "call", reason: "question" }, "2026-10-18T10:04:00.000Z");
+    renderBoard([working, question, inPain, finished]); // board order: as they arrived
+    const summary = within(screen.getByRole("region", { name: "Σύνοψη αίθουσας" }));
+    expect(summary.getByText("Χρειάζονται εσάς").nextSibling).toHaveTextContent("2"); // label first for screen readers; CSS puts the number on top
+    const waiting = summary.getAllByRole("listitem").map((li) => li.textContent);
+    expect(waiting[0]).toMatch(/Ελένη · Πόνος πριν από 3 λεπτά/); // called first
+    expect(waiting[1]).toMatch(/Ανδρέας · Απορία πριν από 1 λεπτό/);
   });
 
   it("says when the room is empty and offers a new patient", () => {

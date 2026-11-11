@@ -25,8 +25,8 @@ export function ExerciseEditor({ exercise, index, dispatch }: ExerciseEditorProp
   return (
     <li className="border-t border-border py-8 first:border-t-0 first:pt-2">
       <div className="mb-4 flex items-center justify-between gap-4">
-        <p className="label-mono flex items-center gap-3 text-muted">
-          <span className="rounded-xs border border-border-strong px-2 py-0.5 text-foreground">{String(number).padStart(2, "0")}</span>
+        <p className="label flex items-center gap-3 text-muted">
+          <span className="flex size-8 items-center justify-center rounded-full border-2 border-primary font-bold text-foreground">{number}</span>
           Άσκηση {number}
         </p>
         <Button variant="ghost" icon={<TrashIcon />} onClick={() => dispatch({ type: "removeExercise", index })}>

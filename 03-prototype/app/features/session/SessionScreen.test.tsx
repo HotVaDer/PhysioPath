@@ -65,6 +65,20 @@ describe("SessionScreen", () => {
     ]);
   });
 
+  it("goes to another exercise when its box is tapped, and marks sets there", async () => {
+    const sent = fakeServer(view());
+    render(<SessionScreen initial={view()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Άσκηση 2: Isometric external rotation" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Isometric external rotation" })).toBeInTheDocument();
+    expect(screen.getByText("Άσκηση 2 από 2")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Τελείωσα την άσκηση" }));
+    // Done: back to the first exercise not done yet, and box 2 says so.
+    expect(await screen.findByRole("heading", { level: 1, name: "Wall slides" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Άσκηση 2: Isometric external rotation, έγινε" })).toBeInTheDocument();
+    expect(sent).toEqual([{ type: "setDone", exercise: 1, set: 1 }]);
+  });
+
   it("calls the physio with a reason, and only says they were notified", async () => {
     const sent = fakeServer(view());
     render(<SessionScreen initial={view()} />);

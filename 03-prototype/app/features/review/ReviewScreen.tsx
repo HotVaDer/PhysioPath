@@ -108,7 +108,7 @@ export function ReviewScreen() {
             />
           </div>
 
-          <h3 className="label-mono mt-12 mb-1 text-muted">Ασκήσεις</h3>
+          <h3 className="label mt-12 mb-1 text-muted">Ασκήσεις</h3>
           <p className="mb-4 text-muted">Τα πεδία με «Λείπει» δεν αναφέρθηκαν στη σημείωση.</p>
           <ol>
             {program.exercises.map((exercise, index) => (
@@ -132,7 +132,7 @@ export function ReviewScreen() {
             Προσθήκη άσκησης
           </Button>
 
-          <h3 className="label-mono mt-14 mb-4 text-muted">Οδηγίες</h3>
+          <h3 className="label mt-14 mb-4 text-muted">Οδηγίες</h3>
           <div className="grid gap-6 lg:grid-cols-2">
             {LISTS.map(([field, label]) => (
               <ListField key={field} label={label} value={program[field]} onChange={(items) => dispatch({ type: "setProgramList", field, items })} />

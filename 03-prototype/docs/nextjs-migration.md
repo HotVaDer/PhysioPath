@@ -56,6 +56,14 @@ Rebuilding the demo from one big `public/index.html` + a hand-written Node serve
    - Screens live in `app/features/<page>/`; `app/components/layout/` has the header, page title and PP badge.
    - The step-1 status page (`app/page.tsx`) is gone; its setup checks are alerts on the Record page.
    - Checked end to end in Chrome (sample → Claude → review → approve → patient page), light and dark, desktop and phone.
+5b. ✅ **Redesign «Αίθουσα»** (2026-10-20), from the Claude Design canvas (https://claude.ai/artifact/SNapakX6eXEUocFVggDnWu). Replaces the portfolio look from step 3.
+   - **Look:** towel white `#F6F8F7` and bed teal `#0C5957`; night `#0C1716` / `#79D3C9`. Only alarms get strong colour: new `pain` / `question` tokens (+ `on-` and `-inset`) for the room board. Source Sans 3 (Greek), tabular digits everywhere, sentence-case `label` utility, `rounded-card` (22px) and `rounded-tile` (16px), pill buttons. JetBrains Mono, racing orange, the start lights and the paddock pass are gone. 112 colour pairs checked: text ≥7:1, borders/focus/fills ≥3:1, both themes.
+   - **Components:** Button gets `outline` (undo, start a hold) and `inverse` / `inverse-outline` (buttons on a red or amber card; the card sets `--card-bg`, `--card-fg` and its own `--focus`). Card is a real white card now. Stepper and the set counter use round markers. Spinner is a teal ring. New icons: Play, Restart, Chat, Tap.
+   - **Patient session:** numbered exercise boxes (tap to go to another exercise; only screen state, `session.ts` unchanged because `setDone` already works per exercise), centred exercise card, round set markers, big «Τελείωσα», outlined undo, «Μετά» card, call button at the bottom. Hold timer: ring countdown, «Ξεκίνα το κράτημα» → «Ξανά από την αρχή».
+   - **Room board:** summary card (4 counts + who called, in order), legend, alarm cards fully red (pain) or amber (question), status signs by shape (octagon, circle, half circle, tick), numbered exercise boxes and a set bar. Cards never move.
+   - **Home program:** exercise cards, «Αποφύγετε» / «Πάρτε μας τηλέφωνο αν» on soft amber/red panels; text size «Μικρά / Μεσαία / Μεγάλα».
+   - **Not built:** the canvas's «Δείτε πώς γίνεται» video slot (videos are out of the v1 scope). If the patient jumps ahead, the room board still shows the first unfinished exercise as «now».
+   - `cx` doesn't merge Tailwind classes: to override a Button's size from outside, use the `!` suffix (`text-[0.95rem]!`).
 6. **Quality and clean-up:** ESLint (`eslint-config-next` + `jsx-a11y`), Vitest + Testing Library + axe tests, delete `src/` and `public/index.html`, update README, `docs/accessibility.md`, `notes/decisions.md`
 
 ## Notes

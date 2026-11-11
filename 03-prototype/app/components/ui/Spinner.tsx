@@ -1,6 +1,6 @@
-// "Please wait" indicator: the portfolio's five start lights, coming on one by one.
-// The text says what is happening, so it still makes sense when the lights don't move
-// (reduce-motion setting: they stay lit) or can't be seen.
+// "Please wait" indicator: a calm teal ring turning slowly.
+// The text says what is happening, so it still makes sense when the ring doesn't move
+// (reduce-motion setting) or can't be seen.
 import type { ReactNode } from "react";
 
 import { cx } from "@/app/lib/cx";
@@ -23,13 +23,7 @@ type SpinnerProps = {
 export function Spinner({ label, children }: SpinnerProps) {
   return (
     <div role="status" className="flex flex-col items-center gap-4 py-6 text-center">
-      <span className="start-lights" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-        <span />
-        <span />
-      </span>
+      <SpinnerRing className="size-10 border-4 text-primary [animation-duration:1.4s]" />
       <p className="text-lg font-semibold">{label}</p>
       {children && <p className="max-w-prose text-muted">{children}</p>}
     </div>

@@ -1,5 +1,5 @@
 // Top of each physio page: where they are in starting a patient's session (when they're in that flow),
-// then the page title in the portfolio's big italic style with an orange full stop, and an optional line.
+// then the page title, and an optional line.
 import type { ReactNode } from "react";
 
 import { Stepper } from "@/app/components/ui/Stepper";
@@ -15,14 +15,9 @@ type PageHeaderProps = {
 
 export function PageHeader({ step, title, children }: PageHeaderProps) {
   return (
-    <div className="mb-12">
+    <div className="mb-10">
       {step !== undefined && <Stepper steps={STEPS} current={step} />}
-      <h1 className={cx("text-5xl leading-[0.95] font-extrabold tracking-tight italic sm:text-6xl", step !== undefined && "mt-10")}>
-        {title}
-        <span aria-hidden="true" className="text-primary">
-          .
-        </span>
-      </h1>
+      <h1 className={cx("text-4xl leading-tight font-bold sm:text-5xl", step !== undefined && "mt-8")}>{title}</h1>
       {children && <div className="mt-4 max-w-2xl text-lg text-muted">{children}</div>}
     </div>
   );
