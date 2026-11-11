@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta property="og:title" content="PhysioPath demo">
+<meta property="og:description" content="Σύντομο βίντεο με το πρωτότυπο PhysioPath (1:36).">
+<meta property="og:image" content="https://hotvader.github.io/PhysioPath/demo/poster.jpg">
+<title>PhysioPath demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;650&display=swap">
+<style>
+  /* Layout: one calm column, the video first, three short steps under it. Colours from the app's «Αίθουσα» look. */
+  :root {
+    --bg: #f6f8f7;
+    --surface: #ffffff;
+    --surface-muted: #eaf0ee;
+    --fg: #0f2523;
+    --muted: #38504d;
+    --border: #d5dfdb;
+    --accent: #0c5957;
+    --font: "Commissioner", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c1716; --surface: #122120; --surface-muted: #1a2c2a;
+      --fg: #e8f0ee; --muted: #a8bbb7; --border: #233735; --accent: #86dad0;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c1716; --surface: #122120; --surface-muted: #1a2c2a;
+    --fg: #e8f0ee; --muted: #a8bbb7; --border: #233735; --accent: #86dad0;
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font);
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding-block: 40px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid;
+    gap: 28px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 650; font-size: 15px; letter-spacing: .01em;
+  }
+  .brand i {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 3px solid var(--accent); display: block;
+  }
+  header { display: grid; gap: 10px; max-width: 62ch; }
+  h1 {
+    margin: 0; font-size: clamp(28px, 5vw, 40px); line-height: 1.15;
+    font-weight: 650; letter-spacing: -.01em; text-wrap: balance;
+  }
+  header p { margin: 0; color: var(--muted); }
+
+  .video {
+    border-radius: 14px; overflow: hidden;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+  }
+  video { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; height: auto; background: #000; }
+  .meta { margin: 0; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  h2 { margin: 0 0 12px; font-size: 20px; font-weight: 650; }
+  ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; counter-reset: s; }
+  li {
+    counter-increment: s;
+    display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px;
+    padding: 16px 18px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 12px;
+  }
+  li::before {
+    content: counter(s);
+    width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center;
+    border: 2px solid var(--accent); color: var(--accent);
+    font-weight: 650; font-size: 15px;
+  }
+  li b { display: block; font-weight: 650; }
+  li span { color: var(--muted); }
+
+  footer { border-top: 1px solid var(--border); padding-top: 20px; color: var(--muted); font-size: 15px; max-width: 62ch; }
+  footer p { margin: 0 0 6px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="brand"><i></i>PhysioPath</div>
+
+  <header>
+    <h1>Από τη φωνή σας στο πρόγραμμα του ασθενή</h1>
+    <p>Ένα σύντομο βίντεο με το πρωτότυπο που φτιάχνω στο Πανεπιστήμιο Κύπρου. Ο φυσιοθεραπευτής λέει τις ασκήσεις φωναχτά, όπως θα τις έλεγε στον ασθενή, και η εφαρμογή γράφει την κλινική σημείωση και το πρόγραμμα του ασθενή.</p>
+  </header>
+
+  <section>
+    <div class="video">
+      <video id="demo" controls playsinline preload="metadata" poster="poster.jpg">
+        <source src="physiopath-demo.mp4" type="video/mp4">
+        Ο browser σας δεν μπορεί να παίξει το βίντεο.
+      </video>
+    </div>
+    <p class="meta" style="margin-top:10px">Διάρκεια 1:36 · Οι ασθενείς στο βίντεο είναι φανταστικοί.</p>
+  </section>
+
+  <section>
+    <h2>Τι βλέπετε στο βίντεο</h2>
+    <ol>
+      <li><div><b>Ηχογράφηση</b><span>Ο φυσιοθεραπευτής περιγράφει τις ασκήσεις με φωνητική σημείωση. Οι ιατρικοί όροι διορθώνονται αυτόματα και μπορείτε να αναιρέσετε κάθε διόρθωση.</span></div></li>
+      <li><div><b>Έλεγχος</b><span>Βλέπετε το πρόγραμμα και την κλινική σημείωση πριν φτάσει οτιδήποτε στον ασθενή. Τα πεδία που λείπουν σημειώνονται. Η κλινική σημείωση μένει μόνο στον φυσιοθεραπευτή.</span></div></li>
+      <li><div><b>Έναρξη και αίθουσα</b><span>Ο ασθενής σκανάρει έναν κωδικό QR και βλέπει τις ασκήσεις του στο κινητό, μία μία. Εσείς βλέπετε σε μία οθόνη ποιος ασκείται, ποιος έχει απορία και ποιος πονάει.</span></div></li>
+      <li><div><b>Πρόγραμμα για το σπίτι</b><span>Στο τέλος ο ασθενής παίρνει σύνδεσμο με το πρόγραμμά του για το σπίτι, με SMS ή WhatsApp.</span></div></li>
+    </ol>
+  </section>
+
+  <footer>
+    <p>Είναι πρωτότυπο για έρευνα, όχι προϊόν προς πώληση. Η γνώμη σας θα με βοηθούσε πολύ, όποια κι αν είναι.</p>
+    <p>Στυλιανός · Τμήμα Πληροφορικής, Πανεπιστήμιο Κύπρου</p>
+  </footer>
+</main>
+</body>
+</html>
