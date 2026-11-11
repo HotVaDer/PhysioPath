@@ -1,34 +1,34 @@
 # Physiotherapist Interview Guide
 
-Goal: understand how sessions run **today**, especially when a physio works with several patients at once, and how notes and home exercises are handled. Ask about past behaviour, not opinions about a future product.
+Goal: understand how physios handle **clinical notes and home exercises today**, especially the note GeSY requires for each session, and how sessions run. Ask about past behaviour, not opinions about a future product.
 
 Length: 25–30 min. Ask for permission before taking notes or recording.
 
 ## Intro (2 min)
 
-- Who I am, why I'm asking (my own rehab after bicep surgery: my physio often had 2–3 patients at once).
+- Who I am, why I'm asking (my own rehab after bicep surgery made me curious how physios manage everything around the session).
 - "I'm not selling anything. I want to understand how your work happens today."
 
 ## About them (3 min)
 
 1. How long have you been practising? Solo or in a clinic? How many physios work there?
 2. How many patients do you see on a typical day? How long is a session?
-3. What kind of patients mostly (sports, post-surgery, elderly, neuro…)? How much of a session is exercises?
+3. How many of your patients are GeSY and how many private? Do you run any group sessions (Pilates, post-op groups, classes)?
+4. What kind of patients mostly (sports, post-surgery, elderly, neuro…)? How much of a session is exercises?
 
-## During the session (8 min)
+## Notes after the session (8 min)
 
-4. Think of your last busy day. How many patients were you working with at the same time?
-5. Walk me through one of those sessions. While you were with one patient, what were the others doing?
-6. When a patient finishes an exercise, how do they know what comes next? (you tell them, a sheet, a whiteboard, they remember…)
-7. How often does a patient stop and wait for you, or call you over? What do you do then?
-8. Have you set up anything to handle this yourself? (sheets on the wall, a whiteboard, an assistant, WhatsApp…) How well does it work?
-9. What happens to the session when you get interrupted a lot? How does it feel at the end of the day?
-10. Have you ever had to turn a patient away or run late because of this?
+5. Think of your last GeSY session. What did you write in the clinical note, and where? (GeSY portal, own software, paper)
+6. When did you write it? (during, between patients, end of day, at home) How long did it take?
+7. What does GeSY require in the note? Has ΟΑΥ ever checked your notes, or questioned or rejected a claim because of one? Have you heard about the recent ΟΑΥ fines over clinical notes, and did it change how you write yours? (If they agree: "Could you show me what the notes screen looks like?")
+8. For private patients, do you write notes too? Same format?
+9. At the end of a session, how do you explain the home exercises to the patient? (say them aloud, show them, write them down)
 
-## Notes after the session (4 min)
+## During the session (4 min)
 
-11. What do you write after a session, where and when? (during, between patients, end of day, at home)
-12. How long does it take you per patient? Who reads the notes (GESY, insurance, doctors), and is there a required format?
+10. Think of yesterday. Was there a time you had more than one patient in the room? What were the others doing?
+11. When a patient finishes an exercise during the session, how do they know what comes next?
+12. (If they run groups or private sports sessions) How do you keep track of everyone?
 
 ## Home exercises (5 min)
 
@@ -48,11 +48,12 @@ Length: 25–30 min. Ask for permission before taking notes or recording.
 20. Who else should I talk to?
 21. Can I contact you again when I have something to show?
 
-**Only after all the questions:** if there is time, show the demo (speak a plan → patient screen on my phone → room board). Note their first reaction in their own words before asking anything.
+**Only after all the questions:** if there is time, show the demo (speak the home program for 30 s → clinical note + patient's program link on my phone). Note their first reaction in their own words before asking anything.
 
 ## Things to watch for
 
 - Exact words they use for the problem (useful for marketing copy later).
 - Workarounds they have built themselves = strong signal of real pain.
 - Numbers: patients at once, interruptions per session, minutes lost.
+- Numbers: minutes per note, when notes get written (after hours = strong pain), GeSY vs private share.
 - Avoid leading questions like "Would you use an app that…?"

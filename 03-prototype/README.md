@@ -1,5 +1,7 @@
 # PhysioPath demo
 
+> **Focus changed on 2026-10-25:** PhysioPath is now about the end of the session (the GeSY clinical note + home program; see [../02-product/mvp-spec.md](../02-product/mvp-spec.md)). This README still describes the demo as built (session mode). It will be updated as the demo moves to the v0 flow.
+
 At the start of a session the physio speaks the day's exercises in Greek. The patient follows them on their phone (QR code) or a clinic tablet, one exercise at a time, while the physio watches every patient on a room board. At the end, the session becomes the patient's home program and a clinical note. Built to show at the end of physio interviews.
 
 **Fictional patients only.** Real patient data waits for the steps in [../06-privacy-legal/checklist.md](../06-privacy-legal/checklist.md).

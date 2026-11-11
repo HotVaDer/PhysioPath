@@ -2,6 +2,12 @@
 
 Newest first. One entry per decision: what, why, what we'd need to see to change it.
 
+## 2026-10-25 – Back to v0: the end of the session is the product
+
+- **Decision:** The main product is v0 again: at the end of a one-to-one session the physio speaks for ~30 s and gets the clinical note and the patient's home program, both reviewed before use. Session mode (patient session screen, room board) is parked, not deleted, as a possible later option for GeSY group exercise (PHYS04), private group classes or sports rehab.
+- **Why:** GeSY's normal physio sessions (PHYS01–03) must be one-to-one ("δεν εξυπηρετούνται παράλληλα άλλοι ασθενείς", allied-health rules Sep 2025), so a room board for parallel patients in those sessions shows what GeSY forbids. The only exception is PHYS04, supervised group exercise for 2–4 patients (45′), allowed only for neuro and scoliosis diagnoses: a niche, not the main market. Forums, blogs and a friend's feedback agree that physios see parallel care as a compromise, not something to optimise. GeSY requires a clinical note for every paid session (service given, assessment results, treatment plan, progress), which is v0's job. Dictating the home program at the end doubles as the explanation the physio already gives the patient.
+- **Revisit if:** Interviews show GeSY notes take little time or are not a pain, or that parallel work (PHYS04 neuro groups, or outside GeSY) is common and accepted in the segment we pick.
+
 ## 2026-10-18 – Speech model back to turbo; program step stays at effort medium
 
 - **Decision:** Whisper large-v3-turbo (not large-v3) with proofreading; Claude Opus 5.5 program step stays at effort medium.

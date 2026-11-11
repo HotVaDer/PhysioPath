@@ -1,6 +1,6 @@
 # PhysioPath
 
-The physio's assistant during the session: the physio speaks today's exercises, the patient follows them on a phone or tablet, the physio sees the whole room. At the end: home program for the patient + clinical note for the clinic. Greek first, for physiotherapists in Cyprus and Greece.
+GeSY paperwork, done before the patient leaves: at the end of the session the physio speaks for about 30 seconds, and PhysioPath writes the clinical note (in the four parts GeSY requires) and the patient's home program. Greek first, for physiotherapists in Cyprus and Greece. Session mode (patient screen, room board) is parked; see [notes/decisions.md](notes/decisions.md).
 
 **The physio decides, the AI writes.**
 
@@ -23,7 +23,7 @@ Full pitch: [00-pitch/pitch.md](00-pitch/pitch.md)
 | [02-product/](02-product/) | MVP spec, example voice notes and expected outputs |
 | [03-prototype/](03-prototype/) | Code for the first version |
 | [04-pilot/](04-pilot/) | Pilot plan, metrics, feedback |
-| [05-business/](05-business/) | Competitors, pricing, business model notes |
+| [05-business/](05-business/) | Competitors, GeSY rules, pricing, business model notes |
 | [06-privacy-legal/](06-privacy-legal/) | GDPR checklist, consent forms, regulatory notes |
 | [07-outreach/](07-outreach/) | Contacts, message templates for physios and mentors |
 | [notes/](notes/) | Decision log, open questions, assumptions to test |
