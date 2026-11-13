@@ -95,11 +95,142 @@
 
   footer { border-top: 1px solid var(--border); padding-top: 20px; color: var(--muted); font-size: 15px; max-width: 62ch; }
   footer p { margin: 0 0 6px; }
+
+  a { color: var(--accent); text-underline-offset: 3px; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  /* Row under the video: details on the left, button to the questionnaire on the right (stacks on phones). */
+  .under-video {
+    margin-top: 12px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px;
+  }
+  .cta {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 48px; padding: 0 24px; border-radius: 999px;
+    background: var(--accent); color: var(--bg);
+    font-weight: 650; text-decoration: none; white-space: nowrap;
+  }
+  .cta:hover { filter: brightness(1.08); }
+
+  /* Draw the eye: the button pops in, then a soft ring pulses around it until it is clicked.
+     When the video ends it pops again. No motion for people who turned animations off. */
+  .cta {
+    position: relative;
+    animation: cta-pop .6s cubic-bezier(.34, 1.56, .64, 1) .8s both;
+  }
+  .cta::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    box-shadow: 0 0 0 0 var(--accent);
+    animation: cta-ring 2.2s ease-out 1.6s infinite;
+    pointer-events: none;
+  }
+  .cta.again { animation: cta-pop .6s cubic-bezier(.34, 1.56, .64, 1) both; }
+  .cta.seen::after { animation: none; }
+  @keyframes cta-pop {
+    0%   { transform: scale(.6); opacity: 0; }
+    100% { transform: scale(1);  opacity: 1; }
+  }
+  @keyframes cta-ring {
+    0%   { box-shadow: 0 0 0 0 var(--accent); opacity: .55; }
+    70%  { box-shadow: 0 0 0 14px var(--accent); opacity: 0; }
+    100% { box-shadow: 0 0 0 14px var(--accent); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cta, .cta.again, .cta::after { animation: none; }
+  }
+  .cta:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  #gnomi { scroll-margin-top: 16px; }
+
+  /* Questionnaire: one card per question, pill buttons for choices, same tokens as above. */
+  :root { --danger: #a3261c; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --danger: #ff9b8f; } }
+  :root[data-theme="dark"] { --danger: #ff9b8f; }
+
+  .lead { margin: 0 0 16px; color: var(--muted); max-width: 62ch; }
+  form { display: grid; gap: 14px; }
+  fieldset {
+    margin: 0; min-width: 0;
+    padding: 16px 18px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 12px;
+    display: grid; gap: 12px;
+  }
+  .q-title { font-weight: 650; line-height: 1.45; }
+  .num { color: var(--accent); margin-right: 6px; font-variant-numeric: tabular-nums; }
+
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+  .choice { position: relative; }
+  .choice input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+  .choice span {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; padding: 0 16px; box-sizing: border-box;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: var(--bg); cursor: pointer; user-select: none;
+  }
+  .choice input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 500; }
+  .choice input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .scale .choice span { width: 48px; padding: 0; font-variant-numeric: tabular-nums; }
+  .scale-ends { display: flex; justify-content: space-between; max-width: 272px; font-size: 14px; color: var(--muted); }
+
+  .field { display: grid; gap: 6px; }
+  .field label { font-size: 15px; color: var(--muted); }
+  input[type="text"], textarea {
+    width: 100%; box-sizing: border-box; min-height: 44px;
+    padding: 10px 12px; font: inherit; color: var(--fg);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+  }
+  textarea { min-height: 96px; resize: vertical; }
+  input[type="text"]:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+
+  .consent { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; color: var(--muted); cursor: pointer; }
+  .consent input { width: 20px; height: 20px; margin: 3px 0 0; flex: none; accent-color: var(--accent); }
+
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+  .submit {
+    min-height: 48px; padding: 0 28px; border: 0; border-radius: 999px;
+    background: var(--accent); color: var(--bg);
+    font: inherit; font-weight: 650; cursor: pointer;
+  }
+  .submit:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .submit:disabled { opacity: .6; cursor: progress; }
+  .status { margin: 0; font-size: 15px; }
+  .status.error { color: var(--danger); }
+
+  .thanks {
+    padding: 20px 18px; background: var(--surface);
+    border: 1px solid var(--accent); border-radius: 12px;
+  }
+  .thanks:focus { outline: none; }
+  .thanks b { display: block; font-size: 20px; font-weight: 650; margin-bottom: 4px; }
+  .thanks p { margin: 0; color: var(--muted); }
+
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  [hidden] { display: none !important; }
+
+  /* Top row: brand left, ΕΛ | EN switch right. */
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .lang-switch {
+    display: inline-flex; padding: 3px; gap: 2px;
+    border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+  }
+  .lang-switch button {
+    min-width: 48px; min-height: 40px; padding: 0 12px;
+    border: 0; border-radius: 999px; background: transparent; color: var(--muted);
+    font: inherit; font-size: 15px; font-weight: 650; cursor: pointer;
+  }
+  .lang-switch button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
+  .lang-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
 <main class="wrap">
-  <div class="brand"><i></i>PhysioPath</div>
+  <div class="top">
+    <div class="brand"><i></i>PhysioPath</div>
+    <div class="lang-switch" role="group" aria-label="Γλώσσα / Language">
+      <button type="button" data-lang="gr" aria-pressed="true">ΕΛ</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
+  </div>
 
   <header>
     <h1>Από τη φωνή σας στο πρόγραμμα του ασθενή</h1>
@@ -113,7 +244,10 @@
         Ο browser σας δεν μπορεί να παίξει το βίντεο.
       </video>
     </div>
-    <p class="meta" style="margin-top:10px">Διάρκεια 1:36 · Οι ασθενείς στο βίντεο είναι φανταστικοί.</p>
+    <div class="under-video">
+      <p class="meta">Διάρκεια 1:36 · Οι ασθενείς στο βίντεο είναι φανταστικοί.</p>
+      <a class="cta" href="#gnomi">Πείτε μας τη γνώμη σας ↓</a>
+    </div>
   </section>
 
   <section>
@@ -126,10 +260,300 @@
     </ol>
   </section>
 
+  <section id="gnomi" aria-labelledby="gnomi-title">
+    <h2 id="gnomi-title">Πείτε μου τη γνώμη σας</h2>
+    <p class="lead">Περίπου 2 λεπτά. Απαντήστε όσες ερωτήσεις θέλετε, καμία δεν είναι υποχρεωτική. Η ειλικρινής γνώμη σας, θετική ή αρνητική, με βοηθά περισσότερο.</p>
+
+    <form id="feedback" novalidate>
+      <fieldset aria-labelledby="q1">
+        <div class="q-title" id="q1"><span class="num">1</span>Ποιος είναι ο ρόλος σας;</div>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="role" value="physio"><span>Φυσιοθεραπευτής/τρια</span></label>
+          <label class="choice"><input type="radio" name="role" value="owner"><span>Ιδιοκτήτης/τρια κέντρου</span></label>
+          <label class="choice"><input type="radio" name="role" value="head"><span>Υπεύθυνος/η τμήματος</span></label>
+          <label class="choice"><input type="radio" name="role" value="assistant"><span>Βοηθός</span></label>
+          <label class="choice"><input type="radio" name="role" value="other"><span>Άλλο</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset aria-labelledby="q2">
+        <div class="q-title" id="q2"><span class="num">2</span>Πόσα άτομα δουλεύουν στο κέντρο σας;</div>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="team_size" value="1"><span>Μόνο εγώ</span></label>
+          <label class="choice"><input type="radio" name="team_size" value="2 to 4"><span>2–4</span></label>
+          <label class="choice"><input type="radio" name="team_size" value="5 to 10"><span>5–10</span></label>
+          <label class="choice"><input type="radio" name="team_size" value="10+"><span>Πάνω από 10</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset aria-labelledby="q3">
+        <div class="q-title" id="q3"><span class="num">3</span>Πόσο χρήσιμο σας φαίνεται να λέτε τις ασκήσεις φωναχτά και να γράφονται μόνες τους η κλινική σημείωση και το πρόγραμμα;</div>
+        <div>
+          <div class="choices scale">
+            <label class="choice"><input type="radio" name="useful_voice" value="1"><span>1</span></label>
+            <label class="choice"><input type="radio" name="useful_voice" value="2"><span>2</span></label>
+            <label class="choice"><input type="radio" name="useful_voice" value="3"><span>3</span></label>
+            <label class="choice"><input type="radio" name="useful_voice" value="4"><span>4</span></label>
+            <label class="choice"><input type="radio" name="useful_voice" value="5"><span>5</span></label>
+          </div>
+          <div class="scale-ends" aria-hidden="true"><span>Καθόλου</span><span>Πολύ</span></div>
+        </div>
+      </fieldset>
+
+      <fieldset aria-labelledby="q4">
+        <div class="q-title" id="q4"><span class="num">4</span>Πόσο χρήσιμη σας φαίνεται η «Αίθουσα», η οθόνη που δείχνει ποιος ασκείται, ποιος έχει απορία και ποιος πονάει;</div>
+        <div>
+          <div class="choices scale">
+            <label class="choice"><input type="radio" name="useful_room" value="1"><span>1</span></label>
+            <label class="choice"><input type="radio" name="useful_room" value="2"><span>2</span></label>
+            <label class="choice"><input type="radio" name="useful_room" value="3"><span>3</span></label>
+            <label class="choice"><input type="radio" name="useful_room" value="4"><span>4</span></label>
+            <label class="choice"><input type="radio" name="useful_room" value="5"><span>5</span></label>
+          </div>
+          <div class="scale-ends" aria-hidden="true"><span>Καθόλου</span><span>Πολύ</span></div>
+        </div>
+      </fieldset>
+
+      <fieldset aria-labelledby="q5">
+        <div class="q-title" id="q5"><span class="num">5</span>Θα το χρησιμοποιούσατε στο κέντρο σας;</div>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="would_use" value="yes"><span>Ναι</span></label>
+          <label class="choice"><input type="radio" name="would_use" value="maybe"><span>Ίσως</span></label>
+          <label class="choice"><input type="radio" name="would_use" value="no"><span>Όχι</span></label>
+        </div>
+        <div class="field">
+          <label for="why">Γιατί;</label>
+          <textarea id="why" name="why" maxlength="2000"></textarea>
+        </div>
+      </fieldset>
+
+      <fieldset aria-labelledby="q6">
+        <div class="q-title" id="q6"><span class="num">6</span>Τι λείπει ή τι δεν σας αρέσει;</div>
+        <div class="field">
+          <label for="missing" class="hp">Τι λείπει ή τι δεν σας αρέσει;</label>
+          <textarea id="missing" name="missing" maxlength="2000"></textarea>
+        </div>
+      </fieldset>
+
+      <fieldset aria-labelledby="q7">
+        <div class="q-title" id="q7"><span class="num">7</span>Θέλετε να κανονίσουμε μια σύντομη συνάντηση (15–20 λεπτά);</div>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="wants_meeting" value="yes"><span>Ναι</span></label>
+          <label class="choice"><input type="radio" name="wants_meeting" value="no"><span>Όχι, ευχαριστώ</span></label>
+        </div>
+        <div id="meeting-fields" hidden>
+          <div class="field">
+            <label for="contact">Email ή τηλέφωνο για να επικοινωνήσω μαζί σας</label>
+            <input type="text" id="contact" name="contact" maxlength="200" autocomplete="email">
+          </div>
+          <div class="field" style="margin-top:12px">
+            <label for="clinic">Όνομα κέντρου (προαιρετικό)</label>
+            <input type="text" id="clinic" name="clinic" maxlength="200" autocomplete="organization">
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="hp" aria-hidden="true">
+        <label for="website">Μην το συμπληρώσετε</label>
+        <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+      </div>
+
+      <label class="consent">
+        <input type="checkbox" id="consent" name="consent">
+        <span>Οι απαντήσεις χρησιμοποιούνται μόνο για την έρευνα του μαθήματος ΕΠΛ679 «Ηλεκτρονική Υγεία» και δεν δημοσιεύονται με το όνομά σας ή του κέντρου. Δεν γράφω στοιχεία ασθενών.</span>
+      </label>
+
+      <div class="actions">
+        <button type="submit" class="submit" id="send">Αποστολή</button>
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+      </div>
+    </form>
+
+    <div class="thanks" id="thanks" tabindex="-1" hidden>
+      <b>Ευχαριστώ πολύ!</b>
+      <p id="thanks-text">Η γνώμη σας καταγράφηκε.</p>
+    </div>
+  </section>
+
   <footer>
-    <p>Είναι πρωτότυπο για έρευνα, όχι προϊόν προς πώληση. Η γνώμη σας θα με βοηθούσε πολύ, όποια κι αν είναι.</p>
+    <p>Είναι πρωτότυπο για έρευνα, όχι προϊόν προς πώληση. Δεν κάνει διάγνωση και δεν προτείνει θεραπεία· όλα τα γράφει και τα εγκρίνει ο φυσιοθεραπευτής.</p>
     <p>Στυλιανός · Τμήμα Πληροφορικής, Πανεπιστήμιο Κύπρου</p>
   </footer>
 </main>
+<script>
+  // Sends the answers to a Google Sheet (Apps Script web app, source in the main branch:
+  // 07-outreach/feedback/apps-script.gs). Plain-text JSON keeps it a "simple" request, so no CORS preflight.
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbyh9U0WHILQ_2DcB071b_mo1kUocB-wSRWPAojnWn9JiHMpnq0a4NWmho6yj0pRoxyFSw/exec";
+  const FIELDS = ["role", "team_size", "useful_voice", "useful_room", "would_use", "why", "missing", "wants_meeting", "contact", "clinic"];
+
+  // Language: Greek is written in the HTML; English swaps every text node through this table.
+  // ?lang=en in the link opens in English; the choice is remembered on this device.
+  const EN = {
+    "PhysioPath demo": "PhysioPath demo",
+    "Από τη φωνή σας στο πρόγραμμα του ασθενή": "From your voice to the patient's program",
+    "Ένα σύντομο βίντεο με το πρωτότυπο που φτιάχνω στο Πανεπιστήμιο Κύπρου. Ο φυσιοθεραπευτής λέει τις ασκήσεις φωναχτά, όπως θα τις έλεγε στον ασθενή, και η εφαρμογή γράφει την κλινική σημείωση και το πρόγραμμα του ασθενή.":
+      "A short video of the prototype I'm building at the University of Cyprus. The physiotherapist says the exercises out loud, just as they would tell the patient, and the app writes the clinical note and the patient's program.",
+    "Ο browser σας δεν μπορεί να παίξει το βίντεο.": "Your browser can't play this video.",
+    "Διάρκεια 1:36 · Οι ασθενείς στο βίντεο είναι φανταστικοί.": "1:36 · The video is in Greek. The patients in it are fictional.",
+    "Πείτε μας τη γνώμη σας ↓": "Tell us your opinion ↓",
+    "Τι βλέπετε στο βίντεο": "What you see in the video",
+    "Ηχογράφηση": "Recording",
+    "Ο φυσιοθεραπευτής περιγράφει τις ασκήσεις με φωνητική σημείωση. Οι ιατρικοί όροι διορθώνονται αυτόματα και μπορείτε να αναιρέσετε κάθε διόρθωση.":
+      "The physiotherapist describes the exercises in a voice note. Medical terms are corrected automatically, and you can undo any correction.",
+    "Έλεγχος": "Review",
+    "Βλέπετε το πρόγραμμα και την κλινική σημείωση πριν φτάσει οτιδήποτε στον ασθενή. Τα πεδία που λείπουν σημειώνονται. Η κλινική σημείωση μένει μόνο στον φυσιοθεραπευτή.":
+      "You see the program and the clinical note before anything reaches the patient. Missing fields are flagged. The clinical note stays with the physiotherapist only.",
+    "Έναρξη και αίθουσα": "Start and room board",
+    "Ο ασθενής σκανάρει έναν κωδικό QR και βλέπει τις ασκήσεις του στο κινητό, μία μία. Εσείς βλέπετε σε μία οθόνη ποιος ασκείται, ποιος έχει απορία και ποιος πονάει.":
+      "The patient scans a QR code and sees their exercises on their phone, one at a time. You see on one screen who is exercising, who has a question and who is in pain.",
+    "Πρόγραμμα για το σπίτι": "Home program",
+    "Στο τέλος ο ασθενής παίρνει σύνδεσμο με το πρόγραμμά του για το σπίτι, με SMS ή WhatsApp.":
+      "At the end, the patient gets a link to their home program by SMS or WhatsApp.",
+    "Πείτε μου τη γνώμη σας": "Tell me your opinion",
+    "Περίπου 2 λεπτά. Απαντήστε όσες ερωτήσεις θέλετε, καμία δεν είναι υποχρεωτική. Η ειλικρινής γνώμη σας, θετική ή αρνητική, με βοηθά περισσότερο.":
+      "About 2 minutes. Answer as many questions as you like, none are required. Your honest opinion, good or bad, helps me most.",
+    "Ποιος είναι ο ρόλος σας;": "What is your role?",
+    "Φυσιοθεραπευτής/τρια": "Physiotherapist",
+    "Ιδιοκτήτης/τρια κέντρου": "Clinic owner",
+    "Υπεύθυνος/η τμήματος": "Head of department",
+    "Βοηθός": "Assistant",
+    "Άλλο": "Other",
+    "Πόσα άτομα δουλεύουν στο κέντρο σας;": "How many people work at your clinic?",
+    "Μόνο εγώ": "Just me",
+    "Πάνω από 10": "More than 10",
+    "Πόσο χρήσιμο σας φαίνεται να λέτε τις ασκήσεις φωναχτά και να γράφονται μόνες τους η κλινική σημείωση και το πρόγραμμα;":
+      "How useful is it to say the exercises out loud and have the clinical note and program written for you?",
+    "Καθόλου": "Not at all",
+    "Πολύ": "Very",
+    "Πόσο χρήσιμη σας φαίνεται η «Αίθουσα», η οθόνη που δείχνει ποιος ασκείται, ποιος έχει απορία και ποιος πονάει;":
+      "How useful is the room board, the screen that shows who is exercising, who has a question and who is in pain?",
+    "Θα το χρησιμοποιούσατε στο κέντρο σας;": "Would you use it at your clinic?",
+    "Ναι": "Yes",
+    "Ίσως": "Maybe",
+    "Όχι": "No",
+    "Γιατί;": "Why?",
+    "Τι λείπει ή τι δεν σας αρέσει;": "What's missing, or what don't you like?",
+    "Θέλετε να κανονίσουμε μια σύντομη συνάντηση (15–20 λεπτά);": "Would you like to set up a short meeting (15–20 minutes)?",
+    "Όχι, ευχαριστώ": "No, thanks",
+    "Email ή τηλέφωνο για να επικοινωνήσω μαζί σας": "Email or phone so I can contact you",
+    "Όνομα κέντρου (προαιρετικό)": "Clinic name (optional)",
+    "Μην το συμπληρώσετε": "Leave this empty",
+    "Οι απαντήσεις χρησιμοποιούνται μόνο για την έρευνα του μαθήματος ΕΠΛ679 «Ηλεκτρονική Υγεία» και δεν δημοσιεύονται με το όνομά σας ή του κέντρου. Δεν γράφω στοιχεία ασθενών.":
+      "Answers are used only for research in the EPL679 (eHealth) course and are never published with your name or your clinic's. I'm not including any patient details.",
+    "Αποστολή": "Send",
+    "Αποστολή…": "Sending…",
+    "Ευχαριστώ πολύ!": "Thank you very much!",
+    "Η γνώμη σας καταγράφηκε.": "Your opinion has been recorded.",
+    "Η γνώμη σας καταγράφηκε. Θα επικοινωνήσω μαζί σας σύντομα για τη συνάντηση.": "Your opinion has been recorded. I'll contact you soon about the meeting.",
+    "Απαντήστε τουλάχιστον μία ερώτηση.": "Please answer at least one question.",
+    "Γράψτε ένα email ή τηλέφωνο για τη συνάντηση, ή απαντήστε απλώς στο email μου.": "Add an email or phone for the meeting, or simply reply to my email.",
+    "Τσεκάρετε το κουτάκι πάνω από το κουμπί για να σταλεί.": "Tick the box above the button to send.",
+    "Η απάντηση δεν στάλθηκε. Δοκιμάστε ξανά σε λίγο ή απαντήστε απλώς στο email μου.": "Your answer wasn't sent. Please try again in a moment, or simply reply to my email.",
+    "Είναι πρωτότυπο για έρευνα, όχι προϊόν προς πώληση. Δεν κάνει διάγνωση και δεν προτείνει θεραπεία· όλα τα γράφει και τα εγκρίνει ο φυσιοθεραπευτής.":
+      "This is a research prototype, not a product for sale. It doesn't diagnose or suggest treatment; the physiotherapist writes and approves everything.",
+    "Στυλιανός · Τμήμα Πληροφορικής, Πανεπιστήμιο Κύπρου": "Stylianos · Department of Computer Science, University of Cyprus",
+  };
+  let lang = "gr";
+  const t = (gr) => (lang === "en" && EN[gr]) || gr;
+
+  // Remember each text node's Greek original once, so switching back and forth is lossless.
+  const textNodes = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const n = walker.currentNode, gr = n.nodeValue.trim();
+    if (gr && EN[gr] && !n.parentElement.closest("script")) textNodes.push([n, n.nodeValue]);
+  }
+
+  function setLang(next, remember) {
+    lang = next === "en" ? "en" : "gr";
+    document.documentElement.lang = lang === "en" ? "en" : "el";
+    for (const [n, orig] of textNodes) {
+      const gr = orig.trim();
+      n.nodeValue = lang === "en" ? orig.replace(gr, EN[gr]) : orig;
+    }
+    for (const b of document.querySelectorAll(".lang-switch button"))
+      b.setAttribute("aria-pressed", String(b.dataset.lang === lang));
+    // Text the script itself changes (button while sending, thank-you line) is refreshed here too.
+    const btn = document.getElementById("send");
+    btn.textContent = t(btn.disabled ? "Αποστολή…" : "Αποστολή");
+    const tt = document.getElementById("thanks-text");
+    tt.textContent = t(tt.dataset.meeting ? "Η γνώμη σας καταγράφηκε. Θα επικοινωνήσω μαζί σας σύντομα για τη συνάντηση." : "Η γνώμη σας καταγράφηκε.");
+    if (remember) { try { localStorage.setItem("pp-lang", lang); } catch (e) {} }
+  }
+  for (const b of document.querySelectorAll(".lang-switch button"))
+    b.addEventListener("click", () => {
+      setLang(b.dataset.lang, true);
+      // Keep any message on screen in the same language.
+      const s = document.getElementById("status");
+      const back = Object.keys(EN).find((k) => EN[k] === s.textContent) || s.textContent;
+      if (s.textContent) s.textContent = t(back);
+    });
+  {
+    let saved = null;
+    try { saved = localStorage.getItem("pp-lang"); } catch (e) {}
+    const fromUrl = new URLSearchParams(location.search).get("lang");
+    setLang(fromUrl || saved || "gr", false);
+  }
+
+  // Opinion button: stop the pulse once clicked; pop it again when the video finishes.
+  const cta = document.querySelector(".cta");
+  cta.addEventListener("click", () => cta.classList.add("seen"));
+  document.getElementById("demo").addEventListener("ended", () => {
+    cta.classList.remove("again");
+    void cta.offsetWidth; // restart the animation
+    cta.classList.add("again");
+  });
+
+  const form = document.getElementById("feedback");
+  const statusEl = document.getElementById("status");
+  const sendBtn = document.getElementById("send");
+  const meetingFields = document.getElementById("meeting-fields");
+
+  form.addEventListener("change", (e) => {
+    if (e.target.name === "wants_meeting") meetingFields.hidden = e.target.value !== "yes";
+  });
+
+  function say(text, isError) {
+    statusEl.textContent = text;
+    statusEl.classList.toggle("error", !!isError);
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const data = { lang, website: fd.get("website") || "" };
+    for (const f of FIELDS) data[f] = String(fd.get(f) || "").trim();
+    if (data.wants_meeting !== "yes") { data.contact = ""; data.clinic = ""; }
+
+    if (!FIELDS.some((f) => data[f])) return say(t("Απαντήστε τουλάχιστον μία ερώτηση."), true);
+    if (data.wants_meeting === "yes" && !data.contact)
+      return say(t("Γράψτε ένα email ή τηλέφωνο για τη συνάντηση, ή απαντήστε απλώς στο email μου."), true);
+    if (!form.consent.checked) return say(t("Τσεκάρετε το κουτάκι πάνω από το κουμπί για να σταλεί."), true);
+
+    sendBtn.disabled = true;
+    sendBtn.textContent = t("Αποστολή…");
+    say("");
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 20000);
+    try {
+      const res = await fetch(ENDPOINT, { method: "POST", body: JSON.stringify(data), signal: ctrl.signal });
+      const out = await res.json();
+      if (!out.ok) throw new Error("not ok");
+      form.hidden = true;
+      if (data.wants_meeting === "yes") document.getElementById("thanks-text").dataset.meeting = "1";
+      if (data.wants_meeting === "yes")
+        document.getElementById("thanks-text").textContent = t("Η γνώμη σας καταγράφηκε. Θα επικοινωνήσω μαζί σας σύντομα για τη συνάντηση.");
+      const thanks = document.getElementById("thanks");
+      thanks.hidden = false;
+      thanks.focus();
+    } catch (err) {
+      say(t("Η απάντηση δεν στάλθηκε. Δοκιμάστε ξανά σε λίγο ή απαντήστε απλώς στο email μου."), true);
+      sendBtn.disabled = false;
+      sendBtn.textContent = t("Αποστολή");
+    } finally {
+      clearTimeout(timer);
+    }
+  });
+</script>
 </body>
 </html>
