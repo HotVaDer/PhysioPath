@@ -2,6 +2,10 @@
 
 Contacts: `contacts.csv` (local only). Fill in everything in [brackets] before sending.
 
+Demo video (linked in every email): https://hotvader.github.io/PhysioPath/demo/ (English: add `?lang=en`)
+
+The outreach app (`app/`) sends the wording in `app/templates.json`. Keep this file and that one in sync.
+
 ## How to send
 
 - **One email per clinic, never CC.** Each one should feel personal: their name or clinic name in the greeting, and one line about them if you can (e.g. "I saw you work a lot with sports injuries").
@@ -15,19 +19,20 @@ Contacts: `contacts.csv` (local only). Fill in everything in [brackets] before s
 
 ## Email: Greek (default)
 
-**Θέμα:** Φοιτητής Πανεπιστημίου Κύπρου: 20 λεπτά για την εμπειρία σας ως φυσιοθεραπευτής;
+**Θέμα:** Φοιτητής Πανεπιστημίου Κύπρου: θα θέλατε να δείτε ένα πρωτότυπο για φυσιοθεραπευτές;
 
 > Καλησπέρα σας [κύριε/κυρία Επώνυμο | ομάδα του Όνομα Κέντρου],
 >
 > Ονομάζομαι Στυλιανός [Επώνυμο] και είμαι τεταρτοετής φοιτητής Πληροφορικής στο Πανεπιστήμιο Κύπρου.
 >
-> Πριν από λίγο καιρό χειρουργήθηκα για ρήξη δικεφάλου και πέρασα από φυσιοθεραπεία. Τότε κατάλαβα πόσα πράγματα πρέπει να θυμάται ο ασθενής ανάμεσα στις συνεδρίες, αλλά και πόσος χρόνος χρειάζεται από τον φυσιοθεραπευτή για σημειώσεις και οδηγίες.
+> Πριν από λίγο καιρό χειρουργήθηκα για ρήξη δικεφάλου και πέρασα από φυσιοθεραπεία. Από εκεί ξεκίνησε η εργασία μου στο πλαίσιο του μαθήματος ΕΠΛ679 «Ηλεκτρονική Υγεία»: ένα πρωτότυπο που βοηθά τον φυσιοθεραπευτή με τις σημειώσεις και τις ασκήσεις για το σπίτι.
 >
-> Στο πλαίσιο του μαθήματος [ΕΠΛ679 – όνομα μαθήματος] κάνω μια μικρή έρευνα για το πώς δουλεύουν σήμερα οι φυσιοθεραπευτές με:
-> - τις σημειώσεις μετά από κάθε συνεδρία, και
-> - τις ασκήσεις που δίνουν στους ασθενείς για το σπίτι.
+> Ο φυσιοθεραπευτής λέει τις ασκήσεις φωναχτά και η εφαρμογή γράφει την κλινική σημείωση και το πρόγραμμα του ασθενή. Σε μία οθόνη βλέπετε ποιος ασκείται, ποιος έχει απορία και ποιος πονάει, κάτι που βοηθά κυρίως όταν στο κέντρο δουλεύουν αρκετοί φυσιοθεραπευτές ή βοηθοί.
 >
-> Δεν πουλάω κάτι. Θα ήθελα μόνο να ακούσω την εμπειρία σας. Θα μπορούσατε να μου διαθέσετε περίπου 20 λεπτά, στον χώρο σας, τηλεφωνικά ή μέσω βιντεοκλήσης, όποτε σας βολεύει;
+> Έφτιαξα ένα βίντεο 1,5 λεπτού (οι ασθενείς στο βίντεο είναι φανταστικοί):
+> https://hotvader.github.io/PhysioPath/demo/
+>
+> Τι γνώμη έχετε; Μπορείτε να μου πείτε σε 2 λεπτά στο ερωτηματολόγιο κάτω από το βίντεο. Αν σας αρέσει, απαντήστε σε αυτό το email και κανονίζουμε μια σύντομη συνάντηση 15–20 λεπτών, στον χώρο σας, τηλεφωνικά ή μέσω βιντεοκλήσης, όποτε σας βολεύει. Δεν πουλάω κάτι. Η ειλικρινής γνώμη σας, θετική ή αρνητική, θα με βοηθούσε πολύ.
 >
 > Ό,τι μου πείτε θα χρησιμοποιηθεί μόνο για την έρευνα, χωρίς να αναφερθεί το όνομά σας ή το όνομα του κέντρου.
 >
@@ -44,19 +49,20 @@ Contacts: `contacts.csv` (local only). Fill in everything in [brackets] before s
 
 Use for contacts marked "English" in `contacts.csv`, or clinics whose website is English-only.
 
-**Subject:** University of Cyprus student: 20 minutes about your work as a physiotherapist?
+**Subject:** University of Cyprus student: would you take a look at a prototype for physiotherapists?
 
 > Dear [Name | Clinic team],
 >
 > My name is Stylianos [Surname], and I'm a 4th-year Computer Science student at the University of Cyprus.
 >
-> I recently had surgery for a torn bicep and went through physiotherapy. It showed me how much a patient has to remember between sessions, and how much time physiotherapists spend on notes and instructions.
+> I recently had surgery for a torn bicep and went through physiotherapy. That led to my project for my EPL679 (eHealth) course: a prototype that helps physiotherapists with clinical notes and home exercises.
 >
-> As part of my [EPL679 – course name] course, I'm researching how physiotherapists currently handle:
-> - clinical notes after each session, and
-> - home exercises for their patients.
+> The physiotherapist says the exercises out loud, and the app writes the clinical note and the patient's program. One screen shows who is exercising, who has a question and who is in pain, which helps most when a clinic has several physiotherapists or assistants.
 >
-> I'm not selling anything. I'd just like to hear about your experience. Could you spare about 20 minutes, at your clinic, by phone or on a video call, whenever suits you?
+> I made a 1.5-minute video (the patients in it are fictional; the video is in Greek):
+> https://hotvader.github.io/PhysioPath/demo/?lang=en
+>
+> What do you think? You can tell me in 2 minutes in the short questionnaire under the video. If you like it, just reply to this email and we can set up a short 15–20 minute meeting, at your clinic, by phone or on a video call, whenever suits you. I'm not selling anything. Your honest opinion, good or bad, would help me a lot.
 >
 > Anything you share will be used only for this research, without naming you or your clinic.
 >
@@ -73,14 +79,14 @@ Use for contacts marked "English" in `contacts.csv`, or clinics whose website is
 
 **Greek:**
 
-> Καλησπέρα σας ξανά. Ήθελα απλώς να επανέλθω στο προηγούμενο μήνυμά μου. Ακόμη και 15 λεπτά τηλεφωνικά θα με βοηθούσαν πάρα πολύ. Αν δεν σας ενδιαφέρει, κανένα πρόβλημα, ενημερώστε με και δεν θα σας ξαναενοχλήσω.
+> Καλησπέρα σας ξανά. Ήθελα απλώς να επανέλθω στο προηγούμενο μήνυμά μου. Αν έχετε 2 λεπτά να δείτε το βίντεο (https://hotvader.github.io/PhysioPath/demo/) και σας αρέσει, απαντήστε σε αυτό το email και κανονίζουμε μια σύντομη συνάντηση. Αν δεν σας ενδιαφέρει, κανένα πρόβλημα, ενημερώστε με και δεν θα σας ξαναενοχλήσω.
 >
 > Ευχαριστώ,
 > Στυλιανός
 
 **English:**
 
-> Hi again, just following up on my previous message. Even 15 minutes by phone would help me a lot. If it's not a good fit, no problem at all, just let me know and I won't contact you again.
+> Hi again, just following up on my previous message. If you have 2 minutes to watch the video (https://hotvader.github.io/PhysioPath/demo/?lang=en) and you like it, just reply to this email and we can set up a short meeting. If it's not a good fit, no problem at all, just let me know and I won't contact you again.
 >
 > Thanks,
 > Stylianos
@@ -98,5 +104,5 @@ For contacts with a phone number only. Call mid-morning or early afternoon, not 
 > Δεν πουλάω κάτι. Θα μπορούσα να σας κλέψω 20 λεπτά κάποια μέρα που σας βολεύει, να μου πείτε πώς το κάνετε εσείς;
 
 **If yes:** book date, time and place (clinic, phone or video). Get their email or mobile and send a confirmation message.
-**If "send me an email":** get the address and send the Greek email above the same day.
+**If "send me an email":** get the address and send the Greek email above the same day (it includes the demo video).
 **If no:** "Κανένα πρόβλημα, ευχαριστώ πολύ για τον χρόνο σας." Mark it in `contacts.csv` and move on.
