@@ -1,8 +1,10 @@
-// Speech-to-text bench: how many of the spoken words survive, per Whisper model, before and after
+// Speech-to-text bench: how many of the spoken words (and numbers) survive, per engine, before and after
 // proofreading, and how long each step takes. Runs the app's own transcribe() and proofread().
+// Engines: Whisper (each model in models/), OpenAI and Azure (only when their key is in .env).
 //
-//   npm run bench:speech                  every model in models/, every note in test-audio/
-//   npm run bench:speech -- --generate    also time the program step (Claude) at effort medium vs low
+//   npm run bench:speech                            every engine available, every note in test-audio/
+//   npm run bench:speech -- --engines=openai,azure  only these (local, openai, azure)
+//   npm run bench:speech -- --generate              also time the program step (Claude) at effort medium vs low
 //
 // test-audio/ holds pairs: <name>.<m4a|webm|wav|mp3|…> + <name>.txt with the exact words spoken.
 // It is gitignored (voices are personal data). When it has no audio yet, synthetic phone-quality
@@ -17,24 +19,42 @@ const MODELS_DIR = path.join(ROOT, "models");
 const AUDIO_EXT = /\.(m4a|webm|wav|mp3|ogg|aac|mp4|aiff)$/i;
 
 type Note = { name: string; audio: string; text: string };
-type NoteResult = { name: string; whisperSeconds: number; proofreadSeconds: number; heard: Score; checked: Score; fixes: number; text: string };
-type Score = { kept: number; wer: number };
+type NoteResult = { name: string; speechSeconds: number; proofreadSeconds: number; heard: Score; checked: Score; fixes: number; text: string };
+type Score = { kept: number; wer: number; numbers: number };
 
 // ---- scoring: share of the spoken words found in the transcript, and word error rate ----
 const NUMBER_WORDS: Record<string, string> = {
   ενα: "1", μια: "1", δυο: "2", τρια: "3", τρεισ: "3", τεσσερα: "4", τεσσερισ: "4", πεντε: "5", εξι: "6", επτα: "7", εφτα: "7",
   οκτω: "8", οχτω: "8", εννια: "9", εννεα: "9", δεκα: "10", δωδεκα: "12", δεκαπεντε: "15", εικοσι: "20", τριαντα: "30", σαραντα: "40",
+  πενηντα: "50", εξηντα: "60", εβδομηντα: "70", ογδοντα: "80", ενενηντα: "90",
+  δκυο: "2", // Cypriot
 };
+// Cypriot spellings some engines keep and others turn into standard Greek. Mapped on both sides so neither
+// is penalised for the spelling. Only unambiguous words: «όι» is left out because without accents it is «οι».
+const DIALECT: Record<string, string> = { τζιαι: "και", τζαι: "και", τζιε: "και", μεν: "μην" };
 const words = (text: string) =>
-  text
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .replace(/ς/g, "σ")
-    .replace(/[^\p{L}\p{N}\s]/gu, " ")
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => NUMBER_WORDS[w] ?? w);
+  joinTensAndUnits(
+    text
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      .replace(/ς/g, "σ")
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => NUMBER_WORDS[w] ?? DIALECT[w] ?? w),
+  );
+
+// «τριάντα δύο» is one number (32), the way engines write it as digits.
+function joinTensAndUnits(list: string[]) {
+  const out: string[] = [];
+  for (const w of list) {
+    const last = out.at(-1);
+    if (last && /^[2-9]0$/.test(last) && /^[1-9]$/.test(w)) out[out.length - 1] = String(Number(last) + Number(w));
+    else out.push(w);
+  }
+  return out;
+}
 
 function editDistance(a: string[], b: string[]) {
   let previous = Array.from({ length: b.length + 1 }, (_, j) => j);
@@ -59,7 +79,23 @@ function score(reference: string, hypothesis: string): Score {
       pool.set(w, left - 1);
     }
   }
-  return { kept: found / ref.length, wer: editDistance(ref, hyp) / ref.length };
+  return { kept: found / ref.length, wer: editDistance(ref, hyp) / ref.length, numbers: numbersKept(ref, hyp) };
+}
+
+// Share of the spoken numbers (sets, reps, seconds, ages…) that appear in the transcript. "Words kept" can look
+// fine while a 15 became a 10, so this is the measure that matters most for doses.
+function numbersKept(ref: string[], hyp: string[]) {
+  const spoken = ref.filter((w) => /^\d+$/.test(w));
+  const pool = hyp.filter((w) => /^\d+$/.test(w));
+  let found = 0;
+  for (const n of spoken) {
+    const i = pool.indexOf(n);
+    if (i >= 0) {
+      found++;
+      pool.splice(i, 1);
+    }
+  }
+  return spoken.length ? found / spoken.length : 1;
 }
 
 // ---- test notes ----
@@ -106,18 +142,34 @@ function loadNotes(): Note[] {
   return notes;
 }
 
-// ---- one model (runs in a child process, because the app reads WHISPER_MODEL once at start) ----
-async function measureCurrentModel(notes: Note[]): Promise<NoteResult[]> {
+// ---- engines to compare ----
+// Whisper runs once per downloaded model; cloud engines only when their key is in .env.
+type Engine = { label: string; env: Record<string, string> };
+function engines(): Engine[] {
+  const wanted = (process.argv.find((a) => a.startsWith("--engines="))?.split("=")[1] ?? "local,openai,azure").split(",");
+  const list: Engine[] = [];
+  if (wanted.includes("local")) {
+    const models = existsSync(MODELS_DIR) ? readdirSync(MODELS_DIR).filter((f) => /^ggml-.*\.bin$/.test(f) && !f.includes("silero")).sort() : [];
+    for (const model of models) list.push({ label: `whisper ${model}`, env: { SPEECH: "local", WHISPER_MODEL: path.join(MODELS_DIR, model) } });
+  }
+  if (wanted.includes("openai") && process.env.OPENAI_API_KEY)
+    list.push({ label: `openai ${process.env.OPENAI_SPEECH_MODEL || "gpt-transcribe"}`, env: { SPEECH: "openai" } });
+  if (wanted.includes("azure") && process.env.AZURE_SPEECH_KEY) list.push({ label: "azure el-GR", env: { SPEECH: "azure" } });
+  return list;
+}
+
+// ---- one engine (runs in a child process, because the app reads WHISPER_MODEL once at start) ----
+async function measureEngine(notes: Note[]): Promise<NoteResult[]> {
   const { transcribe, warmUpWhisper } = await import("@/app/lib/transcribe");
   const { proofread } = await import("@/app/lib/proofread");
-  await warmUpWhisper(); // the first run is slow; the app does this at start too
+  await warmUpWhisper(); // Whisper's first run is slow; the app does this at start too (no-op for cloud engines)
   const results: NoteResult[] = [];
   for (const note of notes) {
     const heard = await transcribe(readFileSync(note.audio));
     const checked = await proofread(heard.text);
     results.push({
       name: note.name,
-      whisperSeconds: heard.seconds,
+      speechSeconds: heard.seconds,
       proofreadSeconds: checked.seconds,
       heard: score(note.text, heard.text),
       checked: score(note.text, checked.text),
@@ -151,27 +203,37 @@ const average = (rows: NoteResult[], pick: (r: NoteResult) => number) => rows.re
 
 if (process.env.BENCH_CHILD) {
   const notes: Note[] = JSON.parse(process.env.BENCH_NOTES ?? "[]");
-  console.log(`BENCH_RESULT ${JSON.stringify(await measureCurrentModel(notes))}`);
+  console.log(`BENCH_RESULT ${JSON.stringify(await measureEngine(notes))}`);
 } else {
   const notes = loadNotes();
-  const models = readdirSync(MODELS_DIR).filter((f) => /^ggml-.*\.bin$/.test(f) && !f.includes("silero")).sort();
-  console.log(`${notes.length} notes · models: ${models.join(", ")}\n`);
-  for (const model of models) {
-    const output = execFileSync(process.execPath, [...process.execArgv, process.argv[1]], {
-      env: { ...process.env, BENCH_CHILD: "1", BENCH_NOTES: JSON.stringify(notes), WHISPER_MODEL: path.join(MODELS_DIR, model) },
-      encoding: "utf8",
-      maxBuffer: 20 * 1024 * 1024,
-    });
+  const list = engines();
+  console.log(`${notes.length} notes · engines: ${list.map((e) => e.label).join(", ")}\n`);
+  for (const engine of list) {
+    let output: string;
+    try {
+      output = execFileSync(process.execPath, [...process.execArgv, process.argv[1]], {
+        env: { ...process.env, ...engine.env, BENCH_CHILD: "1", BENCH_NOTES: JSON.stringify(notes) },
+        encoding: "utf8",
+        maxBuffer: 20 * 1024 * 1024,
+      });
+    } catch (e) {
+      console.log(`${engine.label}\n  failed: ${(e as Error).message.split("\n").slice(0, 3).join(" ")}\n`);
+      continue; // one engine failing (no credit, no network) shouldn't hide the others
+    }
     const line = output.split("\n").find((l) => l.startsWith("BENCH_RESULT "));
-    if (!line) throw new Error(`No result for ${model}:\n${output}`);
+    if (!line) throw new Error(`No result for ${engine.label}:\n${output}`);
     const rows: NoteResult[] = JSON.parse(line.slice("BENCH_RESULT ".length));
-    console.log(`${model}`);
+    console.log(`${engine.label}`);
     console.log(
-      `  words kept: Whisper ${pct(average(rows, (r) => r.heard.kept))} → after proofreading ${pct(average(rows, (r) => r.checked.kept))}` +
-        ` · WER after ${pct(average(rows, (r) => r.checked.wer))} · Whisper ${average(rows, (r) => r.whisperSeconds).toFixed(1)} s + proofreading ${average(rows, (r) => r.proofreadSeconds).toFixed(1)} s per note`,
+      `  words kept ${pct(average(rows, (r) => r.heard.kept))} → ${pct(average(rows, (r) => r.checked.kept))} after proofreading` +
+        ` · numbers kept ${pct(average(rows, (r) => r.checked.numbers))} · WER ${pct(average(rows, (r) => r.checked.wer))}` +
+        ` · ${average(rows, (r) => r.speechSeconds).toFixed(1)} s + ${average(rows, (r) => r.proofreadSeconds).toFixed(1)} s per note`,
     );
     for (const r of rows)
-      console.log(`    ${r.name.padEnd(20)} ${pct(r.heard.kept)} → ${pct(r.checked.kept)} · ${r.fixes} fixes · ${r.whisperSeconds} s + ${r.proofreadSeconds} s`);
+      console.log(
+        `    ${r.name.padEnd(20)} ${pct(r.heard.kept)} → ${pct(r.checked.kept)} · numbers ${pct(r.checked.numbers)} · ${r.fixes} fixes · ${r.speechSeconds} s + ${r.proofreadSeconds} s`,
+      );
+    console.log("");
   }
   if (process.argv.includes("--generate")) await compareEffort(notes);
 }
