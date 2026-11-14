@@ -29,10 +29,10 @@ The outreach app (`app/`) sends the wording in `app/templates.json`. Keep this f
 >
 > Ο φυσιοθεραπευτής λέει τις ασκήσεις φωναχτά και η εφαρμογή γράφει την κλινική σημείωση και το πρόγραμμα του ασθενή. Σε μία οθόνη βλέπετε ποιος ασκείται, ποιος έχει απορία και ποιος πονάει, κάτι που βοηθά κυρίως όταν στο κέντρο δουλεύουν αρκετοί φυσιοθεραπευτές ή βοηθοί.
 >
-> Έφτιαξα ένα βίντεο 1,5 λεπτού (οι ασθενείς στο βίντεο είναι φανταστικοί):
+> Έφτιαξα μια σελίδα με ένα βίντεο 1,5 λεπτού και, ακριβώς από κάτω, ένα σύντομο ερωτηματολόγιο (οι ασθενείς στο βίντεο είναι φανταστικοί):
 > https://hotvader.github.io/PhysioPath/demo/
 >
-> Τι γνώμη έχετε; Μπορείτε να μου πείτε σε 2 λεπτά στο ερωτηματολόγιο κάτω από το βίντεο. Αν σας αρέσει, απαντήστε σε αυτό το email και κανονίζουμε μια σύντομη συνάντηση 15–20 λεπτών, στον χώρο σας, τηλεφωνικά ή μέσω βιντεοκλήσης, όποτε σας βολεύει. Δεν πουλάω κάτι. Η ειλικρινής γνώμη σας, θετική ή αρνητική, θα με βοηθούσε πολύ.
+> Θα σας παρακαλούσα να δείτε το βίντεο και να μου πείτε τη γνώμη σας στο ερωτηματολόγιο. Παίρνει περίπου 2 λεπτά, και στο τέλος μπορείτε, αν θέλετε, να κανονίσουμε μια σύντομη συνάντηση. Δεν πουλάω κάτι. Η ειλικρινής γνώμη σας, θετική ή αρνητική, θα με βοηθούσε πολύ.
 >
 > Ό,τι μου πείτε θα χρησιμοποιηθεί μόνο για την έρευνα, χωρίς να αναφερθεί το όνομά σας ή το όνομα του κέντρου.
 >
@@ -59,10 +59,10 @@ Use for contacts marked "English" in `contacts.csv`, or clinics whose website is
 >
 > The physiotherapist says the exercises out loud, and the app writes the clinical note and the patient's program. One screen shows who is exercising, who has a question and who is in pain, which helps most when a clinic has several physiotherapists or assistants.
 >
-> I made a 1.5-minute video (the patients in it are fictional; the video is in Greek):
+> I made a page with a 1.5-minute video and, right below it, a short questionnaire (the patients in the video are fictional; the video is in Greek):
 > https://hotvader.github.io/PhysioPath/demo/?lang=en
 >
-> What do you think? You can tell me in 2 minutes in the short questionnaire under the video. If you like it, just reply to this email and we can set up a short 15–20 minute meeting, at your clinic, by phone or on a video call, whenever suits you. I'm not selling anything. Your honest opinion, good or bad, would help me a lot.
+> I'd be grateful if you could watch the video and share your opinion in the questionnaire. It takes about 2 minutes, and at the end you can also set up a short meeting if you'd like. I'm not selling anything. Your honest opinion, good or bad, would help me a lot.
 >
 > Anything you share will be used only for this research, without naming you or your clinic.
 >
@@ -79,14 +79,14 @@ Use for contacts marked "English" in `contacts.csv`, or clinics whose website is
 
 **Greek:**
 
-> Καλησπέρα σας ξανά. Ήθελα απλώς να επανέλθω στο προηγούμενο μήνυμά μου. Αν έχετε 2 λεπτά να δείτε το βίντεο (https://hotvader.github.io/PhysioPath/demo/) και σας αρέσει, απαντήστε σε αυτό το email και κανονίζουμε μια σύντομη συνάντηση. Αν δεν σας ενδιαφέρει, κανένα πρόβλημα, ενημερώστε με και δεν θα σας ξαναενοχλήσω.
+> Καλησπέρα σας ξανά. Ήθελα απλώς να επανέλθω στο προηγούμενο μήνυμά μου. Αν έχετε 2 λεπτά, θα με βοηθούσε πάρα πολύ να δείτε το βίντεο και να συμπληρώσετε το σύντομο ερωτηματολόγιο από κάτω: https://hotvader.github.io/PhysioPath/demo/ Αν δεν σας ενδιαφέρει, κανένα πρόβλημα, ενημερώστε με και δεν θα σας ξαναενοχλήσω.
 >
 > Ευχαριστώ,
 > Στυλιανός
 
 **English:**
 
-> Hi again, just following up on my previous message. If you have 2 minutes to watch the video (https://hotvader.github.io/PhysioPath/demo/?lang=en) and you like it, just reply to this email and we can set up a short meeting. If it's not a good fit, no problem at all, just let me know and I won't contact you again.
+> Hi again, just following up on my previous message. If you have 2 minutes, it would help me a lot if you could watch the video and fill in the short questionnaire below it: https://hotvader.github.io/PhysioPath/demo/?lang=en If it's not a good fit, no problem at all, just let me know and I won't contact you again.
 >
 > Thanks,
 > Stylianos
