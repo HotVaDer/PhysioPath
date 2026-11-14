@@ -58,3 +58,6 @@ private/
 
 # Demo: voice recordings for the speech bench (personal data)
 03-prototype/test-audio/
+
+# Supabase schema, policies and RLS checks stay local (security: they map the access rules)
+08-app/supabase/

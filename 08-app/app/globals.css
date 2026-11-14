@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/* ---------- Look: «Χαρτιά κλινικής», the clinic's paperwork ----------
+   A sheet of paper on a desk: warm off-white sheet, ink-brown text, a red margin rule,
+   typewriter answers, green for actions, a violet rubber stamp when the form is filed.
+   Design canvas (2026-11-14): https://claude.ai/artifact/SNapakX6eXEUocFVggDnWu, page «Χαρτιά κλινικής».
+   Checked on the sheet (#FFFDF7): ink 15:1, muted 8.4:1, action green 7.9:1 (white on it 8.1:1),
+   stamp violet 9.7:1, error red 8.5:1, field lines 5.6:1. On the coloured tabs and slips text stays ink.
+   Light only for now (paper has no night mode yet). */
+
+:root {
+  color-scheme: light;
+}
+
+@theme {
+  --color-desk: #e7e0d2; /* the desk the sheet lies on */
+  --color-sheet: #fffdf7; /* the paper */
+  --color-ink: #2b2420; /* printed and typed text   15:1 */
+  --color-muted: #554a42; /* labels, notes            8.4:1 */
+  --color-line: #6e655d; /* the line you write on    5.6:1 (≥3:1 for fields) */
+  --color-hairline: #cfc6b4; /* decorative rules only */
+  --color-ledger: #b9c9dd; /* blue ledger lines, decorative */
+  --color-margin: #c65a4e; /* the red double margin rule, decorative */
+  --color-action: #1e5a43; /* «Συνέχεια», links       7.9:1 */
+  --color-action-hover: #15412f;
+  --color-stamp: #5b2a86; /* «ΚΑΤΑΤΕΘΗΚΕ»             9.7:1 */
+  --color-error: #921f12; /* what's wrong with a field 8.5:1 */
+  /* Binder tabs and paper slips (text on them is always ink) */
+  --color-tab-blue: #d6e2f0;
+  --color-tab-pink: #f3d3d8;
+  --color-tab-yellow: #f6e7a9;
+  --color-tab-violet: #e8ddf0;
+  --color-tab-done: #ece6da;
+  --color-note-green: #e3eedf;
+
+  /* Fonts are loaded in app/layout.tsx (self-hosted, with Greek). */
+  --font-display: var(--font-didot), "Didot", Georgia, serif; /* headings: GFS Didot */
+  --font-serif: var(--font-literata), Georgia, serif; /* text: Literata */
+  --font-typed: var(--font-cousine), "Courier New", monospace; /* typed answers: Cousine */
+}
+
+@layer base {
+  body {
+    background: var(--color-desk);
+    color: var(--color-ink);
+    font-family: var(--font-serif);
+    font-size: 18px;
+    line-height: 1.5;
+  }
+
+  a {
+    color: var(--color-action);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  a:hover {
+    color: var(--color-ink);
+  }
+
+  /* One visible focus ring everywhere, for keyboard users. */
+  :focus-visible {
+    outline: 3px solid var(--color-action);
+    outline-offset: 2px;
+  }
+}
+
+/* The rubber stamp lands once when the form is filed. No motion for people who asked for none. */
+@keyframes stamp-in {
+  0% {
+    opacity: 0;
+    transform: scale(1.7) rotate(-16deg);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(0.94) rotate(-7deg);
+  }
+  75% {
+    transform: scale(1.03) rotate(-8deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-8deg);
+  }
+}
+.stamp-in {
+  animation: stamp-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .stamp-in {
+    animation: none;
+  }
+}
