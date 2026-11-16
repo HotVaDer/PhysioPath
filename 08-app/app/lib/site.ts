@@ -4,6 +4,11 @@ export function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3001").replace(/\/+$/, "");
 }
 
+// The button in our emails goes here first (app/auth/confirm), then on to "next".
+export function confirmLink(next: string): string {
+  return `${siteUrl()}/auth/confirm?next=${encodeURIComponent(next)}`;
+}
+
 // Who to contact for help, shown at the bottom of the sign-up and sign-in pages («Χρειάζεστε
 // βοήθεια;»). Fill in a real phone and/or email; while both are null the line is hidden.
 export const HELP: { phone: string | null; email: string | null } = { phone: null, email: null };

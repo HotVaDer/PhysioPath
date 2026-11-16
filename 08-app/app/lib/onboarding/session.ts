@@ -66,3 +66,10 @@ export async function requireMember() {
   if (!profile?.onboarded_at || !profile.clinic_id) redirect("/register/clinic");
   return { supabase, user, profile };
 }
+
+// For the owner's settings (rooms, team). Physios and assistants go home.
+export async function requireOwner() {
+  const member = await requireMember();
+  if (member.profile.role !== "owner") redirect("/");
+  return member as typeof member & { profile: Profile & { clinic_id: string } };
+}

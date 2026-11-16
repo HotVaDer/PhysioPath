@@ -16,8 +16,9 @@ import {
   type FieldErrors,
 } from "@/app/lib/onboarding/schema";
 import { currentUser, requireFormUser, requireMember, saveDraft } from "@/app/lib/onboarding/session";
-import { safeNext, siteUrl } from "@/app/lib/site";
-import { createAdminClient, createAnonClient } from "@/app/lib/supabase/admin";
+import { sendInvites } from "@/app/lib/onboarding/invites";
+import { confirmLink, safeNext } from "@/app/lib/site";
+import { createAdminClient } from "@/app/lib/supabase/admin";
 
 // What a form gets back when something is wrong. React clears a form after it's sent, so the
 // typed values come back too and the fields refill.
@@ -26,10 +27,6 @@ export type FormState = { errors?: FieldErrors; message?: string; notice?: strin
 
 function texts(form: FormData, keys: string[]): Record<string, string> {
   return Object.fromEntries(keys.map((k) => [k, String(form.get(k) ?? "")]));
-}
-
-function confirmLink(next: string): string {
-  return `${siteUrl()}/auth/confirm?next=${encodeURIComponent(next)}`;
 }
 
 function linkError(error: { status?: number; code?: string; message: string }): string {
@@ -113,7 +110,7 @@ export async function resendCode(_: FormState, form: FormData): Promise<FormStat
   const next = safeNext(String(form.get("next") ?? ""), login ? "/" : "/register/clinic");
   const problem = await sendCode(email.data.email, login, next);
   if (problem) return { message: problem };
-  const at = new Intl.DateTimeFormat("el-GR", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Nicosia" }).format(new Date());
+  const at = new Intl.DateTimeFormat("el-GR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Nicosia" }).format(new Date());
   return { notice: `Στείλαμε νέο κωδικό στις ${at}. Ο προηγούμενος δεν ισχύει πια.` };
 }
 
@@ -138,51 +135,14 @@ export async function finishRegistration(_: FormState, form: FormData): Promise<
   redirect("/?welcome=1");
 }
 
-// One email per invite. New people get our invite email (supabase/templates/invite.html; Supabase
-// also creates their account); people who already have an account get a sign-in link instead.
-// Both land on /invite/<token>. "data" fills the invite email's text: clinic, who invites, the role.
-const ROLE_IN_EMAIL: Record<string, string> = { physio: "φυσιοθεραπευτή", assistant: "βοηθό" };
-
-async function sendInvites(
-  invites: { email: string; role: string; token: string }[],
-  from: { clinicName: string; ownerName: string },
-) {
-  const admin = createAdminClient();
-  let sent = 0;
-  for (const invite of invites) {
-    if (!admin) break; // no secret key yet: nothing can be sent
-    const redirectTo = confirmLink(`/invite/${invite.token}`);
-    const { error } = await admin.auth.admin.inviteUserByEmail(invite.email, {
-      redirectTo,
-      data: { clinic_name: from.clinicName, invited_by: from.ownerName, role_label: ROLE_IN_EMAIL[invite.role] ?? "" },
-    });
-    if (!error) {
-      sent++;
-      continue;
-    }
-    if (error.code === "email_exists" || error.status === 422) {
-      const again = await createAnonClient().auth.signInWithOtp({
-        email: invite.email,
-        options: { shouldCreateUser: false, emailRedirectTo: redirectTo },
-      });
-      if (!again.error) {
-        sent++;
-        continue;
-      }
-    }
-    console.error(`Invite email to ${invite.email} failed:`, error);
-  }
-  return { sent, notSent: invites.length - sent };
-}
-
-// ---------- «Ξανά αποστολή» (home page, owner only) ----------
+// ---------- «Ξανά αποστολή» (Ρυθμίσεις → Ομάδα, owner only) ----------
 // Sends one open invite again and gives it 7 more days. The owner can't read tokens (RLS), so the
 // server reads it with the secret key, but only after checking the invite belongs to the owner's clinic.
 export async function resendInvite(form: FormData): Promise<void> {
   const { supabase, profile } = await requireMember();
   const id = z.uuid().safeParse(form.get("inviteId"));
   const admin = createAdminClient();
-  if (profile.role !== "owner" || !id.success || !admin) redirect("/?invite=not-sent");
+  if (profile.role !== "owner" || !id.success || !admin) redirect("/settings/team?invite=not-sent");
 
   const { data: invite } = await admin
     .from("invites")
@@ -191,14 +151,14 @@ export async function resendInvite(form: FormData): Promise<void> {
     .eq("clinic_id", profile.clinic_id)
     .is("accepted_at", null)
     .maybeSingle();
-  if (!invite) redirect("/?invite=not-sent");
+  if (!invite) redirect("/settings/team?invite=not-sent");
 
   await admin.from("invites").update({ expires_at: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString() }).eq("id", invite.id);
   const { data: clinic } = await supabase.from("clinics").select("name").eq("id", profile.clinic_id).maybeSingle();
   const { sent } = await sendInvites([invite], { clinicName: clinic?.name ?? "", ownerName: profile.full_name ?? "" });
   // "to" and "at" make each press land on a new address, so the note always shows the latest send.
-  const at = new Intl.DateTimeFormat("el-GR", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Nicosia" }).format(new Date());
-  redirect(`/?invite=${sent ? "sent" : "not-sent"}&to=${encodeURIComponent(invite.email)}&at=${encodeURIComponent(at)}`);
+  const at = new Intl.DateTimeFormat("el-GR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Nicosia" }).format(new Date());
+  redirect(`/settings/team?invite=${sent ? "sent" : "not-sent"}&to=${encodeURIComponent(invite.email)}&at=${encodeURIComponent(at)}`);
 }
 
 // ---------- Joining from an invite ----------

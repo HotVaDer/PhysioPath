@@ -15,13 +15,16 @@ const name = (what: string, max = 120) =>
     .min(1, `Γράψτε ${what}.`)
     .max(max, `Το πολύ ${max} χαρακτήρες.`);
 
-const email = z
-  .string({ error: "Γράψτε ένα email." })
-  .trim()
-  .toLowerCase()
-  .min(1, "Γράψτε το email σας.")
-  .max(254, "Αυτό το email είναι πολύ μεγάλο.")
-  .pipe(z.email("Αυτό δεν μοιάζει με email. Παράδειγμα: maria@example.com"));
+// "empty": what to say when the box is empty (your email, or the email of the person you invite).
+const emailWith = (empty: string) =>
+  z
+    .string({ error: "Γράψτε ένα email." })
+    .trim()
+    .toLowerCase()
+    .min(1, empty)
+    .max(254, "Αυτό το email είναι πολύ μεγάλο.")
+    .pipe(z.email("Αυτό δεν μοιάζει με email. Παράδειγμα: maria@example.com"));
+const email = emailWith("Γράψτε το email σας.");
 
 // Cover: who is signing up (before they have an account).
 export const CoverSchema = z.object({
@@ -32,7 +35,7 @@ export const CoverSchema = z.object({
 // Login for someone who already has an account (or an invitee whose link expired).
 export const LoginSchema = z.object({ email });
 
-// §1 Στοιχεία κλινικής
+// The clinic's details
 export const ClinicSchema = z.object({
   ownerName: name("το ονοματεπώνυμό σας"),
   clinicName: name("το όνομα της κλινικής"),
@@ -44,25 +47,27 @@ export const ClinicSchema = z.object({
     .refine((v) => (v.match(/\d/g) ?? []).length >= 6, "Το τηλέφωνο έχει τουλάχιστον 6 ψηφία."),
 });
 
-// §2 Χώροι: one line of the ledger
+// Rooms: one room, with its beds and exercise stations
 const count = z.coerce
   .number({ error: "Γράψτε έναν αριθμό." })
   .int("Ολόκληρος αριθμός.")
   .min(0, "Από 0 έως 40.")
   .max(40, "Από 0 έως 40.");
 
-export const RoomSchema = z
-  .object({ name: name("το όνομα του χώρου", 40), beds: count, stations: count })
-  .refine((r) => r.beds + r.stations > 0, { message: "Βάλτε τουλάχιστον ένα κρεβάτι ή μία θέση.", path: ["beds"] });
+const roomFields = z.object({ name: name("το όνομα του χώρου", 40), beds: count, stations: count });
+const hasPlace = (r: { beds: number; stations: number }) => r.beds + r.stations > 0;
+const noPlace = { message: "Βάλτε τουλάχιστον ένα κρεβάτι ή μία θέση άσκησης.", path: ["beds"] };
+
+export const RoomSchema = roomFields.refine(hasPlace, noPlace);
 
 export const RoomsSchema = z
   .array(RoomSchema)
   .min(1, "Χρειάζεται τουλάχιστον ένας χώρος.")
   .max(30, "Το πολύ 30 χώροι.");
 
-// §3 Ομάδα: one person to invite
+// Team: one person to invite
 export const MemberSchema = z.object({
-  email,
+  email: emailWith("Γράψτε το email του ατόμου που καλείτε."),
   role: z.enum(["physio", "assistant"], { error: "Διαλέξτε ρόλο." }),
 });
 
@@ -70,6 +75,14 @@ export const TeamSchema = z
   .array(MemberSchema)
   .max(30, "Το πολύ 30 άτομα. Τους υπόλοιπους τους καλείτε από τις Ρυθμίσεις.")
   .refine((team) => new Set(team.map((m) => m.email)).size === team.length, "Το ίδιο email υπάρχει δύο φορές.");
+
+// Settings → Χώροι (after sign-up): the whole list in the order shown. A room that already exists
+// carries its id (changed in place); a new one has none. Removed rooms are simply missing.
+export const SettingsRoomsSchema = z
+  .array(roomFields.extend({ id: z.uuid().optional() }).refine(hasPlace, noPlace))
+  .min(1, "Χρειάζεται τουλάχιστον ένας χώρος.")
+  .max(30, "Το πολύ 30 χώροι.");
+export type SettingsRoom = z.infer<typeof SettingsRoomsSchema>[number];
 
 // The half-filled form as saved in onboarding_drafts. Every part is optional until it's filled.
 export const DraftSchema = z.object({

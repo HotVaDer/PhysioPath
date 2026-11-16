@@ -6,6 +6,8 @@ import {
   CodeSchema,
   RegisterClinicSchema,
   RoomsSchema,
+  SettingsRoomsSchema,
+  MemberSchema,
   TeamSchema,
   fieldErrors,
   firstRoom,
@@ -37,7 +39,7 @@ describe("cover", () => {
   });
 });
 
-describe("§1 clinic", () => {
+describe("clinic", () => {
   const ok = { ownerName: "Μαρία", clinicName: "Φυσικοθεραπεία Ακτή", city: "Λεμεσός", phone: "25 000 000" };
 
   it("accepts a normal clinic", () => {
@@ -57,7 +59,7 @@ describe("§1 clinic", () => {
   });
 });
 
-describe("§2 rooms", () => {
+describe("rooms", () => {
   it("turns the form's text numbers into numbers", () => {
     expect(RoomsSchema.parse([{ name: "Αίθουσα 1", beds: "4", stations: "0" }])).toEqual([
       { name: "Αίθουσα 1", beds: 4, stations: 0 },
@@ -67,7 +69,7 @@ describe("§2 rooms", () => {
   it("refuses an empty room, like the database does", () => {
     const r = RoomsSchema.safeParse([{ name: "Άδειο", beds: 0, stations: 0 }]);
     expect(r.success).toBe(false);
-    if (!r.success) expect(fieldErrors(r.error)["0.beds"]).toBe("Βάλτε τουλάχιστον ένα κρεβάτι ή μία θέση.");
+    if (!r.success) expect(fieldErrors(r.error)["0.beds"]).toBe("Βάλτε τουλάχιστον ένα κρεβάτι ή μία θέση άσκησης.");
   });
 
   it.each([-1, 41, 2.5])("refuses %s beds", (beds) => {
@@ -79,7 +81,40 @@ describe("§2 rooms", () => {
   });
 });
 
-describe("§3 team", () => {
+describe("settings: rooms after sign-up", () => {
+  const ID = "0b8f5c2e-6d1a-4c3b-9e7f-1a2b3c4d5e6f";
+
+  it("keeps the id of a room that exists and none for a new one", () => {
+    expect(
+      SettingsRoomsSchema.parse([
+        { id: ID, name: " Αίθουσα ", beds: 3, stations: 0 },
+        { name: "Γυμναστήριο", beds: 0, stations: 2 },
+      ]),
+    ).toEqual([
+      { id: ID, name: "Αίθουσα", beds: 3, stations: 0 },
+      { name: "Γυμναστήριο", beds: 0, stations: 2 },
+    ]);
+  });
+
+  it("refuses a made-up id, an empty room and an empty list", () => {
+    expect(SettingsRoomsSchema.safeParse([{ id: "1", name: "Χ", beds: 1, stations: 0 }]).success).toBe(false);
+    const empty = SettingsRoomsSchema.safeParse([{ id: ID, name: "Χ", beds: 0, stations: 0 }]);
+    expect(empty.success).toBe(false);
+    if (!empty.success) expect(fieldErrors(empty.error)["0.beds"]).toMatch(/τουλάχιστον ένα κρεβάτι/);
+    expect(SettingsRoomsSchema.safeParse([]).success).toBe(false);
+  });
+});
+
+describe("settings: inviting one person", () => {
+  it("cleans the email and needs a role", () => {
+    expect(MemberSchema.parse({ email: " Eleni@Example.com ", role: "physio" })).toEqual({ email: "eleni@example.com", role: "physio" });
+    const r = MemberSchema.safeParse({ email: "", role: "" });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(fieldErrors(r.error)).toMatchObject({ email: "Γράψτε το email του ατόμου που καλείτε.", role: "Διαλέξτε ρόλο." });
+  });
+});
+
+describe("team", () => {
   it("may be empty (invite later)", () => {
     expect(TeamSchema.parse([])).toEqual([]);
   });

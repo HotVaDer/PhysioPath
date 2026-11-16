@@ -210,3 +210,29 @@ Why: the user's mother and a collaborator couldn't finish sign-up. Plan: `~/.cla
 - Follow-up: Sheet and Card **centred vertically** (flex, `min-h-dvh`, `justify-center`): measured equal space above and
   below (and left/right) on /register, /register/code, /login, /login/code at 360/390/430-wide phones and laptops.
   A card taller than the screen starts at the top. Sign-in no longer repeats «κωδικό 6 ψηφίων» as the email hint.
+
+## 2026-11-16 · Sign-up redesign, step C: rooms and team after sign-up
+- Home (owner): **«Επόμενα βήματα»** with two big link cards, ① «Ρυθμίστε τους χώρους σας» → `/settings/rooms`,
+  ② «Καλέστε την ομάδα σας» → `/settings/team`, each turning into ✓ «Έγινε»; «Δουλεύω μόνη/ος, δεν χρειάζεται»
+  under ② (most clinics we talk to are one physio). The section goes away when both are done; «Χώροι · Αλλαγή» and
+  «Ομάδα · Διαχείριση» stay in the clinic details. The invite list moved from home to the team page.
+- `/settings/rooms`: one card per room (name box, then «Κρεβάτια − n +» and «Θέσεις άσκησης − n +»), stacked on a
+  phone, no table; «+ Προσθήκη χώρου» puts the cursor in the new name; a room with a problem gets a red border and
+  «Πρόβλημα: …»; nothing changes until «Αποθήκευση». Removed «Α/Α», «υποδοχή», «Σύνολο».
+- `/settings/team`: **one person per press** (email + role + «Αποστολή πρόσκλησης»), so a typed email can't be lost
+  (the trap in the old §3). Role as two big choice cards, each saying what that person sees; «Βοηθός» chosen by
+  default (sees least). List with status, «Ξανά αποστολή» and «Ακύρωση». Clear messages for own email, someone
+  already in the team, and an email already invited.
+- Database (`20261116120000_settings_rooms_team.sql`, `20261116130000_team_checked.sql`, pushed live):
+  `save_rooms(items)` saves the whole list in one transaction (owner only; room order constraint now deferrable);
+  `add_invites(items)` (owner only, returns tokens for the email); a trigger stops a room losing a bed or station a
+  patient is on right now (open session in the last 12 h); `clinics.rooms_checked_at` / `team_checked_at` for the ✓.
+  `rls_check.sql`: +17 checks (reorder, bed in use, room in use, add/remove, another clinic's room, invites refused for
+  own email / team member / already invited / same email twice, assistant and anon refused): **121/121 pass**.
+- Code: `sendInvites` moved to `lib/onboarding/invites.ts` (server only), `confirmLink` to `lib/site.ts`,
+  `requireOwner()` in `session.ts`, settings actions in `lib/settings/actions.ts`. Times in messages are 24-hour
+  («21:35», was «09:35 μ.μ.», which the page then refused to show).
+- Checks: `tsc` clean, 73 tests, `next build` OK. End to end on a production build (no email key, so nothing sent)
+  at 390×844 and 1280×720 with throwaway accounts (deleted after): sign-up → next steps → rooms (empty room error,
+  add, save) → team (empty, own email, invite, same email again, cancel) → home without «Επόμενα βήματα»; no
+  sideways scroll. Note: `next dev` blocks its scripts for 127.0.0.1 (allowedDevOrigins), so browser tests use `next start`.
