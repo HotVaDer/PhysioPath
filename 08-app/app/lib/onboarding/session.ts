@@ -46,14 +46,14 @@ export async function saveDraft(supabase: Supabase, userId: string, patch: Parti
   if (error) throw new Error(`Saving the draft failed: ${error.message}`);
 }
 
-// For the sheets §1–§4: signed in, not yet in a clinic. Others are sent where they belong.
+// For the sign-up clinic step: signed in, not yet in a clinic. Others are sent where they belong.
 export async function requireFormUser() {
   const { supabase, user } = await currentUser();
-  if (!user) redirect("/register");
+  if (!user) redirect("/welcome");
   const profile = await loadProfile(supabase, user.id);
   if (profile?.onboarded_at) redirect("/");
   const draft = await loadDraft(supabase);
-  // Prefill the name typed on the cover (saved with the account when the link was sent).
+  // The name typed in sign-up step 1 (saved with the account when the code was sent).
   if (!draft.ownerName && typeof user.user_metadata?.full_name === "string") draft.ownerName = user.user_metadata.full_name;
   return { supabase, user, draft };
 }
@@ -61,7 +61,7 @@ export async function requireFormUser() {
 // For pages that need a clinic member.
 export async function requireMember() {
   const { supabase, user } = await currentUser();
-  if (!user) redirect("/register");
+  if (!user) redirect("/welcome");
   const profile = await loadProfile(supabase, user.id);
   if (!profile?.onboarded_at || !profile.clinic_id) redirect("/register/clinic");
   return { supabase, user, profile };

@@ -1,75 +1,81 @@
-// One sheet of the registration form lying on the desk: the paper, the red margin rule, the
-// header, the binder tabs beside it and the page number at the bottom.
-// Canvas: boards PF1You … PF7Done on the «Χαρτιά κλινικής · μία ενότητα ανά σελίδα» page.
+// One sheet of paper on the desk, for the sign-up pages: the logo at the top, an optional
+// «Βήμα 1 από 3» with a simple bar, the page's content, and a help line at the bottom.
+// No form jargon (no §, binder tabs or page numbers): people who don't use computers much found
+// those confusing (review 2026-11-16).
+// Sized so a whole step fits one laptop screen (1280×650 and up) without scrolling: tight padding,
+// and `wide` sheets that use the width of a laptop for two columns (2026-11-16).
 import type { ReactNode } from "react";
+
+import { HelpLine } from "@/app/components/paper/HelpLine";
+import { Logo } from "@/app/components/paper/Logo";
+import { cx } from "@/app/lib/cx";
 
 type Props = {
   children: ReactNode;
-  // The binder tabs (BinderTabs), shown to the right of the sheet; on a phone above it.
-  tabs?: ReactNode;
-  // The cover shows the big title; the other sheets show it small in the header.
-  cover?: { subtitle: string };
-  // Something on the right of the header (e.g. "Έχετε λογαριασμό; Σύνδεση").
+  // Something on the right of the header (e.g. "Έχετε λογαριασμό; Είσοδος").
   headerAside?: ReactNode;
-  // "Σελ. 2 / 5"
-  page?: { n: number; of: number };
+  // Where they are in sign-up: «Βήμα 2 από 3».
+  step?: { n: number; of: number };
+  // Wider on a laptop, for pages laid out in two columns there (one column on a phone).
+  wide?: boolean;
 };
 
-export function Sheet({ children, tabs, cover, headerAside, page }: Props) {
+export function Sheet({ children, headerAside, step, wide = false }: Props) {
   return (
-    <div className="px-3 pb-16 pt-6 sm:px-4 sm:pt-10">
-      <div className="mx-auto flex max-w-[1060px] flex-row-reverse flex-wrap items-start justify-center">
-        {tabs}
-        <main
-          id="main"
-          // As tall as its content (no fixed height), so the main button is always right after the
-          // last field, on a phone, a laptop or a big screen.
-          className="relative flex min-w-0 max-w-[860px] flex-[1_1_640px] flex-col bg-sheet px-5 pb-8 pt-8 shadow-[0_1px_0_#cfc6b4,0_18px_40px_-24px_rgba(43,36,32,0.45)] sm:pb-10 sm:pl-24 sm:pr-14 sm:pt-12"
-        >
-          {/* The red double margin rule of a real form. Decoration only. */}
-          <span aria-hidden="true" className="absolute inset-y-0 left-[68px] hidden w-1 border-x border-margin sm:block" />
+    // Centred on the screen, up/down as well as left/right: equal space above and below the card
+    // (symmetry), on a phone as on a laptop. A card taller than the screen simply starts at the top.
+    <div className="desk-pattern flex min-h-dvh flex-col justify-center px-3 py-3 sm:px-4 sm:py-5 lg:py-6">
+      <main
+        id="main"
+        // As tall as its content (no fixed height), so the main button is always right after the
+        // last field, on a phone, a laptop or a big screen.
+        className={cx(
+          "mx-auto flex w-full flex-col bg-sheet px-5 pb-5 pt-4 shadow-[0_1px_0_#cfc6b4,0_18px_40px_-24px_rgba(43,36,32,0.45)] sm:px-10 sm:pb-7 sm:pt-6",
+          wide ? "max-w-[720px] lg:max-w-[1000px]" : "max-w-[720px]",
+        )}
+      >
+        <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-b-2 border-hairline pb-2.5 text-base">
+          <Logo />
+          {/* The step sits in the header when nothing else is there (saves a line), else under it. */}
+          {headerAside ?? (step && <StepBar n={step.n} of={step.of} />)}
+        </header>
 
-          {cover ? (
-            <header className="flex flex-col gap-4 border-b-[3px] border-double border-ink pb-5">
-              <div className="flex flex-wrap justify-between gap-x-6 gap-y-2 text-[15px]">
-                <span className="text-xl font-semibold italic">PhysioPath</span>
-                {headerAside}
-              </div>
-              <h1 className="text-center font-display text-[34px] leading-[1.05] tracking-[0.03em] sm:text-[46px]">
-                ΔΕΛΤΙΟ ΕΓΓΡΑΦΗΣ ΚΛΙΝΙΚΗΣ
-              </h1>
-              <p className="text-center italic text-muted">{cover.subtitle}</p>
-            </header>
-          ) : (
-            <header className="flex flex-wrap justify-between gap-x-6 gap-y-2 border-b-[3px] border-double border-ink pb-3.5 text-[15px]">
-              <span className="text-xl font-semibold italic">PhysioPath</span>
-              {headerAside ?? <span className="font-display text-[17px] tracking-[0.04em]">ΔΕΛΤΙΟ ΕΓΓΡΑΦΗΣ ΚΛΙΝΙΚΗΣ</span>}
-            </header>
-          )}
+        {headerAside && step && (
+          <div className="pt-3">
+            <StepBar n={step.n} of={step.of} />
+          </div>
+        )}
 
-          <div className="flex flex-col pt-6 sm:pt-8">{children}</div>
+        <div className={cx("flex flex-col", headerAside && step ? "pt-3" : "pt-4")}>{children}</div>
 
-          {page && (
-            <p className="mt-8 text-center font-typed text-sm text-muted sm:mt-10">
-              Σελ. {page.n} / {page.of}
-            </p>
-          )}
-        </main>
+        <HelpLine />
+      </main>
+    </div>
+  );
+}
+
+// «Βήμα 2 από 3» in words (what a screen reader reads) and a bar of 3 pieces beside it (decoration).
+function StepBar({ n, of }: { n: number; of: number }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+      <p className="font-semibold">
+        Βήμα {n} από {of}
+      </p>
+      <div aria-hidden="true" className="flex w-[160px] gap-1.5">
+        {Array.from({ length: of }, (_, i) => (
+          <span key={i} className={cx("h-2.5 flex-1 rounded-full", i < n ? "bg-action" : "bg-hairline")} />
+        ))}
       </div>
     </div>
   );
 }
 
-// The § heading at the top of a sheet: "§1 Στοιχεία κλινικής" and a one-line note under it.
-export function SectionHeading({ mark, title, note }: { mark?: string; title: string; note?: string }) {
+// The title at the top of a sheet and one plain sentence under it.
+export function SectionHeading({ title, note }: { title: string; note?: ReactNode }) {
   return (
-    <div className="flex flex-col gap-2">
-      <h1 className="flex flex-wrap items-baseline gap-x-3.5 font-display text-[30px] leading-[1.1] sm:text-[36px]">
-        {mark && <span className="text-[38px] sm:text-[46px]">{mark}</span>}
-        {mark && " "}
-        {title}
-      </h1>
-      {note && <p className="italic text-muted">{note}</p>}
+    <div className="flex flex-col gap-1">
+      <h1 className="font-display text-[28px] leading-[1.15] sm:text-[32px]">{title}</h1>
+      {note && <p className="text-muted">{note}</p>}
     </div>
   );
 }

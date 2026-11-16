@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { SubmitButton } from "@/app/components/paper/Buttons";
+import { fieldBox } from "@/app/components/paper/LineField";
 import { FormAlert } from "@/app/components/paper/Notes";
 import { acceptInvite, type FormState } from "@/app/lib/onboarding/actions";
 
@@ -13,8 +14,8 @@ export function AcceptForm({ token, name }: { token: string; name: string }) {
     <form action={action} noValidate className="flex flex-col gap-4">
       <input type="hidden" name="token" value={token} />
       <FormAlert>{state.message}</FormAlert>
-      <div className="flex flex-col gap-0.5">
-        <label htmlFor="fullName" className="text-[15px]">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="fullName" className="text-[19px] font-semibold">
           Το όνομά σας
         </label>
         <input
@@ -24,11 +25,11 @@ export function AcceptForm({ token, name }: { token: string; name: string }) {
           defaultValue={state.values?.fullName ?? name}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? "fullName-error" : undefined}
-          className="min-h-11 border-0 border-b-2 border-ink bg-transparent px-1 font-typed text-xl text-ink"
+          className={fieldBox(error)}
         />
         {error && (
-          <p id="fullName-error" className="pt-1 font-semibold text-ink">
-            {error}
+          <p id="fullName-error" className="font-semibold text-error">
+            Πρόβλημα: {error}
           </p>
         )}
       </div>

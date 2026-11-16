@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { z } from "zod";
 
+import { Logo } from "@/app/components/paper/Logo";
 import { SignOut } from "@/app/components/paper/SignOut";
 import { ROLES, type Role } from "@/app/lib/onboarding/schema";
 import { currentUser } from "@/app/lib/onboarding/session";
@@ -34,9 +35,9 @@ function CarbonCopy({ children }: { children: ReactNode }) {
           className="absolute inset-x-0 top-0 h-2.5 bg-[radial-gradient(circle_at_6px_0,var(--color-desk)_4px,transparent_4.5px)] bg-[length:12px_10px]"
         />
         <span aria-hidden="true" className="absolute inset-y-0 left-7 w-[3px] border-x border-margin" />
-        <header className="flex items-baseline justify-between gap-2 border-b-[3px] border-double border-ink pb-2.5">
-          <span className="font-semibold italic">PhysioPath</span>
-          <span className="font-typed text-[13px] font-bold">ΑΝΤΙΓΡΑΦΟ</span>
+        <header className="flex items-center justify-between gap-2 border-b-[3px] border-double border-ink pb-2.5">
+          <Logo />
+          <span className="font-typed text-base font-bold">ΑΝΤΙΓΡΑΦΟ</span>
         </header>
         {children}
       </main>
@@ -88,14 +89,14 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
           <span className="font-typed">{details.clinicName}</span>
           {details.clinicCity ? `, ${details.clinicCity}` : ""}.
         </p>
-        <p className="text-base italic">
+        <p className="text-base">
           {details.role === "assistant"
             ? "Θα βλέπετε την αίθουσα και θα απαντάτε όταν σας καλεί ασθενής. Τις κλινικές σημειώσεις τις βλέπουν μόνο οι φυσιοθεραπευτές."
             : "Θα ηχογραφείτε τις σημειώσεις σας και θα εγκρίνετε τα προγράμματα των ασθενών σας."}
         </p>
       </div>
       <AcceptForm token={token} name={typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : ""} />
-      <p className="pt-2 text-[15px]">
+      <p className="pt-2 text-base">
         Μπαίνετε ως <span className="break-all font-typed">{details.email}</span>.
       </p>
     </CarbonCopy>

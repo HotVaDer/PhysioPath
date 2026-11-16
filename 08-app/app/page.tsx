@@ -1,4 +1,4 @@
-// Home. For now a filed-form sheet with the clinic's details, «Νέα σημείωση» for owner/physio and,
+// Home. For now the clinic's details (and, right after sign-up, «Η κλινική σας είναι έτοιμη»), «Νέα σημείωση» for owner/physio and,
 // for the owner, the team's invites (with «Ξανά αποστολή»). The room board moves here next (from 03-prototype, restyled in
 // the paper look). Not signed in → registration; signed in but the form isn't filed → the form.
 import type { Metadata } from "next";
@@ -23,7 +23,7 @@ function inviteStatus(invite: Invite): { text: string; canResend: boolean } {
 
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { supabase, profile } = await requireMember();
-  const { invite: inviteResult, to, at } = await searchParams;
+  const { invite: inviteResult, to, at, welcome } = await searchParams;
   const sentTo = typeof to === "string" && to.length <= 254 ? to : null;
   const sentAt = typeof at === "string" && /^\d{1,2}:\d{2}$/.test(at) ? at : null;
   const isOwner = profile.role === "owner";
@@ -45,8 +45,14 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           <p>
             Καλώς ήρθατε, {profile.full_name}. <span className="text-muted">({roleLabel})</span>
           </p>
-          <p className="italic text-muted">Ο πίνακας της αίθουσας έρχεται εδώ σύντομα. Μέχρι τότε, αυτά κατατέθηκαν:</p>
         </div>
+
+        {welcome === "1" && (
+          <p role="status" className="bg-note-green px-4 py-3">
+            <span className="font-semibold">Η εγγραφή ολοκληρώθηκε. Η κλινική σας είναι έτοιμη.</span> Από εδώ ξεκινάτε κάθε
+            νέα σημείωση.
+          </p>
+        )}
 
         {profile.role !== "assistant" && (
           <PaperLink href="/notes/new">
@@ -114,7 +120,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                     <li key={invite.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-ledger py-3">
                       <span className="flex-[1_1_240px] break-all font-typed">{invite.email}</span>
                       <span className="text-base">{ROLES[invite.role]}</span>
-                      <span className="text-base italic text-muted">{status.text}</span>
+                      <span className="text-base text-muted">{status.text}</span>
                       {status.canResend && (
                         <form action={resendInvite}>
                           <input type="hidden" name="inviteId" value={invite.id} />

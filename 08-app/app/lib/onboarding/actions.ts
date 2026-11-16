@@ -1,18 +1,18 @@
 "use server";
-// What happens when someone presses a button on the registration form.
+// What happens when someone presses a button in sign-up, sign-in or an invite.
 // Each action is reachable by anyone who can send a POST, so each one checks who is signed in
 // and validates every field again; the browser's own checks are only a convenience.
+import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import {
-  ClinicSchema,
+  CodeSchema,
   CoverSchema,
-  FilingSchema,
   LoginSchema,
-  RoomsSchema,
-  TeamSchema,
+  RegisterClinicSchema,
   fieldErrors,
+  firstRoom,
   type FieldErrors,
 } from "@/app/lib/onboarding/schema";
 import { currentUser, requireFormUser, requireMember, saveDraft } from "@/app/lib/onboarding/session";
@@ -21,18 +21,11 @@ import { createAdminClient, createAnonClient } from "@/app/lib/supabase/admin";
 
 // What a form gets back when something is wrong. React clears a form after it's sent, so the
 // typed values come back too and the fields refill.
-export type FormState = { errors?: FieldErrors; message?: string; values?: Record<string, string> };
+// "notice" is good news shown in green (e.g. "Στείλαμε νέο κωδικό").
+export type FormState = { errors?: FieldErrors; message?: string; notice?: string; values?: Record<string, string> };
 
 function texts(form: FormData, keys: string[]): Record<string, string> {
   return Object.fromEntries(keys.map((k) => [k, String(form.get(k) ?? "")]));
-}
-
-function parseJson(form: FormData, key: string): unknown {
-  try {
-    return JSON.parse(String(form.get(key) ?? "null"));
-  } catch {
-    return null;
-  }
 }
 
 function confirmLink(next: string): string {
@@ -41,94 +34,108 @@ function confirmLink(next: string): string {
 
 function linkError(error: { status?: number; code?: string; message: string }): string {
   if (error.status === 429 || error.code?.includes("rate_limit")) {
-    return "Στείλαμε ήδη σύνδεσμο πριν από λίγο. Περιμένετε ένα λεπτό και ξαναδοκιμάστε.";
+    return "Στείλαμε ήδη κωδικό πριν από λίγο. Περιμένετε ένα λεπτό και ξαναδοκιμάστε.";
   }
   if (error.code === "otp_disabled" || /signups not allowed/i.test(error.message)) {
-    return "Δεν βρήκαμε λογαριασμό με αυτό το email. Για νέα κλινική, ξεκινήστε από την εγγραφή.";
+    return "Δεν βρήκαμε λογαριασμό με αυτό το email. Για νέα κλινική, πατήστε «Εγγραφή κλινικής» πιο κάτω.";
   }
   console.error("signInWithOtp failed:", error);
-  return "Δεν μπορέσαμε να στείλουμε τον σύνδεσμο. Δοκιμάστε ξανά σε λίγο.";
+  return "Δεν μπορέσαμε να στείλουμε τον κωδικό. Δοκιμάστε ξανά σε λίγο.";
 }
 
-// ---------- Cover and login: send the sign-in link ----------
+// Sends the email with the 6-digit code and the button (supabase/templates/confirmation.html for a
+// new account, magic_link.html for an existing one). Returns a message when it didn't work.
+async function sendCode(email: string, login: boolean, next: string, fullName?: string): Promise<string | null> {
+  const { supabase } = await currentUser();
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: !login, // the login page never creates accounts by accident
+      emailRedirectTo: confirmLink(next), // where the button in the email goes
+      data: fullName ? { full_name: fullName } : undefined,
+    },
+  });
+  return error ? linkError(error) : null;
+}
+
+// Where the code page lives, with the email (and, for login, where to go after).
+function codePage(email: string, login: boolean, next: string): string {
+  const q = new URLSearchParams({ email });
+  if (login && next !== "/") q.set("next", next);
+  return `${login ? "/login/code" : "/register/code"}?${q}`;
+}
+
+// ---------- Sign-up step 1 and sign-in: send the code ----------
 export async function sendLink(_: FormState, form: FormData): Promise<FormState> {
   const login = form.get("mode") === "login";
   const values = texts(form, ["fullName", "email"]);
-  const parsed = login ? LoginSchema.safeParse(values) : CoverSchema.safeParse(values);
+  // Sign-up also asks for the name; sign-in only for the email.
+  const cover = login ? null : CoverSchema.safeParse(values);
+  const parsed = cover ?? LoginSchema.safeParse(values);
   if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
 
   const next = safeNext(String(form.get("next") ?? ""), login ? "/" : "/register/clinic");
+  const fullName = cover?.success ? cover.data.fullName : undefined;
+  const problem = await sendCode(parsed.data.email, login, next, fullName);
+  if (problem) return { message: problem, values };
+  redirect(codePage(parsed.data.email, login, next) as Route); // only our own two code pages
+}
+
+// ---------- Sign-up step 2 and sign-in: check the code ----------
+export async function verifyCode(_: FormState, form: FormData): Promise<FormState> {
+  const login = form.get("mode") === "login";
+  const values = texts(form, ["code"]);
+  const email = LoginSchema.safeParse({ email: form.get("email") });
+  if (!email.success) redirect(login ? "/login" : "/register"); // the page lost the email: start again
+  const code = CodeSchema.safeParse(values.code);
+  if (!code.success) return { errors: { code: code.error.issues[0].message }, values };
+
   const { supabase } = await currentUser();
-  const { error } = await supabase.auth.signInWithOtp({
-    email: parsed.data.email,
-    options: {
-      shouldCreateUser: !login, // the login page never creates accounts by accident
-      emailRedirectTo: confirmLink(next),
-      data: "fullName" in parsed.data ? { full_name: parsed.data.fullName } : undefined,
-    },
-  });
-  if (error) return { message: linkError(error), values };
-  const email = encodeURIComponent(parsed.data.email);
-  redirect(login ? `/login/check-email?email=${email}` : `/register/check-email?email=${email}`);
-}
-
-// ---------- §1 Στοιχεία κλινικής ----------
-export async function saveClinic(_: FormState, form: FormData): Promise<FormState> {
-  const { supabase, user } = await requireFormUser();
-  const values = texts(form, ["ownerName", "clinicName", "city", "phone"]);
-  const parsed = ClinicSchema.safeParse(values);
-  if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
-  await saveDraft(supabase, user.id, parsed.data);
-  redirect("/register/rooms");
-}
-
-// ---------- §2 Χώροι (the ledger sends its rows as JSON) ----------
-export async function saveRooms(_: FormState, form: FormData): Promise<FormState> {
-  const { supabase, user } = await requireFormUser();
-  const parsed = RoomsSchema.safeParse(parseJson(form, "rooms"));
-  if (!parsed.success) return { errors: fieldErrors(parsed.error), message: "Διορθώστε τις γραμμές με σημείωση." };
-  await saveDraft(supabase, user.id, { rooms: parsed.data });
-  redirect("/register/team");
-}
-
-// ---------- §3 Ομάδα ----------
-export async function saveTeam(_: FormState, form: FormData): Promise<FormState> {
-  const { supabase, user } = await requireFormUser();
-  const parsed = TeamSchema.safeParse(parseJson(form, "team"));
-  if (!parsed.success) return { errors: fieldErrors(parsed.error), message: parsed.error.issues[0]?.message };
-  // The owner is already in the clinic; inviting their own email would do nothing.
-  const own = user.email?.toLowerCase();
-  await saveDraft(supabase, user.id, { team: parsed.data.filter((m) => m.email !== own) });
-  redirect("/register/sign");
-}
-
-// ---------- §4 Υπογραφή και κατάθεση ----------
-export async function fileRegistration(_: FormState, form: FormData): Promise<FormState> {
-  if (form.get("consent") !== "on") {
-    return { errors: { consent: "Για να συνεχίσετε, χρειάζεται η συμφωνία σας." } };
+  const { error } = await supabase.auth.verifyOtp({ email: email.data.email, token: code.data, type: "email" });
+  if (error) {
+    if (error.status === 429 || error.code?.includes("rate_limit")) {
+      return { errors: { code: "Πολλές προσπάθειες. Περιμένετε λίγα λεπτά και ξαναδοκιμάστε." }, values };
+    }
+    if (error.code !== "otp_expired") console.error("verifyOtp (code) failed:", error);
+    return {
+      errors: { code: "Ο κωδικός δεν είναι σωστός ή έληξε. Ελέγξτε τον, ή πατήστε «Στείλτε μου νέο κωδικό»." },
+      values,
+    };
   }
-  const { supabase, draft } = await requireFormUser();
-  const ready = FilingSchema.safeParse(draft);
-  if (!ready.success) {
-    // Something's missing (e.g. the draft was changed elsewhere): back to the first sheet with a problem.
-    const first = String(ready.error.issues[0]?.path[0] ?? "");
-    redirect(first === "rooms" ? "/register/rooms" : first === "team" ? "/register/team" : "/register/clinic");
+  redirect(login ? (safeNext(String(form.get("next") ?? "")) as Route) : "/register/clinic"); // safeNext: only our own paths
+}
+
+// ---------- «Στείλτε μου νέο κωδικό» ----------
+export async function resendCode(_: FormState, form: FormData): Promise<FormState> {
+  const login = form.get("mode") === "login";
+  const email = LoginSchema.safeParse({ email: form.get("email") });
+  if (!email.success) redirect(login ? "/login" : "/register");
+  const next = safeNext(String(form.get("next") ?? ""), login ? "/" : "/register/clinic");
+  const problem = await sendCode(email.data.email, login, next);
+  if (problem) return { message: problem };
+  const at = new Intl.DateTimeFormat("el-GR", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Nicosia" }).format(new Date());
+  return { notice: `Στείλαμε νέο κωδικό στις ${at}. Ο προηγούμενος δεν ισχύει πια.` };
+}
+
+// ---------- Sign-up step 3: the clinic, then the account is ready ----------
+export async function finishRegistration(_: FormState, form: FormData): Promise<FormState> {
+  const { supabase, user, draft } = await requireFormUser();
+  const values = texts(form, ["ownerName", "clinicName", "city", "phone", "beds"]);
+  // The name typed in step 1 is reused; the field only shows when the account has none.
+  if (!values.ownerName) values.ownerName = draft.ownerName ?? "";
+  const parsed = RegisterClinicSchema.safeParse({ ...values, consent: form.get("consent") ?? undefined });
+  if (!parsed.success) {
+    return { errors: fieldErrors(parsed.error), values, message: "Κάτι λείπει. Δείτε τα μηνύματα με κόκκινο πιο κάτω." };
   }
 
-  const { data, error } = await supabase.rpc("finish_onboarding");
+  const { ownerName, clinicName, city, phone, beds } = parsed.data;
+  await saveDraft(supabase, user.id, { ownerName, clinicName, city, phone, rooms: firstRoom(beds), team: [] });
+  const { error } = await supabase.rpc("finish_onboarding");
   if (error) {
     console.error("finish_onboarding failed:", error);
-    return { message: "Η κατάθεση δεν έγινε και δεν αποθηκεύτηκε τίποτα. Δοκιμάστε ξανά σε λίγο." };
+    return { message: "Η εγγραφή δεν ολοκληρώθηκε. Τα στοιχεία σας κρατήθηκαν: δοκιμάστε ξανά σε λίγο.", values };
   }
-
-  const result = z
-    .object({ invites: z.array(z.object({ email: z.string(), role: z.string(), token: z.string() })) })
-    .safeParse(data);
-  const { sent, notSent } = await sendInvites(result.success ? result.data.invites : [], {
-    clinicName: ready.data.clinicName,
-    ownerName: ready.data.ownerName,
-  });
-  redirect(`/register/done?sent=${sent}&notSent=${notSent}`);
+  redirect("/?welcome=1");
 }
 
 // One email per invite. New people get our invite email (supabase/templates/invite.html; Supabase
@@ -222,5 +229,5 @@ export async function acceptInvite(_: FormState, form: FormData): Promise<FormSt
 export async function signOut(): Promise<void> {
   const { supabase } = await currentUser();
   await supabase.auth.signOut();
-  redirect("/register");
+  redirect("/welcome");
 }

@@ -5,6 +5,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { Logo } from "@/app/components/paper/Logo";
 import { cx } from "@/app/lib/cx";
 import type { Profile } from "@/app/lib/onboarding/session";
 
@@ -49,7 +50,7 @@ export function StaffSheet({ children, profile, current, title, page, width = "n
               </li>
             ))}
           </ul>
-          <p className="mb-2.5 text-[15px]">
+          <p className="mb-2.5 text-base">
             {profile.full_name} · {ROLE_LABELS[profile.role]}
           </p>
         </nav>
@@ -60,8 +61,8 @@ export function StaffSheet({ children, profile, current, title, page, width = "n
         >
           {/* The red double margin rule of a real form. Decoration only. */}
           <span aria-hidden="true" className="absolute inset-y-0 left-[68px] hidden w-1 border-x border-margin sm:block" />
-          <header className="flex flex-wrap justify-between gap-x-6 gap-y-2 border-b-[3px] border-double border-ink pb-3.5 text-[15px]">
-            <span className="text-xl font-semibold italic">PhysioPath</span>
+          <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b-[3px] border-double border-ink pb-3.5 text-base">
+            <Logo />
             <span className="font-display text-[17px] tracking-[0.04em]">{title}</span>
           </header>
           <div className="flex flex-col pt-6 sm:pt-8">{children}</div>
@@ -83,7 +84,7 @@ export function PartHeading({ id, mark, children, note }: { id?: string; mark: s
       <h2 id={id} className="flex flex-wrap items-baseline gap-x-3 font-display text-[26px] leading-tight sm:text-[30px]">
         <span className="text-[30px] sm:text-[34px]">{mark}</span> {children}
       </h2>
-      {note && <p className="italic text-muted">{note}</p>}
+      {note && <p className="text-muted">{note}</p>}
     </div>
   );
 }

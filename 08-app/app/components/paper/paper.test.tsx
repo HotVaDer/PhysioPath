@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { BinderTabs } from "@/app/components/paper/BinderTabs";
 import { SubmitButton } from "@/app/components/paper/Buttons";
 import { LineField, LineSelect } from "@/app/components/paper/LineField";
 import { FormAlert, Stamp } from "@/app/components/paper/Notes";
@@ -9,19 +8,22 @@ import { SectionHeading, Sheet } from "@/app/components/paper/Sheet";
 import { expectNoA11yViolations } from "@/app/test/axe";
 
 describe("LineField", () => {
-  it("ties the hint and the error to the field", async () => {
+  it("puts the label first and ties the hint and the error to the field", async () => {
     const { container } = render(
-      <LineField id="phone" name="phone" label="Τηλέφωνο" number="1.3" hint="Το βλέπει ο ασθενής." error="Μόνο ψηφία." />,
+      <LineField id="phone" name="phone" label="Τηλέφωνο" hint="Το βλέπει ο ασθενής." error="Μόνο ψηφία." />,
     );
-    const input = screen.getByLabelText("1.3 Τηλέφωνο");
+    const input = screen.getByLabelText("Τηλέφωνο");
     expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(input).toHaveAccessibleDescription("Το βλέπει ο ασθενής. Μόνο ψηφία.");
+    expect(input).toHaveAccessibleDescription("Το βλέπει ο ασθενής. Πρόβλημα: Μόνο ψηφία.");
+    // Label, then hint, then the box: the order people read in.
+    const order = Array.from(container.querySelectorAll("label, p, input")).map((el) => el.tagName);
+    expect(order).toEqual(["LABEL", "P", "INPUT", "P"]);
     await expectNoA11yViolations(container);
   });
 
   it("is not marked invalid without an error", () => {
-    render(<LineField id="name" name="name" label="Επωνυμία" />);
-    expect(screen.getByLabelText("Επωνυμία")).not.toHaveAttribute("aria-invalid");
+    render(<LineField id="name" name="name" label="Όνομα κλινικής" />);
+    expect(screen.getByLabelText("Όνομα κλινικής")).not.toHaveAttribute("aria-invalid");
   });
 
   it("works as a select too", async () => {
@@ -36,28 +38,17 @@ describe("LineField", () => {
   });
 });
 
-describe("BinderTabs", () => {
-  it("marks the current section and says which are done", async () => {
-    const { container } = render(<BinderTabs current="rooms" done={{ you: true, clinic: true }} />);
-    const nav = screen.getByRole("navigation", { name: "Ενότητες του δελτίου" });
-    expect(screen.getByRole("link", { current: "step" })).toHaveTextContent("Χώροι");
-    expect(screen.getByRole("link", { name: /Κλινική/ })).toHaveTextContent("(έγινε)");
-    expect(screen.getByRole("link", { name: /Ομάδα/ })).not.toHaveTextContent("(έγινε)");
-    expect(nav).toBeInTheDocument();
-    await expectNoA11yViolations(container);
-  });
-});
-
 describe("Sheet", () => {
-  it("has one main landmark and the page number", async () => {
+  it("has one main landmark and says the step in words", async () => {
     const { container } = render(
-      <Sheet page={{ n: 2, of: 5 }}>
-        <SectionHeading mark="§1" title="Στοιχεία κλινικής" note="Τα βλέπουν οι ασθενείς." />
+      <Sheet step={{ n: 2, of: 3 }}>
+        <SectionHeading title="Η κλινική σας" note="Τα βλέπουν οι ασθενείς." />
       </Sheet>,
     );
     expect(screen.getByRole("main")).toHaveAttribute("id", "main");
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("§1 Στοιχεία κλινικής");
-    expect(screen.getByText(/Σελ\./)).toHaveTextContent("Σελ. 2 / 5");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Η κλινική σας");
+    expect(screen.getByText(/^Βήμα/)).toHaveTextContent("Βήμα 2 από 3");
+    expect(container).not.toHaveTextContent(/§|Σελ\./);
     await expectNoA11yViolations(container);
   });
 });

@@ -6,7 +6,10 @@
    Design canvas (2026-11-14): https://claude.ai/artifact/SNapakX6eXEUocFVggDnWu, page «Χαρτιά κλινικής».
    Checked on the sheet (#FFFDF7): ink 15:1, muted 8.4:1, action green 7.9:1 (white on it 8.1:1),
    stamp violet 9.7:1, error red 8.5:1, field lines 5.6:1. On the coloured tabs and slips text stays ink.
-   Light only for now (paper has no night mode yet). */
+   Light only for now (paper has no night mode yet).
+   2026-11-16, after older people couldn't finish sign-up: headings moved from GFS Didot (hairline
+   capitals) to Literata semibold, text-base is 17px (nothing shared is smaller), fields are white
+   boxes. Sign-up dropped the paperwork props (§, binder tabs, margin rule, stamp). */
 
 :root {
   color-scheme: light;
@@ -34,9 +37,13 @@
   --color-note-green: #e3eedf;
 
   /* Fonts are loaded in app/layout.tsx (self-hosted, with Greek). */
-  --font-display: var(--font-didot), "Didot", Georgia, serif; /* headings: GFS Didot */
+  --font-display: var(--font-literata), Georgia, serif; /* headings: Literata, semibold (below) */
   --font-serif: var(--font-literata), Georgia, serif; /* text: Literata */
   --font-typed: var(--font-cousine), "Courier New", monospace; /* typed answers: Cousine */
+
+  /* Tailwind's text-base is 16px; older eyes need a bit more. */
+  --text-base: 1.0625rem; /* 17px */
+  --text-base--line-height: 1.5;
 }
 
 @layer base {
@@ -46,6 +53,11 @@
     font-family: var(--font-serif);
     font-size: 18px;
     line-height: 1.5;
+  }
+
+  /* Headings: solid, upright, easy to read (not the thin Didot capitals of the first paper look). */
+  .font-display {
+    font-weight: 600;
   }
 
   a {
@@ -62,6 +74,15 @@
     outline: 3px solid var(--color-action);
     outline-offset: 2px;
   }
+}
+
+/* The logo «Φ» repeated faintly over the desk around the sign-up, sign-in and welcome cards
+   (2026-11-16). Decoration only, and kept very light (barely darker than the desk) so the eye stays
+   on the card. Two marks per tile, the second slightly turned, so it reads as scattered, not a grid. */
+.desk-pattern {
+  background-color: var(--color-desk);
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'><g fill='none' stroke-linecap='round'><g transform='translate(45 45)'><ellipse rx='16' ry='12.5' stroke='%23D5CBB7' stroke-width='4'/><line y1='-22' y2='22' stroke='%23C7D1BF' stroke-width='5'/></g><g transform='translate(135 135) rotate(-12)'><ellipse rx='16' ry='12.5' stroke='%23D5CBB7' stroke-width='4'/><line y1='-22' y2='22' stroke='%23C7D1BF' stroke-width='5'/></g></g></svg>");
+  background-size: 180px 180px;
 }
 
 /* The rubber stamp lands once when the form is filed. No motion for people who asked for none. */

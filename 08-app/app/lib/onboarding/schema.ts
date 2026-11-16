@@ -19,6 +19,7 @@ const email = z
   .string({ error: "Γράψτε ένα email." })
   .trim()
   .toLowerCase()
+  .min(1, "Γράψτε το email σας.")
   .max(254, "Αυτό το email είναι πολύ μεγάλο.")
   .pipe(z.email("Αυτό δεν μοιάζει με email. Παράδειγμα: maria@example.com"));
 
@@ -81,17 +82,30 @@ export const DraftSchema = z.object({
 });
 export type Draft = z.infer<typeof DraftSchema>;
 
-// The draft is ready to file when §1 and §2 pass their full checks (§3 may be empty).
-export const FilingSchema = ClinicSchema.extend({ rooms: RoomsSchema, team: TeamSchema.default([]) });
+// Sign-up, step 3: the clinic, how many beds, and the agreement. Rooms, exercise stations and the
+// team are set up later from the home page; sign-up makes one room with these beds.
+export const RegisterClinicSchema = ClinicSchema.extend({
+  beds: z.coerce
+    .number({ error: "Γράψτε πόσα κρεβάτια έχετε." })
+    .int("Γράψτε πόσα κρεβάτια έχετε.")
+    .min(1, "Βάλτε τουλάχιστον 1 κρεβάτι.")
+    .max(40, "Το πολύ 40 κρεβάτια. Τα υπόλοιπα τα προσθέτετε μετά."),
+  consent: z.literal("on", { error: "Για να ολοκληρωθεί η εγγραφή, τσεκάρετε ότι συμφωνείτε." }),
+});
 
-// Which sheets are done, for the binder tabs and for sending people back to what's missing.
-export function progress(draft: Draft) {
-  return {
-    clinic: ClinicSchema.safeParse(draft).success,
-    rooms: RoomsSchema.safeParse(draft.rooms).success,
-    team: draft.team !== undefined,
-  };
-}
+// The one room sign-up creates (renamed, split or added to later from the home page).
+export const firstRoom = (beds: number) => [{ name: "Αίθουσα", beds, stations: 0 }];
+
+// The 6-digit code from the email. People copy it with spaces or a dash ("123 456"): those are dropped.
+export const CodeSchema = z
+  .string({ error: "Γράψτε τον κωδικό από το email." })
+  .transform((v) => v.replace(/[\s-]/g, ""))
+  .pipe(
+    z
+      .string()
+      .min(1, "Γράψτε τον κωδικό από το email.")
+      .regex(/^\d{6}$/, "Ο κωδικός έχει 6 ψηφία. Τον βρίσκετε στο email που σας στείλαμε."),
+  );
 
 // Field errors as { field: "first message" }, ready for the form to show next to each input.
 export type FieldErrors = Record<string, string>;

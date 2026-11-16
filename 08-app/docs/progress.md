@@ -146,3 +146,67 @@ Built from the canvas boards PRNew, PRReview, PRApproved; ported from `03-protot
   Generation can't run and proofreading quietly skips until a new key is set in `.env.local` and on Vercel.
   The GeSY sample check (02–04) is still to do after that.
 - Not done here (phases 4–5): `/s/<token>`, `/p/<token>` and the room board, so the QR links 404 for now.
+
+## Sign-up for older users, step A: base pieces (2026-11-16)
+
+Why: the user's mother and a collaborator couldn't finish sign-up. Plan: `~/.claude/plans/propose-a-plan-to-synthetic-haven.md`
+(steps A–D: welcome page, 3-step sign-up with a 6-digit email code, rooms/team after sign-up).
+- Fields (`LineField`, `LineSelect`): label above in dark semibold, hint under it, a white box with a full border
+  (56 px tall, 20 px text), error under the box as «Πρόβλημα: …». `fieldBox()` reused by the invite form. No more `number` («1.3»).
+- `Sheet`: no margin rule, «ΔΕΛΤΙΟ» capitals, binder tabs or «Σελ. n / 5»; new `step` prop → «Βήμα n από m» + bar.
+  `SectionHeading` has no § mark. `BinderTabs.tsx` deleted. `Card`: no punched hole or typewriter label.
+- `HelpLine` («Χρειάζεστε βοήθεια;») on every Sheet and Card; hidden until `HELP` in `app/lib/site.ts` gets a real phone/email.
+- Look: headings Literata semibold (GFS Didot removed), `text-base` = 17 px, no italics or 13–15 px text on the
+  sign-up, sign-in, invite and home pages (notes pages untouched).
+- Words: «Όνομα κλινικής», «Τηλέφωνο για τους ασθενείς», «Είσοδος», «Συνέχεια» (no «στο §2»); empty email →
+  «Γράψτε το email σας.»; rooms error no longer says «γραμμές με σημείωση».
+- Until step B the old pages stay, counted «Βήμα n από 5».
+- Checks: `tsc` clean, 68 tests (BinderTabs test out, label-order + empty-email tests in), `next build` OK.
+  Screenshots at 390/1280 px of /register (+ errors), /login, check-email: no sideways scroll, smallest text 17 px.
+
+## Sign-up for older users, step B: welcome page + 3-step sign-up with an email code (2026-11-16)
+
+- `/welcome` (new): «Καλώς ήρθατε», one sentence on what the app does, two equal big buttons «Νέα κλινική · Εγγραφή»
+  (green) and «Έχω λογαριασμό · Είσοδος» (outlined, new `PaperLink variant="outline"`). Signed-out visitors of any
+  member page land here (`requireMember`/`requireFormUser`), and «Αποσύνδεση» goes here. Signed-in people skip it.
+- Flow: `/register` (Βήμα 1 από 3: name + email) → `/register/code` (Βήμα 2: type the 6-digit code) →
+  `/register/clinic` (Βήμα 3: name, city, phone, bed counter, agreement → «Ολοκλήρωση εγγραφής») → `/?welcome=1`.
+  Removed: `/register/{rooms,team,sign,check-email}`, `/login/check-email`; `/register/done` redirects home.
+- Code: `otp_length = 6`; `confirmation.html` and `magic_link.html` show the code large, then the button (still works on
+  any device). New subjects «Ο κωδικός σας για την εγγραφή / για είσοδο στο PhysioPath» (also `EMAIL_SUBJECTS` in
+  `app/lib/site.ts`, shown on the code page). Pushed with `supabase config push` (diff afterwards: none).
+- Actions: `sendLink` → code page; `verifyCode` (`verifyOtp` type `email`, spaces/dashes dropped by `CodeSchema`);
+  `resendCode` («Στείλαμε νέο κωδικό στις hh:mm»); `finishRegistration` = clinic + `firstRoom(beds)` + empty team
+  into the draft, then the unchanged `finish_onboarding` RPC. `saveClinic/saveRooms/saveTeam/fileRegistration`,
+  `FilingSchema`, `progress()` removed. `/login/code` shares `CodeForm` on the small card.
+- The agreement is one plain sentence in a big tappable box, «Τι σημαίνει αυτό;» opens the longer text.
+  The name from step 1 is reused (asked again only if the account has none). `Counter` moved to `components/paper`.
+- Checks: `tsc` clean, 70 tests (code + clinic-step schema tests), `next build` OK. End to end on the dev server with a
+  throwaway account (code from the admin API, no email sent) at 390 px: `/` → `/welcome`, wrong code → error,
+  real code typed as «123 456» → clinic step, no agreement → error with the bed count kept, then home with
+  «Η εγγραφή ολοκληρώθηκε». Test account and its clinic deleted afterwards.
+- Next (step C): «Επόμενα βήματα» on home, `/settings/rooms`, `/settings/team` (+ `add_invites` migration).
+- Follow-up (same day): **logo «Φ»** chosen from four ideas (γωνιόμετρο, Φ, φωνή→βήματα, έγκριση): the oval is a
+  joint, the green line the limb through it. `components/paper/Logo.tsx` (`Logo`, `LogoMark`) in the header of
+  Sheet, Card, StaffSheet and the invite card; `app/icon.svg` (green square, white oval, yellow line) is the tab icon.
+  Welcome text now «Το PhysioPath είναι ένα εργαλείο για φυσιοθεραπευτές:» + 3 numbered steps (Μιλάτε / Ελέγχετε / Έτοιμο).
+- Follow-up: faint repeated «Φ» on the desk around the welcome, sign-up and sign-in cards (`.desk-pattern` in
+  `globals.css`, inline SVG tile, two marks per 180 px tile, one slightly turned; used by `Card` and `Sheet`, not staff pages).
+- Follow-up: **welcome page full screen** (no card), after the layout of the user's portfolio (hotvader.github.io):
+  top bar (logo · «Είσοδος»), kicker «Για φυσιοθεραπευτές και κλινικές», headline «Μιλάτε. Το PhysioPath γράφει.»,
+  one paragraph, the two buttons stacked, a large line-drawn Φ on the right (≥1024 px only), the three steps as a
+  strip with thin dividers at the bottom (stacked on a phone), help line. Sign-up and sign-in keep the card + Φ pattern.
+- Follow-up: welcome page sized to fit one laptop screen without scrolling (measured: 1280×650, 1366×680,
+  1440×780 all fit): headline 38/48/54 px on two lines, kicker removed, buttons side by side from 640 px, smaller Φ,
+  slimmer strip. Phones (390 and 360 wide): both buttons inside the first screen, the steps scroll below, no sideways scroll.
+- Follow-up: **every sign-up/sign-in card fits one screen** (measured with a throwaway account, deleted after):
+  `/register`, `/register/code`, `/login`, `/login/code` fit at 1280×650, 1366×680, 1440×780, 390×844 and 360×740;
+  `/register/clinic` fits all three laptop sizes. How: tighter Sheet/Card padding, 52 px fields, «Βήμα n από 3» in the
+  header when it's free, `wide` Sheet/Card (two columns ≥1024 px): code page puts «Δεν ήρθε το email;» beside the
+  code (on phones it folds into a tap-to-open line); clinic step in two columns, one-line hints, «Τι σημαίνει η
+  συμφωνία;» beside the button. Not fitting: the clinic step on phones (+129 px at 390×844, one swipe), and with three
+  errors on the smallest laptops (+39 px); after a failed submit the page focuses and scrolls to the first field
+  with a problem. The email on the code page no longer breaks mid-word.
+- Follow-up: Sheet and Card **centred vertically** (flex, `min-h-dvh`, `justify-center`): measured equal space above and
+  below (and left/right) on /register, /register/code, /login, /login/code at 360/390/430-wide phones and laptops.
+  A card taller than the screen starts at the top. Sign-in no longer repeats «κωδικό 6 ψηφίων» as the email hint.

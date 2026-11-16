@@ -1,6 +1,6 @@
 "use client";
-// The form that asks for an email and sends a sign-in link. On the cover it also asks for the
-// name (a new account); on the login sheet just the email.
+// The form that asks for an email and sends the 6-digit code. In sign-up it also asks for the
+// name (a new account); on the sign-in card just the email.
 import { useActionState } from "react";
 
 import { Actions, SubmitButton } from "@/app/components/paper/Buttons";
@@ -12,7 +12,7 @@ export function LinkForm({ mode, next }: { mode: "register" | "login"; next?: st
   const [state, action] = useActionState<FormState, FormData>(sendLink, {});
   const v = state.values ?? {};
   return (
-    <form action={action} noValidate className="flex flex-col gap-5">
+    <form action={action} noValidate className="flex flex-col gap-4">
       <input type="hidden" name="mode" value={mode} />
       {next && <input type="hidden" name="next" value={next} />}
       <FormAlert>{state.message}</FormAlert>
@@ -36,12 +36,12 @@ export function LinkForm({ mode, next }: { mode: "register" | "login"; next?: st
         spellCheck={false}
         defaultValue={v.email}
         error={state.errors?.email}
-        hint={mode === "register" ? "Σας στέλνουμε σύνδεσμο για να μπείτε. Δεν χρειάζεται κωδικός." : undefined}
+        hint={mode === "register" ? "Θα σας στείλουμε εκεί έναν κωδικό 6 ψηφίων." : undefined} // sign-in says it above
         required
       />
       <Actions>
         <SubmitButton pending="Αποστολή…">
-          {mode === "register" ? "Στείλτε μου τον σύνδεσμο" : "Σύνδεσμος εισόδου"} <span aria-hidden="true">→</span>
+          {mode === "register" ? "Συνέχεια" : "Στείλτε μου κωδικό"} <span aria-hidden="true">→</span>
         </SubmitButton>
       </Actions>
     </form>
