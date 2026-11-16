@@ -90,3 +90,12 @@
     animation: none;
   }
 }
+
+/* Writing lines on paper for long text boxes (transcript, note parts). Pair with a 34px line-height
+   (or ruled-32 with 32px). Decoration only: the box keeps its bottom border as the real edge. */
+.ruled {
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 33px, var(--color-ledger) 33px, var(--color-ledger) 34px);
+}
+.ruled-32 {
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, var(--color-ledger) 31px, var(--color-ledger) 32px);
+}

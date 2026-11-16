@@ -13,8 +13,23 @@ export function FormAlert({ children }: { children?: ReactNode }) {
   );
 }
 
-// «ΚΑΤΑΤΕΘΗΚΕ»: the rubber stamp on a filed form. Decoration: the page says the same in words.
-export function Stamp({ date, number, animate = false, className }: { date: string; number?: string; animate?: boolean; className?: string }) {
+// «ΚΑΤΑΤΕΘΗΚΕ»: the rubber stamp on a filed form («ΕΓΚΡΙΘΗΚΕ» on an approved program).
+// Decoration: the page says the same in words.
+export function Stamp({
+  date,
+  number,
+  animate = false,
+  className,
+  word = "ΚΑΤΑΤΕΘΗΚΕ",
+  top = "PHYSIOPATH",
+}: {
+  date: string;
+  number?: string;
+  animate?: boolean;
+  className?: string;
+  word?: string;
+  top?: string;
+}) {
   return (
     <div
       aria-hidden="true"
@@ -25,8 +40,8 @@ export function Stamp({ date, number, animate = false, className }: { date: stri
       )}
     >
       <span className="flex flex-col items-center gap-0.5 rounded-[5px] border-[1.5px] border-stamp px-1.5 py-2">
-        <span className="font-typed text-[11px] font-bold tracking-[0.12em]">PHYSIOPATH</span>
-        <span className="font-display text-[30px] leading-none tracking-[0.06em]">ΚΑΤΑΤΕΘΗΚΕ</span>
+        <span className="font-typed text-[11px] font-bold tracking-[0.12em]">{top}</span>
+        <span className="font-display text-[30px] leading-none tracking-[0.06em]">{word}</span>
         <span className="font-typed text-sm font-bold">
           {date}
           {number && ` · ${number}`}

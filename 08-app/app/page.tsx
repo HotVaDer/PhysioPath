@@ -1,12 +1,12 @@
-// Home. For now a filed-form sheet with the clinic's details and, for the owner, the team's
-// invites (with «Ξανά αποστολή»). The room board moves here next (from 03-prototype, restyled in
+// Home. For now a filed-form sheet with the clinic's details, «Νέα σημείωση» for owner/physio and,
+// for the owner, the team's invites (with «Ξανά αποστολή»). The room board moves here next (from 03-prototype, restyled in
 // the paper look). Not signed in → registration; signed in but the form isn't filed → the form.
 import type { Metadata } from "next";
 
-import { QuietSubmit } from "@/app/components/paper/Buttons";
+import { PaperLink, QuietSubmit } from "@/app/components/paper/Buttons";
 import { FormAlert } from "@/app/components/paper/Notes";
 import { SignOut } from "@/app/components/paper/SignOut";
-import { Sheet } from "@/app/components/paper/Sheet";
+import { StaffSheet } from "@/app/components/paper/StaffSheet";
 import { resendInvite } from "@/app/lib/onboarding/actions";
 import { ROLES, type Role } from "@/app/lib/onboarding/schema";
 import { requireMember } from "@/app/lib/onboarding/session";
@@ -38,7 +38,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const canSend = Boolean(process.env.SUPABASE_SECRET_KEY);
 
   return (
-    <Sheet headerAside={<span className="font-typed">{clinic?.name}</span>}>
+    <StaffSheet profile={profile} current="board" title={<span className="font-typed">{clinic?.name}</span>}>
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
           <h1 className="font-display text-[36px] leading-[1.08] sm:text-[42px]">Η αίθουσα</h1>
@@ -47,6 +47,12 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           </p>
           <p className="italic text-muted">Ο πίνακας της αίθουσας έρχεται εδώ σύντομα. Μέχρι τότε, αυτά κατατέθηκαν:</p>
         </div>
+
+        {profile.role !== "assistant" && (
+          <PaperLink href="/notes/new">
+            <span aria-hidden="true">+</span> Νέα σημείωση
+          </PaperLink>
+        )}
 
         <dl className="flex flex-col border-b border-ledger">
           <div className="flex flex-wrap gap-x-4 border-t border-ledger py-3">
@@ -127,6 +133,6 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
         <SignOut />
       </div>
-    </Sheet>
+    </StaffSheet>
   );
 }

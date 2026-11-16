@@ -87,3 +87,62 @@ filtering) → accept as assistant; login as its own small card. Fixes made whil
 3. Plan 2: record → review → approve moved here on Supabase, in the paper look (canvas design first).
 4. Plan 3: room board (T-card rack idea) + patient phone screen online.
 5. Plan 4: home program `/p/…`, new Vercel project rooted at `08-app`, turn off Vercel auth.
+
+## Plan 2 (rest of the app), phase 2: database (2026-11-15)
+
+Plan: `~/.claude/plans/its-time-to-move-lively-honey.md`. Boards for every new screen: canvas page
+«Χαρτιά κλινικής · η αίθουσα» (`project/PR*.dc.html`), approved by the user.
+
+Migration `supabase/migrations/20261116000000_programs_notes_sessions.sql` (local only, git-ignored):
+- `programs` rebuilt (were empty): uuid id, `draft_id` (one approval per draft), `token` for `/p/<token>`. No note column.
+- `notes` (new): the GeSY note, activity code (PHYS01–04, picked by the physio), session number (counted from history).
+  Read and added only by owner/physio: assistants see no rows. This closes the gap where assistants could read notes.
+- `sessions` rebuilt (were empty): real columns (room + slot, sets target/done arrays, call reason/time, finished),
+  `token` for `/s/<token>`. One open session per slot. Staff can only clear calls, move and finish, and only while open;
+  finishing uses the server clock. Composite keys stop a row pointing at another clinic's patient, program or room.
+- `approve_program(...)`: program + note + optional card in one transaction (a taken bed undoes all of it; the same
+  draft twice returns the first result). Runs with the caller's rights, so RLS applies.
+- Patient phone without login: `patient_session(token)`, `patient_action(token, …)` (one guarded update per tap:
+  double taps count once, frozen after «Τέλος» or after 12 h), `home_program(token)`. Never the note.
+  The secret key stays invites-only.
+- `rls_check.sql` updated for the new tables: **rolled-back trial on the online project, 104 checks, 0 failed** (2026-11-15).
+- Pushed with the user's OK (`supabase db push --remote`), checks run again on the real schema: **104 checks, 0 failed** (2026-11-15).
+
+## Plan 2, phase 0: online (2026-11-16)
+
+- Vercel project **`physio-path`** (team kouklos, Pro) already had Root Directory `08-app`; it now serves this app at
+  **https://physio-path-nine.vercel.app** (deployed from GitHub `main` 432bfc2, READY).
+- Env vars added from the CLI (values piped from `.env.local`, never printed):
+  Production + Preview: Supabase URL, publishable key, `SUPABASE_SECRET_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
+  (the last three stored as Secret: write-only), `NEXT_PUBLIC_SITE_URL=https://physio-path-nine.vercel.app`.
+  Development (what `vercel env pull` downloads): only the non-secret ones, site URL `http://localhost:3001`.
+- Functions in **fra1** (Frankfurt, next to Supabase). Vercel login wall only on preview URLs; production is public.
+- Supabase Auth: Site URL = the Vercel URL; redirect URLs = the Vercel URL and `localhost:3001` (`config.toml`,
+  `supabase config push`, diff now empty). Email links use `{{ .RedirectTo }}`, so each app gets its own links.
+- `.vercel/` is git-ignored (root `.gitignore`).
+- Checked with curl: `/register`, `/login` 200, `/` and `/invite/…` redirect when signed out, served from fra1.
+- Left over: `ZZ_TEST` (a test variable, Preview). The CLI needs the user's approval to remove it: `vercel env rm ZZ_TEST`.
+- To test by the user: sign up and accept an invite on a phone over mobile data.
+
+## Plan 2, phase 3: record → review → approve (2026-11-16)
+
+Built from the canvas boards PRNew, PRReview, PRApproved; ported from `03-prototype/app/lib`.
+- `app/lib/notes/`: `schema.ts` (note = GeSY 4 parts + `patient_ref`, `body_area`; activity codes), `prompt.ts`
+  (GeSY section: each part only from what was said, empty part = null + a question, never a diagnosis/code/count),
+  `fixes.ts`, `format.ts` (GeSY labels el/en, `noteAsText` with the gesy.md header, `missingParts`), `draft.ts`
+  (+ patient, PHYS code, where, `draftId`), `DraftContext.tsx` (sessionStorage), `useRecorder.ts`,
+  `generate.ts` (Claude Opus 5.5, effort medium), `proofread.ts` (Claude Haiku 5.5), both `timeout 50 s, 1 retry`,
+  `speech/openai.ts` (gpt-transcribe + Cypriot hint), `samples.ts` (examples 02–04 bundled), `approval.ts`
+  (payload rules, blank exercises dropped, free slots: beds first then stations, like `check_slot`),
+  `actions.ts` (`approveNote` → `approve_program`), `http.ts` + `api.ts` (Greek errors, also for Vercel's HTML 413/504).
+- Routes: `POST /api/transcribe` (raw audio ≤ 4 MB) and `POST /api/generate`, `maxDuration = 120`, owner/physio only.
+- Pages: `/notes/new`, `/notes/review`, `/programs/[id]` (real QR from `qrcode`, link, copy link, «Αντιγραφή σημείωσης»
+  for owner/physio only). `/notes/*` sends assistants home. Home got «Νέα σημείωση» and the staff folder tabs
+  (`components/paper/StaffSheet.tsx`); «Κλινική» tab waits for its page (phase 4). `Stamp` takes `word`/`top`.
+- Checks: `tsc` clean, **68 tests** pass (28 before) (notes rules, approval rules, staff sheet + axe), `next build` 17 routes.
+  Signed out (curl): `/notes/*`, `/programs/*` redirect to `/register`; both APIs answer 401 JSON in Greek.
+  Speech-to-text on `03-prototype/test-audio/synth-02.webm`: 2.8 s, numbers kept («δεκαπέντε» heard as «10-15»: the review catches it).
+- **Blocked: `ANTHROPIC_API_KEY` is invalid** (Anthropic answers 401, same key as `03-prototype/.env`, and on Vercel).
+  Generation can't run and proofreading quietly skips until a new key is set in `.env.local` and on Vercel.
+  The GeSY sample check (02–04) is still to do after that.
+- Not done here (phases 4–5): `/s/<token>`, `/p/<token>` and the room board, so the QR links 404 for now.
