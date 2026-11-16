@@ -61,3 +61,6 @@ private/
 
 # Supabase schema, policies and RLS checks stay local (security: they map the access rules)
 08-app/supabase/
+
+# Vercel CLI link (project and team ids, per computer)
+.vercel/

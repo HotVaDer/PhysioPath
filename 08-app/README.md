@@ -9,7 +9,7 @@ Stack: Next.js 16, React 19, Tailwind 4, TypeScript, Supabase (Postgres + Auth, 
 ## Run it
 
 ```bash
-cp .env.example .env.local   # fill in the Supabase keys
+cp .env.example .env.local   # fill in the keys: see docs/setup.md
 npm install
 npm run dev                  # http://localhost:3001 (the prototype keeps 3000)
 ```
@@ -36,6 +36,7 @@ app/
 proxy.ts               keeps the login fresh on every request
 supabase/              migrations + RLS checks (local only, git-ignored)
 docs/progress.md       what's done, what's next, dashboard settings
+docs/setup.md          setting up on a new computer, which keys and how to get your own
 ```
 
 ## Rules this app keeps
