@@ -1,16 +1,12 @@
-// «Νέα σημείωση»: who the note is for, the recording (or a sample), and the text we heard.
-// Canvas: board PRNew. The recording and the draft live in the browser (NewNoteForm).
+// «Νέα συνεδρία», step 1 of 4: for which patient (then 2 same program or new, 3 the recording, 4 check and approve).
 import type { Metadata } from "next";
 
 import { StaffSheet } from "@/app/components/paper/StaffSheet";
-import { SAMPLES } from "@/app/lib/notes/samples";
 import { requireMember } from "@/app/lib/onboarding/session";
 
-import { NewNoteForm } from "./NewNoteForm";
+import { PatientForm } from "./PatientForm";
 
-export const metadata: Metadata = { title: "Νέα σημείωση" };
-
-const today = () => new Intl.DateTimeFormat("el-GR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date());
+export const metadata: Metadata = { title: "Νέα συνεδρία · ασθενής" };
 
 export default async function NewNotePage() {
   const { supabase, profile } = await requireMember();
@@ -20,11 +16,11 @@ export default async function NewNotePage() {
     .select("id, label")
     .is("archived_at", null)
     .order("created_at", { ascending: false })
-    .limit(40);
+    .limit(200);
 
   return (
-    <StaffSheet profile={profile} current="new" title={`ΦΩΝΗΤΙΚΗ ΣΗΜΕΙΩΣΗ · ${today()}`} page={{ n: 1, of: 2 }}>
-      <NewNoteForm patients={patients ?? []} samples={SAMPLES} />
+    <StaffSheet profile={profile} current="new" step={{ n: 1, of: 4 }}>
+      <PatientForm patients={patients ?? []} />
     </StaffSheet>
   );
 }

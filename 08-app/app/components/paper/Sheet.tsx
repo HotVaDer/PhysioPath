@@ -55,7 +55,8 @@ export function Sheet({ children, headerAside, step, wide = false }: Props) {
 }
 
 // «Βήμα 2 από 3» in words (what a screen reader reads) and a bar of 3 pieces beside it (decoration).
-function StepBar({ n, of }: { n: number; of: number }) {
+// Also used by the staff pages (a voice note is 2 steps).
+export function StepBar({ n, of }: { n: number; of: number }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
       <p className="font-semibold">

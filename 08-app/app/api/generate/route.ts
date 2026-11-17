@@ -1,10 +1,10 @@
-// POST /api/generate: { transcript, noteLang } → the patient program, the GeSY note and the questions
-// for the physio. Owner or physio only. Nothing is saved here: the physio reviews and approves first.
+// POST /api/generate: { transcript, noteLang, mode } → the patient program, the GeSY note and the questions
+// for the physio (mode "note", «Ίδιο πρόγραμμα»: only the note and the questions). Owner or physio only. Nothing is saved here: the physio reviews and approves first.
 import * as z from "zod";
 
 import { GenerationError, generate } from "@/app/lib/notes/generate";
 import { HttpError, readBody, requirePhysioApi, respond } from "@/app/lib/notes/http";
-import { NoteLanguage } from "@/app/lib/notes/prompt";
+import { GenerateMode, NoteLanguage } from "@/app/lib/notes/prompt";
 
 // Claude takes about 20 s with effort medium; generate.ts gives up at 50 s plus one retry.
 export const maxDuration = 120;
@@ -12,6 +12,7 @@ export const maxDuration = 120;
 const Body = z.object({
   transcript: z.string().trim().min(1, "Το κείμενο είναι κενό.").max(20_000, "Το κείμενο είναι πολύ μεγάλο."),
   noteLang: NoteLanguage.catch("el"),
+  mode: GenerateMode.catch("program"),
 });
 
 export async function POST(request: Request) {
@@ -27,6 +28,6 @@ export async function POST(request: Request) {
     }
     const body = Body.safeParse(data);
     if (!body.success) throw new HttpError(400, body.error.issues[0]?.message ?? "Λάθος αίτημα.");
-    return generate(body.data.transcript, body.data.noteLang);
+    return generate(body.data.transcript, body.data.noteLang, body.data.mode);
   }, [GenerationError]);
 }

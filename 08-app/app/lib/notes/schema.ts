@@ -58,10 +58,17 @@ export const VoiceNoteResult = z.object({
   ),
 });
 
+// «Ίδιο πρόγραμμα»: only today's note and the questions (the stored program is not sent or changed).
+export const NoteOnlyResult = z.object({
+  note: ClinicalNote,
+  missing_or_unclear: greekList("Short questions for the physio, in Greek, about today's session and missing GeSY parts only."),
+});
+
 export type Exercise = z.infer<typeof Exercise>;
 export type PatientProgram = z.infer<typeof PatientProgram>;
 export type ClinicalNote = z.infer<typeof ClinicalNote>;
 export type VoiceNoteResult = z.infer<typeof VoiceNoteResult>;
+export type NoteOnlyResult = z.infer<typeof NoteOnlyResult>;
 
 // The four GeSY parts, in the order GeSY lists them.
 export const GESY_PARTS = ["service_given", "assessment_findings", "treatment_plan", "progress"] as const;

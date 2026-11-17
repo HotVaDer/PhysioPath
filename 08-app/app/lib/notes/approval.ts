@@ -16,6 +16,9 @@ export const Approval = z.object({
   noteLang: NoteLanguage,
   activityCode: ActivityCode.nullable(),
   where: z.string().nullable(),
+  // «Ίδιο πρόγραμμα»: today's note goes with this stored program (continue_program); "new" = approve_program.
+  mode: z.enum(["new", "same"]).default("new"),
+  baseProgramId: z.uuid().nullable().default(null),
 });
 export type Approval = z.infer<typeof Approval>;
 

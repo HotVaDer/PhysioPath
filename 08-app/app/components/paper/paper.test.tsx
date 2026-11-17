@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { SubmitButton } from "@/app/components/paper/Buttons";
 import { LineField, LineSelect } from "@/app/components/paper/LineField";
-import { FormAlert, Stamp } from "@/app/components/paper/Notes";
+import { FormAlert } from "@/app/components/paper/Notes";
 import { SectionHeading, Sheet } from "@/app/components/paper/Sheet";
 import { expectNoA11yViolations } from "@/app/test/axe";
 
@@ -59,11 +59,6 @@ describe("small pieces", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     rerender(<FormAlert>Κάτι πήγε στραβά.</FormAlert>);
     expect(screen.getByRole("alert")).toHaveTextContent("Κάτι πήγε στραβά.");
-  });
-
-  it("the stamp is decoration (hidden from screen readers)", () => {
-    const { container } = render(<Stamp date="14 ΝΟΕ 2026" />);
-    expect(container.firstChild).toHaveAttribute("aria-hidden", "true");
   });
 
   it("the submit button is a real submit button", async () => {

@@ -14,7 +14,7 @@ export default async function RoomsSettingsPage() {
   const { data: rooms } = await supabase.from("rooms").select("id, name, beds, stations").order("position");
 
   return (
-    <StaffSheet profile={profile} title="Ρυθμίσεις">
+    <StaffSheet profile={profile}>
       <div className="flex max-w-[720px] flex-col gap-5">
         <Link href="/" className="min-h-11 content-center self-start">
           <span aria-hidden="true">←</span> Πίσω στην αρχική

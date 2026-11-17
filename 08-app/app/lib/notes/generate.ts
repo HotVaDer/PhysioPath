@@ -1,12 +1,13 @@
 // Turns a voice-note transcript into the patient's program and the GeSY clinical note, with Claude.
+// mode "note" («Ίδιο πρόγραμμα»): only the GeSY note and the questions; the stored program is never sent.
 // Server only: this file uses the API key, which must never reach the browser.
 import "server-only";
 
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 
-import { systemPrompt, type NoteLanguage } from "@/app/lib/notes/prompt";
-import { VoiceNoteResult } from "@/app/lib/notes/schema";
+import { systemPrompt, type GenerateMode, type NoteLanguage } from "@/app/lib/notes/prompt";
+import { NoteOnlyResult, VoiceNoteResult } from "@/app/lib/notes/schema";
 
 export const MODEL = "claude-opus-5-5";
 
@@ -15,7 +16,7 @@ export class GenerationError extends Error {}
 
 let client: Anthropic | undefined;
 
-export async function generate(transcript: string, noteLang: NoteLanguage) {
+export async function generate(transcript: string, noteLang: NoteLanguage, mode: GenerateMode = "program") {
   const text = transcript.trim();
   if (!text) throw new GenerationError("Το κείμενο είναι κενό. Ηχογραφήστε ή γράψτε τη σημείωση πρώτα.");
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -34,12 +35,12 @@ export async function generate(transcript: string, noteLang: NoteLanguage) {
       output_config: {
         // Medium, not low: low changed exercises in 3 of 5 test notes (03-prototype/docs/transcription.md).
         effort: "medium",
-        format: betaZodOutputFormat(VoiceNoteResult),
+        format: mode === "note" ? betaZodOutputFormat(NoteOnlyResult) : betaZodOutputFormat(VoiceNoteResult),
       },
       // If a safety classifier declines, retry server-side on Anthropic's recommended model.
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
-      system: systemPrompt(noteLang),
+      system: systemPrompt(noteLang, mode),
       messages: [{ role: "user", content: `<transcript>\n${text}\n</transcript>` }],
     });
   } catch (error) {

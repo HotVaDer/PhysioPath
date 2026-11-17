@@ -5,7 +5,7 @@ import * as z from "zod";
 
 import { Fix, undoFix } from "@/app/lib/notes/fixes";
 import { NoteLanguage } from "@/app/lib/notes/prompt";
-import { ActivityCode, Exercise, VoiceNoteResult, type ClinicalNote } from "@/app/lib/notes/schema";
+import { ActivityCode, Exercise, PatientProgram, VoiceNoteResult, type ClinicalNote } from "@/app/lib/notes/schema";
 
 const Timings = z.object({
   recording: z.number().optional(), // seconds of audio
@@ -29,12 +29,16 @@ export const Draft = z.object({
   draftId: z.uuid().nullable().default(null),
   activityCode: ActivityCode.nullable().default(null), // picked by the physio, never preselected
   where: z.string().nullable().default(null), // "<roomId>:<slot>" or "home"
+  // «Νέα συνεδρία» step 2: "new" = record a new program (as always), "same" = «Ίδιο πρόγραμμα»: the patient
+  // keeps the stored program (base, read-only) and only today's GeSY note is written.
+  mode: z.enum(["new", "same"]).default("new"),
+  base: z.object({ programId: z.uuid(), approvedAt: z.string(), program: PatientProgram }).nullable().default(null),
 });
 export type Draft = z.infer<typeof Draft>;
 
 export const emptyDraft: Draft = {
   transcript: "", fixes: [], noteLang: "el", result: null, resultNoteLang: "el", timings: {}, removed: null,
-  patient: null, draftId: null, activityCode: null, where: null,
+  patient: null, draftId: null, activityCode: null, where: null, mode: "new", base: null,
 };
 
 export const emptyExercise = (): Exercise => ({ name: "", sets: null, reps: null, hold: null, frequency: null, notes: null });
@@ -51,6 +55,7 @@ export type DraftAction =
   | { type: "setNoteLang"; lang: NoteLanguage }
   | { type: "generated"; result: VoiceNoteResult; seconds: number; noteLang: NoteLanguage; draftId: string }
   | { type: "setPatient"; patient: { id: string | null; label: string } | null }
+  | { type: "setMode"; mode: "new" | "same"; base: Draft["base"] }
   | { type: "setActivityCode"; code: ActivityCode | null }
   | { type: "setWhere"; where: string | null }
   | { type: "setProgramText"; field: ProgramTextField; value: string }
@@ -106,8 +111,17 @@ export function draftReducer(draft: Draft, action: DraftAction): Draft {
         removed: null,
         draftId: action.draftId,
       };
-    case "setPatient":
-      return { ...draft, patient: action.patient };
+    case "setPatient": {
+      // Another patient: the program choice and anything generated belonged to the old one.
+      const other = (action.patient?.id ?? null) !== (draft.patient?.id ?? null);
+      return other
+        ? { ...draft, patient: action.patient, mode: "new", base: null, result: null, draftId: null, removed: null }
+        : { ...draft, patient: action.patient };
+    }
+    case "setMode":
+      // A different choice: what was generated for the other one no longer fits (the transcript stays).
+      if (draft.mode === action.mode && draft.base?.programId === action.base?.programId) return draft;
+      return { ...draft, mode: action.mode, base: action.mode === "same" ? action.base : null, result: null, draftId: null, removed: null };
     case "setActivityCode":
       return { ...draft, activityCode: action.code };
     case "setWhere":

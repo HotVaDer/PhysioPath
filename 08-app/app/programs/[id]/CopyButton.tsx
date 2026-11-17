@@ -21,12 +21,12 @@ export function CopyButton({ text, label, done, variant = "outline" }: { text: s
         onClick={() => void copy()}
         className={cx(
           "min-h-12 cursor-pointer px-[18px] text-[17px] font-bold",
-          variant === "solid" ? "bg-action text-white hover:bg-action-hover" : "border-2 border-action bg-sheet text-action hover:bg-white",
+          variant === "solid" ? "bg-action text-white hover:bg-action-hover" : "border-2 border-action bg-white text-action hover:bg-note-green",
         )}
       >
         {label}
       </button>
-      <span role="status" className="text-base italic">
+      <span role="status" className="text-base font-semibold">
         {status === "copied" ? done : status === "failed" ? "Η αντιγραφή δεν έγινε. Επιλέξτε το κείμενο και αντιγράψτε το με το χέρι." : ""}
       </span>
     </span>

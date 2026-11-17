@@ -1,44 +1,46 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { Stamp } from "@/app/components/paper/Notes";
-import { PartHeading, Slip, SlipTitle, StaffSheet } from "@/app/components/paper/StaffSheet";
+// «Αποσύνδεση» posts to a server action (server-only code); here a plain button stands in for it.
+vi.mock("@/app/components/paper/SignOut", () => ({
+  SignOut: () => (
+    <form>
+      <button type="submit">Αποσύνδεση</button>
+    </form>
+  ),
+}));
+
+import { Panel, PanelTitle, PartTitle, StaffSheet } from "@/app/components/paper/StaffSheet";
 import { expectNoA11yViolations } from "@/app/test/axe";
 
 describe("StaffSheet", () => {
-  it("shows the physio both tabs and marks the current one", async () => {
+  it("shows the physio both links, marks the current one, and the step in words", async () => {
     const { container } = render(
-      <StaffSheet profile={{ role: "physio", full_name: "Μαρία" }} current="new" title="ΦΩΝΗΤΙΚΗ ΣΗΜΕΙΩΣΗ" page={{ n: 1, of: 2 }}>
-        <PartHeading id="a" mark="Α.">
-          Ασθενής
-        </PartHeading>
-        <Slip tint="yellow" labelledBy="q">
-          <SlipTitle id="q">2 ΕΡΩΤΗΣΕΙΣ ΓΙΑ ΕΣΑΣ</SlipTitle>
+      <StaffSheet profile={{ role: "physio", full_name: "Μαρία" }} current="new" step={{ n: 1, of: 2 }}>
+        <PartTitle id="a">Ηχογράφηση</PartTitle>
+        <Panel tint="yellow" labelledBy="q">
+          <PanelTitle id="q">2 ερωτήσεις για εσάς</PanelTitle>
           <p>Πόσα σετ;</p>
-        </Slip>
+        </Panel>
       </StaffSheet>,
     );
-    expect(screen.getByRole("link", { name: "Νέα σημείωση" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Νέα συνεδρία" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Αίθουσα" })).not.toHaveAttribute("aria-current");
-    expect(screen.getByRole("region", { name: "2 ΕΡΩΤΗΣΕΙΣ ΓΙΑ ΕΣΑΣ" })).toBeInTheDocument();
+    expect(screen.getByText("Βήμα 1 από 2")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "2 ερωτήσεις για εσάς" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Αποσύνδεση" })).toBeInTheDocument();
+    // No paperwork left: no page numbers or Roman-numeral parts.
+    expect(container).not.toHaveTextContent(/Σελ\.|ΙΙ\./);
     await expectNoA11yViolations(container);
   });
 
-  it("gives an assistant no «Νέα σημείωση» tab", () => {
+  it("gives an assistant no «Νέα συνεδρία» link", () => {
     render(
-      <StaffSheet profile={{ role: "assistant", full_name: "Άννα" }} current="board" title="Κλινική">
+      <StaffSheet profile={{ role: "assistant", full_name: "Άννα" }} current="board">
         <p>…</p>
       </StaffSheet>,
     );
-    expect(screen.queryByRole("link", { name: "Νέα σημείωση" })).toBeNull();
-    expect(screen.getByText("Άννα · Βοηθός")).toBeInTheDocument();
-  });
-});
-
-describe("Stamp", () => {
-  it("can say «ΕΓΚΡΙΘΗΚΕ» and stays hidden from screen readers", () => {
-    const { container } = render(<Stamp word="ΕΓΚΡΙΘΗΚΕ" top="ΜΑΡΙΑ" date="16 ΝΟΕ 2026" />);
-    expect(container.firstChild).toHaveAttribute("aria-hidden", "true");
-    expect(container).toHaveTextContent("ΕΓΚΡΙΘΗΚΕ");
+    expect(screen.queryByRole("link", { name: "Νέα συνεδρία" })).toBeNull();
+    expect(screen.getByText(/Άννα/)).toHaveTextContent("Άννα · Βοηθός");
   });
 });

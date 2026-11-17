@@ -1,5 +1,5 @@
 // «Έλεγχος και έγκριση»: the program, the GeSY note, the questions, and where the patient exercises.
-// Canvas: board PRReview. The draft itself is in the browser (ReviewForm); the server adds what only
+// «Νέα συνεδρία», step 4 of 4. The draft itself is in the browser (ReviewForm); the server adds what only
 // the database knows: the rooms and which beds are taken now, and each patient's earlier notes
 // (for «Συνεδρία N»).
 import type { Metadata } from "next";
@@ -35,7 +35,7 @@ export default async function ReviewPage() {
   const today = new Intl.DateTimeFormat("el-GR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date());
 
   return (
-    <StaffSheet profile={profile} current="new" title="ΣΗΜΕΙΩΣΗ ΣΥΝΕΔΡΙΑΣ · ΠΡΟΣ ΕΓΚΡΙΣΗ" page={{ n: 2, of: 2 }}>
+    <StaffSheet profile={profile} current="new" step={{ n: 4, of: 4 }}>
       <ReviewForm
         slots={slotOptions((rooms ?? []) as Room[], openSessions)}
         notesPerPatient={notesPerPatient}

@@ -4,13 +4,14 @@
 import type { Fix } from "@/app/lib/notes/fixes";
 import { AUDIO_TOO_LARGE } from "@/app/lib/notes/limits";
 import type { NoteLanguage } from "@/app/lib/notes/prompt";
-import type { VoiceNoteResult } from "@/app/lib/notes/schema";
+import type { NoteOnlyResult, VoiceNoteResult } from "@/app/lib/notes/schema";
 
 export class ApiError extends Error {}
 
 // text = after proofreading; raw = what speech-to-text wrote; fixes = what changed between them (for undo).
 export type TranscribeResponse = { text: string; raw: string; fixes: Fix[]; seconds: number; proofreadSeconds: number };
 export type GenerateResponse = { result: VoiceNoteResult; seconds: number };
+export type GenerateNoteResponse = { result: NoteOnlyResult; seconds: number };
 
 const STATUS_MESSAGES: Record<number, string> = {
   401: "Η σύνδεσή σας έληξε. Συνδεθείτε ξανά.",
@@ -51,4 +52,12 @@ export const generateProgram = (transcript: string, noteLang: NoteLanguage) =>
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ transcript, noteLang }),
+  });
+
+// «Ίδιο πρόγραμμα»: only today's GeSY note and the questions (the stored program stays as it is).
+export const generateNote = (transcript: string, noteLang: NoteLanguage) =>
+  call<GenerateNoteResponse>("/api/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ transcript, noteLang, mode: "note" }),
   });

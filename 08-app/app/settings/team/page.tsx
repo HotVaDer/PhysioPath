@@ -33,7 +33,7 @@ export default async function TeamSettingsPage({ searchParams }: PageProps<"/set
   const email = sentTo && <span className="break-all font-typed">{sentTo}</span>;
 
   return (
-    <StaffSheet profile={profile} title="Ρυθμίσεις">
+    <StaffSheet profile={profile}>
       <div className="flex max-w-[720px] flex-col gap-6">
         <Link href="/" className="min-h-11 content-center self-start">
           <span aria-hidden="true">←</span> Πίσω στην αρχική
@@ -84,15 +84,15 @@ export default async function TeamSettingsPage({ searchParams }: PageProps<"/set
           <h2 id="list" className="font-display text-[24px]">
             Ποιοι είναι στην ομάδα
           </h2>
-          <ul className="flex flex-col border-b border-ledger">
-            <li className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-ledger py-3">
+          <ul className="flex flex-col border-b border-hairline">
+            <li className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-hairline py-3">
               <span className="flex-[1_1_240px] font-semibold">{profile.full_name} (εσείς)</span>
               <span>Υπεύθυνη/ος κλινικής</span>
             </li>
             {invites.map((invite) => {
               const status = inviteStatus(invite);
               return (
-                <li key={invite.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-ledger py-3">
+                <li key={invite.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-hairline py-3">
                   <span className="flex-[1_1_240px] break-all font-typed">{invite.email}</span>
                   <span>{ROLES[invite.role]}</span>
                   <span className="text-muted">{status.text}</span>

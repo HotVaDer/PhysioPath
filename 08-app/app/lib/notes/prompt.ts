@@ -6,6 +6,11 @@ import * as z from "zod";
 export const NoteLanguage = z.enum(["el", "en"]);
 export type NoteLanguage = z.infer<typeof NoteLanguage>;
 
+// "program": a new program and the note (the usual case). "note": «Ίδιο πρόγραμμα», the patient keeps
+// the program they already have; only today's GeSY note is written.
+export const GenerateMode = z.enum(["program", "note"]);
+export type GenerateMode = z.infer<typeof GenerateMode>;
+
 const NOTE_LANGUAGE_NAMES: Record<NoteLanguage, string> = { el: "Greek", en: "English" };
 
 const SYSTEM_PROMPT = `You are the documentation assistant inside PhysioPath, a tool for physiotherapists in Cyprus and Greece.
@@ -37,6 +42,11 @@ Clinical note style: concise and professional, standard physiotherapy terminolog
 
 missing_or_unclear is read by the physio: write it in Greek, one short question per item.`;
 
-export function systemPrompt(noteLang: NoteLanguage): string {
-  return SYSTEM_PROMPT.replace("{note_language}", NOTE_LANGUAGE_NAMES[noteLang]);
+// Added for «Ίδιο πρόγραμμα» (2026-11-17). Every rule above still holds; only the program is left out.
+const NOTE_ONLY = `
+
+This time the patient keeps the home exercise program they already have: it does not change and you do not write one. Write only the clinical note about today's session and missing_or_unclear. If the physio mentions the home exercises, record that in treatment_plan as said (for example that the same program continues); never add, remove or change exercises. Do not ask about sets, repetitions or frequency of the home exercises: they are already set. Ask only about today's session and the GeSY parts.`;
+
+export function systemPrompt(noteLang: NoteLanguage, mode: GenerateMode = "program"): string {
+  return SYSTEM_PROMPT.replace("{note_language}", NOTE_LANGUAGE_NAMES[noteLang]) + (mode === "note" ? NOTE_ONLY : "");
 }

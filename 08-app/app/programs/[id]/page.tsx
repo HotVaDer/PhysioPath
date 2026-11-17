@@ -1,6 +1,6 @@
-// The approved sheet: the stamp, the QR code for the patient's phone (the session in the room, or the
-// home program), the link, and the GeSY note to copy into the GeSY portal.
-// Canvas: board PRApproved. Assistants see the QR (they help patients scan it) but never the note:
+// After «Έγκριση»: a green «Εγκρίθηκε» line, the QR code for the patient's phone (the session in the room,
+// or the home program), the link, and the GeSY note to copy into the GeSY portal.
+// Plain look (2026-11-17): no rubber stamp, tilted slips or capital labels. Assistants see the QR (they help patients scan it) but never the note:
 // the database gives them no rows from `notes`.
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -9,8 +9,7 @@ import QRCode from "qrcode";
 import * as z from "zod";
 
 import { PaperLink } from "@/app/components/paper/Buttons";
-import { Stamp } from "@/app/components/paper/Notes";
-import { Slip, SlipTitle, StaffSheet } from "@/app/components/paper/StaffSheet";
+import { Panel, PanelTitle, StaffSheet } from "@/app/components/paper/StaffSheet";
 import { slotLabel } from "@/app/lib/notes/approval";
 import { GESY_LABELS, isBlank, noteAsText } from "@/app/lib/notes/format";
 import type { NoteLanguage } from "@/app/lib/notes/prompt";
@@ -23,12 +22,14 @@ import { CopyButton } from "./CopyButton";
 
 export const metadata: Metadata = { title: "Εγκρίθηκε" };
 
-const dateTime = new Intl.DateTimeFormat("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Nicosia" });
-const stampDate = new Intl.DateTimeFormat("el-GR", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Nicosia" });
+const day = new Intl.DateTimeFormat("el-GR", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Nicosia" });
+const time = new Intl.DateTimeFormat("el-GR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Europe/Nicosia" });
 
-export default async function ApprovedPage({ params }: PageProps<"/programs/[id]">) {
+export default async function ApprovedPage({ params, searchParams }: PageProps<"/programs/[id]">) {
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
+  // ?note: which visit (one program can have many: «Ίδιο πρόγραμμα»). Without it: the latest one.
+  const noteId = z.uuid().safeParse((await searchParams).note);
   const { supabase, user, profile } = await requireMember();
 
   const { data: program } = await supabase
@@ -39,15 +40,25 @@ export default async function ApprovedPage({ params }: PageProps<"/programs/[id]
   if (!program) notFound();
 
   const isPhysio = profile.role !== "assistant";
-  const [{ data: session }, { data: patient }, { data: note }] = await Promise.all([
-    supabase.from("sessions").select("token, room_id, slot, finished_at").eq("program_id", id).maybeSingle(),
+  const noteQuery = supabase.from("notes").select("activity_code, session_no, note_lang, note, session_id, created_at").eq("program_id", id);
+  const [{ data: patient }, { data: note }] = await Promise.all([
     program.patient_id
       ? supabase.from("patients").select("label").eq("id", program.patient_id).maybeSingle()
       : Promise.resolve({ data: null }),
+    // Assistants get no rows from notes (the database says no), so this is only for physios.
     isPhysio
-      ? supabase.from("notes").select("activity_code, session_no, note_lang, note").eq("program_id", id).maybeSingle()
+      ? noteId.success
+        ? noteQuery.eq("id", noteId.data).maybeSingle()
+        : noteQuery.order("created_at", { ascending: false }).limit(1).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
+  // The visit's own card on the board (none if it was home only); for assistants, the latest card.
+  const sessionQuery = supabase.from("sessions").select("token, room_id, slot, finished_at");
+  const { data: session } = note
+    ? note.session_id
+      ? await sessionQuery.eq("id", note.session_id).maybeSingle()
+      : { data: null }
+    : await sessionQuery.eq("program_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle();
   const { data: room } = session?.room_id
     ? await supabase.from("rooms").select("name, beds").eq("id", session.room_id).maybeSingle()
     : { data: null };
@@ -59,7 +70,8 @@ export default async function ApprovedPage({ params }: PageProps<"/programs/[id]
   const link = inRoom ? `${siteUrl()}/s/${session!.token}` : `${siteUrl()}/p/${program.token}`;
   const svg = await QRCode.toString(link, { type: "svg", errorCorrectionLevel: "M", margin: 2, color: { dark: "#000000", light: "#ffffff" } });
   const qrSrc = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-  const approvedAt = new Date(program.approved_at as string);
+  // When this visit was approved (for «Ίδιο πρόγραμμα», today's note; else the program itself).
+  const approvedAt = new Date((note?.created_at ?? program.approved_at) as string);
   const signedByMe = program.created_by === user.id;
 
   const parsedNote = note ? ClinicalNote.safeParse(note.note) : null;
@@ -70,18 +82,15 @@ export default async function ApprovedPage({ params }: PageProps<"/programs/[id]
       : null;
 
   return (
-    <StaffSheet profile={profile} title={`Εγκρίθηκε ${dateTime.format(approvedAt)}`}>
+    <StaffSheet profile={profile}>
       <ClearDraft />
-      <div className="relative flex flex-col gap-7">
-        <Stamp
-          word="ΕΓΚΡΙΘΗΚΕ"
-          top={signedByMe && profile.full_name ? profile.full_name.toLocaleUpperCase("el") : "PHYSIOPATH"}
-          date={stampDate.format(approvedAt).toLocaleUpperCase("el")}
-          animate
-          className="self-end sm:absolute sm:right-0 sm:top-0"
-        />
+      <div className="flex flex-col gap-7">
+        <p className="self-start rounded-md bg-note-green px-4 py-3 text-[19px]">
+          <span className="font-bold text-action">✓ Εγκρίθηκε</span> στις {day.format(approvedAt)}, {time.format(approvedAt)}
+          {signedByMe && profile.full_name ? `, από εσάς (${profile.full_name})` : ""}.
+        </p>
 
-        <div role="status" className="flex max-w-[500px] flex-col gap-2.5">
+        <div role="status" className="flex max-w-[620px] flex-col gap-2.5">
           <h1 className="font-display text-[34px] leading-tight sm:text-[40px]">
             {inRoom ? `${name}: ${where ?? "στην αίθουσα"}` : `Το πρόγραμμα για ${name} είναι έτοιμο`}
           </h1>
@@ -93,19 +102,16 @@ export default async function ApprovedPage({ params }: PageProps<"/programs/[id]
         </div>
 
         <div className="flex flex-wrap items-start gap-x-10 gap-y-7">
-          <figure className="relative m-0 flex -rotate-1 flex-col items-center gap-2.5 border border-hairline bg-white px-6 pb-4 pt-6 shadow-[0_10px_24px_-18px_rgba(43,36,32,0.6)]">
-            <svg width="44" height="14" viewBox="0 0 44 14" fill="none" aria-hidden="true" className="absolute -top-1.5 left-5">
-              <path d="M2 12V4h40v8" stroke="#8A8178" strokeWidth="2.5" strokeLinejoin="round" />
-            </svg>
-            <figcaption className="font-typed text-sm font-bold tracking-[0.06em]">{inRoom ? "ΓΙΑ ΤΟ ΚΙΝΗΤΟ ΤΗΣ ΣΥΝΕΔΡΙΑΣ" : "ΓΙΑ ΤΟ ΣΠΙΤΙ"}</figcaption>
+          <figure className="m-0 flex flex-col items-center gap-2 rounded-md border-2 border-hairline bg-white px-6 pb-4 pt-4">
+            <figcaption className="font-semibold">{inRoom ? "Για το κινητό του ασθενή, τώρα" : "Για το σπίτι"}</figcaption>
             {/* eslint-disable-next-line @next/next/no-img-element -- a generated SVG, nothing to optimise */}
             <img src={qrSrc} width={232} height={232} alt={inRoom ? `Κωδικός QR για την οθόνη συνεδρίας: ${name}` : `Κωδικός QR για το πρόγραμμα στο σπίτι: ${name}`} />
           </figure>
 
           <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-3.5">
             <div className="flex flex-col gap-0.5">
-              <span className="text-[15px]">Σύνδεσμος</span>
-              <a href={link} target="_blank" rel="noreferrer" className="break-all border-b-2 border-line pb-1 font-typed text-lg text-ink">
+              <span className="font-semibold">Ο σύνδεσμος</span>
+              <a href={link} target="_blank" rel="noreferrer" className="break-all text-lg">
                 {link}
               </a>
             </div>
@@ -113,15 +119,16 @@ export default async function ApprovedPage({ params }: PageProps<"/programs/[id]
             <p className="max-w-[52ch]">
               {inRoom
                 ? "Όταν τελειώσει, πατήστε «Τέλος» στην κάρτα του στην αίθουσα. Τότε το κινητό του δείχνει το πρόγραμμα για το σπίτι."
-                : "Το πρόγραμμα δεν αλλάζει πια. Για αλλαγές γράφετε νέα σημείωση και ο ασθενής παίρνει νέο σύνδεσμο."}
+                : "Το πρόγραμμα δεν αλλάζει πια. Για αλλαγές: «Νέα συνεδρία» → «Αλλαγή προγράμματος», και ο ασθενής παίρνει νέο σύνδεσμο."}
             </p>
-            <p className="text-[15px] italic text-muted">Η οθόνη του ασθενή και ο πίνακας της αίθουσας έρχονται στο επόμενο βήμα της εφαρμογής.</p>
+            <p className="text-muted">Η οθόνη του ασθενή και ο πίνακας της αίθουσας έρχονται στο επόμενο βήμα της εφαρμογής.</p>
           </div>
         </div>
 
         {noteText && parsedNote?.success && (
-          <Slip labelledBy="att-h" className="w-full rotate-[0.6deg]">
-            <SlipTitle id="att-h">ΣΥΝΗΜΜΕΝΟ · ΚΛΙΝΙΚΗ ΣΗΜΕΙΩΣΗ</SlipTitle>
+          <Panel labelledBy="att-h" className="w-full">
+            <PanelTitle id="att-h">Κλινική σημείωση για το ΓεΣΥ</PanelTitle>
+            <p className="text-muted">Μένει στην κλινική. Αντιγράψτε τη στο σύστημα του ΓεΣΥ.</p>
             <p className="font-display text-[22px] leading-tight">
               {note!.activity_code} · {noteLang === "el" ? "Συνεδρία" : "Session"} {note!.session_no}
               {!isBlank(parsedNote.data.body_area) && ` · ${parsedNote.data.body_area!.trim()}`}
@@ -130,19 +137,19 @@ export default async function ApprovedPage({ params }: PageProps<"/programs/[id]
               {GESY_PARTS.map((part) => (
                 <div key={part}>
                   <dt className="font-semibold">{GESY_LABELS[noteLang][part]}</dt>
-                  <dd className="font-typed">{isBlank(parsedNote.data[part]) ? (noteLang === "el" ? "— Δεν αναφέρθηκε" : "— Not mentioned") : parsedNote.data[part]}</dd>
+                  <dd>{isBlank(parsedNote.data[part]) ? (noteLang === "el" ? "— Δεν αναφέρθηκε" : "— Not mentioned") : parsedNote.data[part]}</dd>
                 </div>
               ))}
             </dl>
             <CopyButton text={noteText} label="Αντιγραφή σημείωσης" done="Αντιγράφηκε. Επικολλήστε τη στο σύστημα του ΓεΣΥ." variant="solid" />
-          </Slip>
+          </Panel>
         )}
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
           <PaperLink href="/">
             Στην αίθουσα <span aria-hidden="true">→</span>
           </PaperLink>
-          {isPhysio && <Link href="/notes/new">Νέα σημείωση</Link>}
+          {isPhysio && <Link href="/notes/new">Νέα συνεδρία</Link>}
         </div>
       </div>
     </StaffSheet>

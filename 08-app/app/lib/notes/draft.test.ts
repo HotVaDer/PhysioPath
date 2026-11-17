@@ -131,6 +131,22 @@ describe("draftReducer: editing the program", () => {
     expect(draftReducer(draft, { type: "reset" }).activityCode).toBeNull();
   });
 
+  it("«Ίδιο πρόγραμμα»: keeps the stored program; another choice or another patient clears what was generated", () => {
+    const ELENI = "5b0b6c1e-1a2b-4c3d-8e9f-0a1b2c3d4e5f";
+    const base = { programId: "6c1c7d2f-2b3c-4d4e-9f0a-1b2c3d4e5f60", approvedAt: "2026-11-12T10:00:00Z", program: withResult.result!.program };
+    let draft = draftReducer(withResult, { type: "setPatient", patient: { id: ELENI, label: "Ελένη Κ." } });
+    expect([draft.result, draft.mode]).toEqual([null, "new"]); // another patient: the old result is gone
+    draft = draftReducer({ ...draft, transcript: "Σήμερα μάλαξη." }, { type: "setMode", mode: "same", base });
+    expect([draft.mode, draft.base?.programId, draft.transcript]).toEqual(["same", base.programId, "Σήμερα μάλαξη."]);
+    const generated = draftReducer(draft, { type: "generated", result: { ...withResult.result!, program: base.program }, seconds: 3, noteLang: "el", draftId: DRAFT_ID });
+    expect(draftReducer(generated, { type: "setMode", mode: "same", base })).toBe(generated); // same choice again: nothing lost
+    const changed = draftReducer(generated, { type: "setMode", mode: "new", base: null });
+    expect([changed.mode, changed.base, changed.result, changed.transcript]).toEqual(["new", null, null, "Σήμερα μάλαξη."]);
+    // Typing a new patient's name doesn't clear anything (the patient is still "new").
+    const typed = draftReducer({ ...withResult, patient: { id: null, label: "Γ" } }, { type: "setPatient", patient: { id: null, label: "Γι" } });
+    expect(typed.result).toBe(withResult.result);
+  });
+
   it("reset starts over but keeps the note language choice", () => {
     const draft = draftReducer({ ...withResult, noteLang: "en" }, { type: "reset" });
     expect(draft).toEqual({ ...emptyDraft, noteLang: "en" });

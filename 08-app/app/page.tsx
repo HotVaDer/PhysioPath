@@ -1,4 +1,4 @@
-// Home. The clinic's details, «Νέα σημείωση» for owner/physio and, for the owner, «Επόμενα βήματα»
+// Home. The clinic's details, «Νέα συνεδρία» for owner/physio and, for the owner, «Επόμενα βήματα»
 // after sign-up: ① the rooms (/settings/rooms) and ② the team (/settings/team), each with ✓ once
 // done. The room board moves here next (from 03-prototype, restyled in the paper look).
 // Not signed in → the welcome page; signed in without a clinic → the last sign-up step.
@@ -7,7 +7,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PaperLink, QuietSubmit } from "@/app/components/paper/Buttons";
-import { SignOut } from "@/app/components/paper/SignOut";
 import { StaffSheet } from "@/app/components/paper/StaffSheet";
 import { ROLES } from "@/app/lib/onboarding/schema";
 import { requireMember } from "@/app/lib/onboarding/session";
@@ -68,7 +67,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const savedNote = typeof saved === "string" ? SAVED[saved] : undefined;
 
   return (
-    <StaffSheet profile={profile} current="board" title={<span className="font-typed">{clinic?.name}</span>}>
+    <StaffSheet profile={profile} current="board">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
           <h1 className="font-display text-[36px] leading-[1.08] sm:text-[42px]">Η αίθουσα</h1>
@@ -80,7 +79,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         {welcome === "1" && (
           <p role="status" className="bg-note-green px-4 py-3">
             <span className="font-semibold">Η εγγραφή ολοκληρώθηκε. Η κλινική σας είναι έτοιμη.</span> Από εδώ ξεκινάτε κάθε
-            νέα σημείωση.
+            νέα συνεδρία.
           </p>
         )}
         {savedNote && (
@@ -91,7 +90,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
         {profile.role !== "assistant" && (
           <PaperLink href="/notes/new">
-            <span aria-hidden="true">+</span> Νέα σημείωση
+            <span aria-hidden="true">+</span> Νέα συνεδρία
           </PaperLink>
         )}
 
@@ -119,21 +118,21 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           </section>
         )}
 
-        <dl className="flex flex-col border-b border-ledger">
-          <div className="flex flex-wrap gap-x-4 border-t border-ledger py-3">
+        <dl className="flex flex-col border-b border-hairline">
+          <div className="flex flex-wrap gap-x-4 border-t border-hairline py-3">
             <dt className="text-base text-muted sm:flex-[0_0_180px]">Κλινική</dt>
-            <dd className="font-typed text-[19px]">
+            <dd className="text-[19px]">
               {clinic?.name}
               {clinic?.city ? `, ${clinic.city}` : ""}
             </dd>
           </div>
-          <div className="flex flex-wrap gap-x-4 border-t border-ledger py-3">
+          <div className="flex flex-wrap gap-x-4 border-t border-hairline py-3">
             <dt className="text-base text-muted sm:flex-[0_0_180px]">Τηλέφωνο</dt>
-            <dd className="font-typed text-[19px]">{clinic?.phone}</dd>
+            <dd className="text-[19px]">{clinic?.phone}</dd>
           </div>
-          <div className="flex flex-wrap items-start gap-x-4 border-t border-ledger py-3">
+          <div className="flex flex-wrap items-start gap-x-4 border-t border-hairline py-3">
             <dt className="text-base text-muted sm:flex-[0_0_180px]">Χώροι</dt>
-            <dd className="flex-1 font-typed text-[19px]">
+            <dd className="flex-1 text-[19px]">
               {(rooms ?? []).map((r) => (
                 <span key={r.name} className="block">
                   {[
@@ -155,7 +154,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             )}
           </div>
           {isOwner && (
-            <div className="flex flex-wrap items-start gap-x-4 border-t border-ledger py-3">
+            <div className="flex flex-wrap items-start gap-x-4 border-t border-hairline py-3">
               <dt className="text-base text-muted sm:flex-[0_0_180px]">Ομάδα</dt>
               <dd className="flex-1 text-[19px]">
                 {invited ? `${invited} ${invited === 1 ? "πρόσκληση" : "προσκλήσεις"}` : "Μόνο εσείς"}
@@ -168,8 +167,6 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             </div>
           )}
         </dl>
-
-        <SignOut />
       </div>
     </StaffSheet>
   );
