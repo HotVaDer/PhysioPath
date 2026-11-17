@@ -17,7 +17,7 @@ export default async function LoginCodePage({ searchParams }: PageProps<"/login/
   if (typeof email !== "string" || !email.includes("@") || email.length > 254) redirect("/login");
 
   return (
-    <Card label="Είσοδος" wide>
+    <Card label={target.startsWith("/invite/") ? "Πρόσκληση" : "Είσοδος"} wide>
       <h1 className="font-display text-[28px] leading-[1.15] sm:text-[32px]">Ελέγξτε το email σας</h1>
       <CodeForm mode="login" email={email} next={target === "/" ? undefined : target} />
     </Card>

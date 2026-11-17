@@ -1,13 +1,15 @@
-// The invitee's copy of the form: a yellow carbon copy with a torn top edge (canvas board PFInvite).
-// They arrive here from the invite email, already signed in by its link.
+// The invite, as the invited person sees it: «Πρόσκληση από {κλινική}», who invites them, what
+// they'll do there (one sentence), their name, and «Αποδοχή». The same plain card as signing in
+// (no yellow carbon copy, no «ΑΝΤΙΓΡΑΦΟ»: review 2026-11-16).
+// They arrive from the invite email, already signed in by its button; otherwise they sign in with
+// a code first and come back here.
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { ReactNode } from "react";
 import { z } from "zod";
 
-import { Logo } from "@/app/components/paper/Logo";
+import { Card } from "@/app/components/paper/Card";
 import { SignOut } from "@/app/components/paper/SignOut";
-import { ROLES, type Role } from "@/app/lib/onboarding/schema";
 import { currentUser } from "@/app/lib/onboarding/session";
 import { AcceptForm } from "@/app/invite/[token]/AcceptForm";
 
@@ -22,28 +24,11 @@ const Details = z.object({
   invitedBy: z.string().nullable().optional(),
 });
 
-function CarbonCopy({ children }: { children: ReactNode }) {
-  return (
-    <div className="px-3.5 py-5 sm:py-12">
-      <main
-        id="main"
-        className="relative mx-auto flex max-w-[460px] flex-col gap-4 bg-tab-yellow pb-6 pl-12 pr-6 pt-8 shadow-[0_14px_30px_-22px_rgba(43,36,32,0.6)]"
-      >
-        {/* Perforated top edge and red margin: decoration only. */}
-        <span
-          aria-hidden="true"
-          className="absolute inset-x-0 top-0 h-2.5 bg-[radial-gradient(circle_at_6px_0,var(--color-desk)_4px,transparent_4.5px)] bg-[length:12px_10px]"
-        />
-        <span aria-hidden="true" className="absolute inset-y-0 left-7 w-[3px] border-x border-margin" />
-        <header className="flex items-center justify-between gap-2 border-b-[3px] border-double border-ink pb-2.5">
-          <Logo />
-          <span className="font-typed text-base font-bold">ΑΝΤΙΓΡΑΦΟ</span>
-        </header>
-        {children}
-      </main>
-    </div>
-  );
-}
+// What the person will do, in one sentence (the same words as the role cards on the owner's team page).
+const ROLE_TEXT = {
+  physio: { as: "φυσιοθεραπευτή", text: "Θα ηχογραφείτε σημειώσεις και θα εγκρίνετε τα προγράμματα των ασθενών σας." },
+  assistant: { as: "βοηθό", text: "Θα βλέπετε την αίθουσα και θα απαντάτε όταν σας καλεί ασθενής. Δεν θα βλέπετε κλινικές σημειώσεις." },
+} as const;
 
 export default async function InvitePage({ params }: PageProps<"/invite/[token]">) {
   const { token } = await params;
@@ -58,47 +43,43 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
   }
 
   if (details.status !== "ok") {
+    // What happened, and what to do next, in plain words.
     const text: Record<string, string> = {
-      used: "Αυτή η πρόσκληση έχει ήδη χρησιμοποιηθεί.",
-      expired: "Αυτή η πρόσκληση έληξε. Ζητήστε νέα από την κλινική.",
-      other_email: `Αυτή η πρόσκληση είναι για άλλο email. Έχετε συνδεθεί ως ${user.email}.`,
-      not_found: "Αυτή η πρόσκληση δεν υπάρχει. Ελέγξτε ότι ανοίξατε ολόκληρο τον σύνδεσμο από το email.",
+      used: "Αυτή η πρόσκληση έχει ήδη χρησιμοποιηθεί. Αν είστε ήδη στην ομάδα, πατήστε «Αρχική».",
+      expired: "Αυτή η πρόσκληση έληξε (ισχύει 7 μέρες). Ζητήστε από την κλινική να σας τη στείλει ξανά.",
+      other_email: `Η πρόσκληση στάλθηκε σε άλλο email. Τώρα έχετε μπει ως ${user.email}. Βγείτε και μπείτε με το email στο οποίο ήρθε η πρόσκληση.`,
+      not_found: "Δεν βρήκαμε αυτή την πρόσκληση. Ανοίξτε την ξανά από το κουμπί μέσα στο email.",
     };
     return (
-      <CarbonCopy>
-        <h1 className="font-display text-[30px] leading-[1.1]">Η πρόσκληση δεν ισχύει</h1>
+      <Card label="Πρόσκληση">
+        <h1 className="font-display text-[28px] leading-[1.15] sm:text-[32px]">Η πρόσκληση δεν ισχύει</h1>
         <p role="alert">{text[details.status]}</p>
-        <SignOut lead={details.status === "other_email" ? "Άλλος λογαριασμός;" : undefined} />
-      </CarbonCopy>
+        {details.status === "used" ? (
+          <Link href="/" className="min-h-11 content-center self-start">
+            Αρχική <span aria-hidden="true">→</span>
+          </Link>
+        ) : (
+          <SignOut lead={details.status === "other_email" ? "Άλλος λογαριασμός;" : undefined} />
+        )}
+      </Card>
     );
   }
 
-  const role = ROLES[details.role as Role];
+  const role = ROLE_TEXT[details.role ?? "assistant"];
   return (
-    <CarbonCopy>
+    <Card label="Πρόσκληση">
       <div className="flex flex-col gap-2">
-        <h1 className="font-display text-[30px] leading-[1.1]">Σας προσκαλούν ως {role === ROLES.physio ? "φυσιοθεραπευτή" : "βοηθό"}</h1>
+        <h1 className="font-display text-[28px] leading-[1.15] sm:text-[32px]">Πρόσκληση από {details.clinicName}</h1>
         <p>
-          {details.invitedBy ? (
-            <>
-              Η/Ο <span className="font-typed">{details.invitedBy}</span>, για{" "}
-            </>
-          ) : (
-            "Για "
-          )}
-          <span className="font-typed">{details.clinicName}</span>
-          {details.clinicCity ? `, ${details.clinicCity}` : ""}.
+          {details.invitedBy ? `Η/Ο ${details.invitedBy} σας καλεί` : "Σας καλούν"} στην ομάδα της κλινικής
+          {details.clinicCity ? ` (${details.clinicCity})` : ""}, ως <span className="font-semibold">{role.as}</span>.
         </p>
-        <p className="text-base">
-          {details.role === "assistant"
-            ? "Θα βλέπετε την αίθουσα και θα απαντάτε όταν σας καλεί ασθενής. Τις κλινικές σημειώσεις τις βλέπουν μόνο οι φυσιοθεραπευτές."
-            : "Θα ηχογραφείτε τις σημειώσεις σας και θα εγκρίνετε τα προγράμματα των ασθενών σας."}
-        </p>
+        <p className="text-muted">{role.text}</p>
       </div>
       <AcceptForm token={token} name={typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : ""} />
-      <p className="pt-2 text-base">
-        Μπαίνετε ως <span className="break-all font-typed">{details.email}</span>.
+      <p className="text-base text-muted">
+        Μπαίνετε με το email <span className="break-all font-semibold text-ink">{details.email}</span>.
       </p>
-    </CarbonCopy>
+    </Card>
   );
 }

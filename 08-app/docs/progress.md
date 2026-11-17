@@ -236,3 +236,24 @@ Why: the user's mother and a collaborator couldn't finish sign-up. Plan: `~/.cla
   at 390×844 and 1280×720 with throwaway accounts (deleted after): sign-up → next steps → rooms (empty room error,
   add, save) → team (empty, own email, invite, same email again, cancel) → home without «Επόμενα βήματα»; no
   sideways scroll. Note: `next dev` blocks its scripts for 127.0.0.1 (allowedDevOrigins), so browser tests use `next start`.
+
+## 2026-11-17 · Sign-up redesign, step D: invite and sign-in wording
+- **Invite page** (`/invite/[token]`): the yellow carbon copy («ΑΝΤΙΓΡΑΦΟ», torn edge, red margin) replaced by the
+  same plain `Card` as sign-in: «Πρόσκληση από {κλινική}», «Η/Ο {όνομα} σας καλεί στην ομάδα της κλινικής, ως
+  φυσιοθεραπευτή/βοηθό», one sentence on what they'll do, «Το ονοματεπώνυμό σας» (boxed field), «Αποδοχή →».
+  Problems say what to do next: used («πατήστε Αρχική»), expired (ask the clinic to send it again), wrong account
+  (sign out, sign in with the invited email), not found (open it again from the email's button).
+- **Sign-in for an invite**: opening an invite signed out goes to `/login?next=/invite/…`, which now reads «Δείτε την
+  πρόσκλησή σας · Γράψτε το email στο οποίο ήρθε η πρόσκληση» (label «Πρόσκληση», no «Νέα κλινική» or «Πίσω»),
+  instead of «Καλώς ήρθατε ξανά» to someone who has never been here. The code page keeps the «Πρόσκληση» label.
+- **Invite email** (`supabase/templates/invite.html`, pushed with `supabase config push`): same light look as the
+  code emails; «Πρόσκληση από {κλινική}», who invites, the role, one line on what PhysioPath is, «Δείτε την
+  πρόσκληση →», «Δεν χρειάζεστε συνθηματικό».
+- Wording search across `app/` and the email templates: no §, «κατάθεση», «δελτίο», «συνημμένο», «υποδοχή» or
+  «ΑΝΤΙΓΡΑΦΟ» left in anything people see. Left as is (staff pages, not sign-up): «Σελ. 1 / 2» and the capital
+  titles on the voice-note pages.
+- Checks: `tsc` clean, 73 tests, build OK. End to end (production build, no email key, throwaway accounts deleted
+  after): owner signs up and invites → colleague opens the invite signed out (invite sign-in page) → signed in
+  (invite card) → empty name error → accepts → home as «Φυσιοθεραπευτής»; owner's list shows «Μπήκε στην ομάδα ✓»;
+  used / wrong-account / made-up invite messages; no sideways scroll at 390 px.
+- Still to do in step D: **the real test** (the user's mother and the collaborator sign up alone on their own phones).
