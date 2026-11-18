@@ -1,5 +1,5 @@
 // The frame of every page for the clinic's staff (home, voice note, review, approved, settings):
-// a plain top bar (logo, «Αίθουσα», «Νέα συνεδρία», the open clinic with «Αλλαγή», who is signed in,
+// a plain top bar (logo, «Αίθουσα», «Νέα συνεδρία», «Κλινική», the open clinic with «Αλλαγή», who is signed in,
 // «Αποσύνδεση») and one sheet
 // of paper under it, with «Βήμα n από m» where a page is a step of something.
 // Same plain look as sign-up (2026-11-17): no folder tabs, red margin, double rules, «Σελ.», capital
@@ -14,11 +14,12 @@ import { SignOut } from "@/app/components/paper/SignOut";
 import { cx } from "@/app/lib/cx";
 import type { Profile } from "@/app/lib/onboarding/session";
 
-export type StaffTab = "board" | "new";
+export type StaffTab = "board" | "new" | "clinic";
 
 const LINKS: { id: StaffTab; href: Route; label: string; physioOnly?: boolean }[] = [
   { id: "board", href: "/", label: "Αίθουσα" },
   { id: "new", href: "/notes/new", label: "Νέα συνεδρία", physioOnly: true },
+  { id: "clinic", href: "/settings", label: "Κλινική" },
 ];
 
 const ROLE_LABELS: Record<Profile["role"], string> = { owner: "Υπεύθυνη/ος", physio: "Φυσιοθεραπευτής", assistant: "Βοηθός" };

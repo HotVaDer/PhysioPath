@@ -1,13 +1,15 @@
-// Home. The clinic's details, «Νέα συνεδρία» for owner/physio and, for the owner, «Επόμενα βήματα»
-// after sign-up: ① the rooms (/settings/rooms) and ② the team (/settings/team), each with ✓ once
-// done. The room board moves here next (from 03-prototype, restyled in the paper look).
+// Home: «Η αίθουσα», the room board (every role), «Νέα συνεδρία» for owner/physio and, for the owner,
+// «Επόμενα βήματα» after sign-up: ① the rooms (/settings/rooms) and ② the team (/settings/team), each
+// with ✓ once done. The clinic's details moved to «Κλινική» (/settings) on 2026-11-18.
 // Not signed in → the welcome page; signed in without a clinic → the last sign-up step.
 import type { Route } from "next";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PaperLink, QuietSubmit } from "@/app/components/paper/Buttons";
+import { RoomBoard } from "@/app/components/board/RoomBoard";
 import { StaffSheet } from "@/app/components/paper/StaffSheet";
+import { loadBoard } from "@/app/lib/board/board";
 import { ROLES } from "@/app/lib/onboarding/schema";
 import { requireMember } from "@/app/lib/onboarding/session";
 import { workAlone } from "@/app/lib/settings/actions";
@@ -17,7 +19,7 @@ export const metadata: Metadata = { title: "Η αίθουσα" };
 
 const SAVED: Record<string, string> = {
   rooms: "Οι χώροι σας αποθηκεύτηκαν.",
-  alone: "Εντάξει, δουλεύετε μόνη/ος. Αν χρειαστεί, καλείτε κάποιον από «Ομάδα» πιο κάτω.",
+  alone: "Εντάξει, δουλεύετε μόνη/ος. Αν χρειαστεί, καλείτε κάποιον από «Κλινική» → «Ομάδα».",
 };
 
 // One of the «Επόμενα βήματα»: a big card that is the link, with a number (or ✓ when done).
@@ -54,9 +56,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { supabase, profile } = await requireMember();
   const { welcome, saved, stale } = await searchParams;
   const isOwner = profile.role === "owner";
-  const [{ data: clinic }, { data: rooms }, { count: invited }] = await Promise.all([
-    supabase.from("clinics").select("name, city, phone, rooms_checked_at, team_checked_at").eq("id", profile.clinic_id).maybeSingle(),
-    supabase.from("rooms").select("name, beds, stations").order("position"),
+  const [{ data: clinic }, board, { count: invited }] = await Promise.all([
+    supabase.from("clinics").select("name, rooms_checked_at, team_checked_at").eq("id", profile.clinic_id).maybeSingle(),
+    loadBoard(supabase),
     isOwner
       ? supabase.from("invites").select("id", { count: "exact", head: true })
       : Promise.resolve({ count: 0 }),
@@ -74,7 +76,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         : undefined;
 
   return (
-    <StaffSheet profile={profile} current="board">
+    <StaffSheet profile={profile} current="board" width="wide">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
           <h1 className="font-display text-[36px] leading-[1.08] sm:text-[42px]">Η αίθουσα</h1>
@@ -133,55 +135,14 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           </section>
         )}
 
-        <dl className="flex flex-col border-b border-hairline">
-          <div className="flex flex-wrap gap-x-4 border-t border-hairline py-3">
-            <dt className="text-base text-muted sm:flex-[0_0_180px]">Κλινική</dt>
-            <dd className="text-[19px]">
-              {clinic?.name}
-              {clinic?.city ? `, ${clinic.city}` : ""}
-            </dd>
-          </div>
-          <div className="flex flex-wrap gap-x-4 border-t border-hairline py-3">
-            <dt className="text-base text-muted sm:flex-[0_0_180px]">Τηλέφωνο</dt>
-            <dd className="text-[19px]">{clinic?.phone}</dd>
-          </div>
-          <div className="flex flex-wrap items-start gap-x-4 border-t border-hairline py-3">
-            <dt className="text-base text-muted sm:flex-[0_0_180px]">Χώροι</dt>
-            <dd className="flex-1 text-[19px]">
-              {(rooms ?? []).map((r) => (
-                <span key={r.name} className="block">
-                  {[
-                    r.name,
-                    r.beds > 0 && `${r.beds} ${r.beds === 1 ? "κρεβάτι" : "κρεβάτια"}`,
-                    r.stations > 0 && `${r.stations} ${r.stations === 1 ? "θέση άσκησης" : "θέσεις άσκησης"}`,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </span>
-              ))}
-            </dd>
-            {isOwner && (
-              <dd>
-                <Link href="/settings/rooms" className="min-h-11 content-center">
-                  Αλλαγή<span className="sr-only"> χώρων</span>
-                </Link>
-              </dd>
-            )}
-          </div>
-          {isOwner && (
-            <div className="flex flex-wrap items-start gap-x-4 border-t border-hairline py-3">
-              <dt className="text-base text-muted sm:flex-[0_0_180px]">Ομάδα</dt>
-              <dd className="flex-1 text-[19px]">
-                {invited ? `${invited} ${invited === 1 ? "πρόσκληση" : "προσκλήσεις"}` : "Μόνο εσείς"}
-              </dd>
-              <dd>
-                <Link href="/settings/team" className="min-h-11 content-center">
-                  Διαχείριση<span className="sr-only"> ομάδας</span>
-                </Link>
-              </dd>
-            </div>
-          )}
-        </dl>
+        {board.rooms.length === 0 ? (
+          <p className="bg-tab-yellow px-4 py-3">
+            Η κλινική δεν έχει ακόμα χώρους.{" "}
+            {isOwner ? <Link href="/settings/rooms">Ρυθμίστε πρώτα τους χώρους</Link> : "Ζητήστε από την/τον υπεύθυνη/ο να τους ρυθμίσει."}
+          </p>
+        ) : (
+          <RoomBoard initial={board} />
+        )}
       </div>
     </StaffSheet>
   );

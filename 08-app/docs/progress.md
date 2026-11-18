@@ -357,3 +357,30 @@ side by side, each tab carries its own clinic:
 - **E3 server:** pages and actions make their database client for their tab's clinic; the hidden `clinicId`
   from phase D becomes the clinic to save into (instead of a refusal).
 - **E4 top bar:** «Αλλαγή» lists the clinics, each can open in a new tab.
+
+## 2026-11-18 · Phase 4: the room board and the patient's phone
+Plan: `~/.claude/plans/lets-plan-phase-4-ticklish-emerson.md`. Decided with the user: refresh every 3 s (no Realtime),
+fix the «τώρα» gap, clinic details move to «Κλινική».
+- **Database** (`20261118000000_session_current_exercise.sql`, pushed live after a rolled-back trial):
+  `sessions.current_exercise`; `patient_action` gets `show` (the patient tapped another exercise) and `setDone`
+  moves on by itself after the last set; `patient_session` returns `current`. RLS checks **169/169** (+4).
+- **Shared rules** `app/lib/board/session.ts` (+ test): reading the phone's data safely, the allowed taps
+  (`PatientAction`), «τώρα» (`nowExercise`), progress, undo target, board status, «πριν από N λεπτά».
+- **Patient phone** `/s/<token>` (no login): `app/lib/board/patient.ts` (anon client → `patient_session` /
+  `patient_action` only), `app/api/s/[token]` (GET every 3 s, POST one tap, ≤1 KB, zod, 404 for a wrong token,
+  no-store), page with noindex + no-referrer. Screen «One thing at a time» (user's choice after the first,
+  boxy version was rejected): top bar Φ · «Αα» · «Φυσιοθεραπευτής» (call: απορία / πονάω), «Άσκηση n από N»
+  with a thin line + «Όλες οι ασκήσεις», the exercise and a huge set number, compact hold timer, «Μετά: …»,
+  one green button fixed at the bottom, «Αναίρεση» a small link; after «Τέλος»: the home-program link.
+  Sizes in rem so «Αα» (125/150/175 %) enlarges everything. `TextSize` lives in `components/patient/`.
+- **Room board** on `/` (every role): `app/lib/board/board.ts` (rooms + open cards < 12 h, through RLS),
+  `app/api/board` (login only), `app/lib/board/actions.ts` («Το είδα» only for the call seen, «Τέλος» only
+  while open; 0 rows → «Άλλαξε ήδη»), `components/board/RoomBoard.tsx`: one column per room, one box per
+  bed/station (free / patient + «Τώρα: …» + «Σετ x από y» + bars / pink ! pain / yellow ? question / ✓ done),
+  «Χωρίς θέση», waiting order, new calls announced (aria-live) and counted in the tab title, «Τέλος» asks first.
+- **«Κλινική»** (`/settings`, new tab in the top bar): the clinic details moved from home, unchanged.
+- Checks: `tsc` clean, **102 tests**, build OK. Screenshots: phone at 390 px on a real session (production
+  build on :3002), board at 1280 px through a temporary local page with fictional patients (deleted after).
+- Note: a dev server started before new files exist can serve stale Tailwind CSS: restart `npm run dev`.
+- Still to do: the end-to-end run with two browsers (approve → scan → set, jump, pain → «Το είδα» → «Τέλος»),
+  then push; phase 5 (`/p/<token>`); the app-wide design pass the user asked for.
