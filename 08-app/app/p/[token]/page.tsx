@@ -1,7 +1,7 @@
 // The patient's home program: what they open at home after a session (canvas board PRHome,
 // «Κινητό ασθενή · πρόγραμμα για το σπίτι»). No login: the secret token in the link is the key.
 //
-// STARTER (for giorgospapapetrou): the data part is done and safe; the design is yours.
+// STARTER (for AndreasVas04): the data part is done and safe; the design is yours.
 // See CONTRIBUTING.md § "Your piece" for the full checklist.
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
