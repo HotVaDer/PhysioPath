@@ -1,5 +1,6 @@
-// The patient's home program: what they open at home after a session (canvas board PRHome,
-// «Κινητό ασθενή · πρόγραμμα για το σπίτι»). No login: the secret token in the link is the key.
+// The patient's home program: what they open at home after a session. No login: the secret token in
+// the link is the key. Design «Γράμμα από την κλινική» (2026-11-18, replaces the PRHome board); what
+// the patient sees is in HomeProgramLetter, which gets the data as props.
 //
 // STARTER (for AndreasVas04): the data part is done and safe; the design is yours.
 // See CONTRIBUTING.md § "Your piece" for the full checklist.
@@ -7,10 +8,17 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
+import { TEXT_SIZE_SCRIPT } from "@/app/components/patient/TextSize";
 import { createAnonClient } from "@/app/lib/supabase/admin";
+import { HomeProgramLetter } from "@/app/p/[token]/HomeProgramLetter";
 
-// Search engines must never list a patient's program.
-export const metadata: Metadata = { title: "Το πρόγραμμά σας", robots: { index: false, follow: false } };
+// Search engines must never list a patient's program, and the link (the patient's key) is never passed
+// on to another site in a Referer header: noindex + no-referrer, as on /s/<token>.
+export const metadata: Metadata = {
+  title: "Το πρόγραμμά σας",
+  robots: { index: false, follow: false },
+  referrer: "no-referrer",
+};
 
 // What the database function home_program(p_token) returns. It never includes the clinical note.
 // TODO: once the record → review work is merged, use PatientProgram from app/lib/notes/schema.ts
@@ -51,27 +59,11 @@ export default async function HomeProgramPage({ params }: PageProps<"/p/[token]"
   if (error) throw new Error("home_program failed"); // shows the error page; details stay in the server log
   const home = HomeProgram.safeParse(data);
   if (!home.success) notFound(); // wrong or old link
-  const { program, clinicName, clinicPhone } = home.data;
-
-  // TODO (design, board PRHome):
-  //   - paper sheet on the desk, red margin, header with clinic name/city and «Για: <name>»
-  //   - text size control (normal / large / very large), «Εκτύπωση» (print hides the buttons)
-  //   - «Σήμερα N από M ασκήσεις» + «Το έκανα σήμερα» per exercise, kept in localStorage only
-  //     (key per token and day, never sent anywhere) → a small Client Component
-  //   - «Αποφύγετε» (yellow), «Πάρτε μας τηλέφωνο αν» (pink + tel: link), «Άλλες οδηγίες»,
-  //     «Επόμενο ραντεβού», footer with who approved it and when
-  //   - 48 px targets, 7:1 contrast, works at 390 px and with the keyboard; a test with axe
   return (
-    <main id="main" className="mx-auto max-w-[460px] p-6">
-      <p>{clinicName}</p>
-      <h1>Το πρόγραμμά σας για το σπίτι</h1>
-      {program.title && <p>{program.title}</p>}
-      <ol>
-        {program.exercises.map((exercise, i) => (
-          <li key={i}>{exercise.name}</li>
-        ))}
-      </ol>
-      {clinicPhone && <a href={`tel:${clinicPhone.replace(/\s+/g, "")}`}>{clinicPhone}</a>}
-    </main>
+    <>
+      {/* The text size chosen on this device (or 20px), set before the first paint: the sheet sizes in rem. */}
+      <script dangerouslySetInnerHTML={{ __html: TEXT_SIZE_SCRIPT }} />
+      <HomeProgramLetter token={valid.data} {...home.data} />
+    </>
   );
 }
