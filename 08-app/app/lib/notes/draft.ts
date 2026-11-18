@@ -33,9 +33,10 @@ export const Draft = z.object({
   // keeps the stored program (base, read-only) and only today's GeSY note is written.
   mode: z.enum(["new", "same"]).default("new"),
   base: z.object({ programId: z.uuid(), approvedAt: z.string(), program: PatientProgram }).nullable().default(null),
-  // The clinic this note was started in (stamped once by DraftProvider). Someone in several clinics can
-  // open another one meanwhile: the patient, program and beds are the first clinic's, so «Έγκριση»
-  // refuses the note while another clinic is open.
+  // The clinic this note belongs to: stamped by DraftProvider with the open clinic when the note starts
+  // and again whenever the patient is chosen (from that clinic's list). Someone in several clinics can
+  // open another one meanwhile: the patient, program and beds are this clinic's, so «Έγκριση» refuses
+  // the note while another clinic is open.
   clinicId: z.uuid().nullable().default(null),
 });
 export type Draft = z.infer<typeof Draft>;
@@ -118,10 +119,13 @@ export function draftReducer(draft: Draft, action: DraftAction): Draft {
       };
     case "setPatient": {
       // Another patient: the program choice and anything generated belonged to the old one.
+      // The patient is chosen from the open clinic's list, so the note now belongs to the open clinic:
+      // clinicId is cleared and DraftProvider stamps the open one at once. (Bug 2026-11-18: a stamp left
+      // over from a note in another clinic, in the same tab, made «Έγκριση» refuse a note of this one.)
       const other = (action.patient?.id ?? null) !== (draft.patient?.id ?? null);
       return other
-        ? { ...draft, patient: action.patient, mode: "new", base: null, result: null, draftId: null, removed: null }
-        : { ...draft, patient: action.patient };
+        ? { ...draft, patient: action.patient, mode: "new", base: null, result: null, draftId: null, removed: null, clinicId: null }
+        : { ...draft, patient: action.patient, clinicId: null };
     }
     case "setMode":
       // A different choice: what was generated for the other one no longer fits (the transcript stays).

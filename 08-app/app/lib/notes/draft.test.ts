@@ -183,6 +183,17 @@ describe("draftReducer: the clinic a note belongs to", () => {
     expect(draftReducer(fresh, { type: "stampClinic", clinicId: B }).clinicId).toBe(B);
   });
 
+  it("choosing the patient makes the note the open clinic's (bug: a leftover stamp refused it)", () => {
+    // A note from clinic A was left in this tab; clinic B is open now and a B patient is chosen.
+    const leftover = draftReducer({ ...emptyDraft, transcript: "παλιά σημείωση" }, { type: "stampClinic", clinicId: A });
+    const chosen = draftReducer(leftover, { type: "setPatient", patient: { id: null, label: "Νίκος" } });
+    expect(chosen.clinicId).toBeNull(); // DraftProvider stamps the open clinic right away
+    expect(draftReducer(chosen, { type: "stampClinic", clinicId: B }).clinicId).toBe(B);
+    // The same with an existing patient picked from the list.
+    const picked = draftReducer(leftover, { type: "setPatient", patient: { id: B, label: "Ελένη" } });
+    expect(draftReducer(picked, { type: "stampClinic", clinicId: B }).clinicId).toBe(B);
+  });
+
   it("an older saved draft (from before clinics were stamped) still reads, without a clinic", () => {
     const { clinicId: _, ...old } = emptyDraft;
     expect(parseDraft(JSON.stringify(old))?.clinicId).toBeNull();
