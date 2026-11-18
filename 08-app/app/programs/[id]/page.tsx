@@ -13,7 +13,7 @@ import { Panel, PanelTitle, StaffSheet } from "@/app/components/paper/StaffSheet
 import { slotLabel } from "@/app/lib/notes/approval";
 import { GESY_LABELS, isBlank, noteAsText } from "@/app/lib/notes/format";
 import type { NoteLanguage } from "@/app/lib/notes/prompt";
-import { ClinicalNote, GESY_PARTS, type ActivityCode } from "@/app/lib/notes/schema";
+import { ClinicalNote, GESY_PARTS, readProgram, type ActivityCode } from "@/app/lib/notes/schema";
 import { requireMember } from "@/app/lib/onboarding/session";
 import { siteUrl } from "@/app/lib/site";
 
@@ -63,7 +63,7 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
     ? await supabase.from("rooms").select("name, beds").eq("id", session.room_id).maybeSingle()
     : { data: null };
 
-  const name = patient?.label ?? (program.program as { patient_first_name?: string | null }).patient_first_name ?? "Ο ασθενής";
+  const name = patient?.label ?? readProgram(program.program)?.patient_first_name ?? "Ο ασθενής";
   const inRoom = Boolean(session && !session.finished_at);
   const where = room && session?.slot ? `${room.name} · ${slotLabel(room, session.slot)}` : null;
   // QR codes always point at the real address (NEXT_PUBLIC_SITE_URL), never a preview URL.

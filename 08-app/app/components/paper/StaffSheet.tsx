@@ -1,5 +1,6 @@
 // The frame of every page for the clinic's staff (home, voice note, review, approved, settings):
-// a plain top bar (logo, «Αίθουσα», «Νέα συνεδρία», who is signed in, «Αποσύνδεση») and one sheet
+// a plain top bar (logo, «Αίθουσα», «Νέα συνεδρία», the open clinic with «Αλλαγή», who is signed in,
+// «Αποσύνδεση») and one sheet
 // of paper under it, with «Βήμα n από m» where a page is a step of something.
 // Same plain look as sign-up (2026-11-17): no folder tabs, red margin, double rules, «Σελ.», capital
 // titles, stapled or tilted slips. Section titles are plain words; boxes are flat and coloured.
@@ -24,7 +25,7 @@ const ROLE_LABELS: Record<Profile["role"], string> = { owner: "Υπεύθυνη/
 
 type Props = {
   children: ReactNode;
-  profile: Pick<Profile, "role" | "full_name">;
+  profile: Pick<Profile, "role" | "full_name"> & Partial<Pick<Profile, "clinic_name">>;
   current?: StaffTab; // which link in the top bar is this page
   step?: { n: number; of: number }; // «Βήμα 1 από 2» (the voice note)
   width?: "narrow" | "wide";
@@ -65,6 +66,15 @@ export function StaffSheet({ children, profile, current, step, width = "narrow" 
             </ul>
           </nav>
           <div className="ml-auto flex flex-wrap items-center gap-x-4 text-base">
+            {/* The clinic open right now; «Αλλαγή» lists the person's clinics (/clinics). */}
+            {profile.clinic_name && (
+              <span className="flex flex-wrap items-center gap-x-2">
+                <span className="font-semibold">{profile.clinic_name}</span>
+                <Link href="/clinics" aria-label="Αλλαγή κλινικής" className="min-h-11 content-center">
+                  Αλλαγή
+                </Link>
+              </span>
+            )}
             <span>
               {profile.full_name} <span className="text-muted">· {ROLE_LABELS[profile.role]}</span>
             </span>

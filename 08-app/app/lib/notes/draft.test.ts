@@ -164,3 +164,27 @@ describe("parseDraft", () => {
     expect(parseDraft(JSON.stringify({ transcript: 5 }))).toBeNull();
   });
 });
+
+describe("draftReducer: the clinic a note belongs to", () => {
+  const A = "11111111-1111-4111-8111-111111111111";
+  const B = "22222222-2222-4222-8222-222222222222";
+
+  it("is stamped once: a note keeps the clinic it was started in", () => {
+    const inA = draftReducer(emptyDraft, { type: "stampClinic", clinicId: A });
+    expect(inA.clinicId).toBe(A);
+    // Clinic B opened meanwhile (maybe in another tab): the note is still clinic A's.
+    expect(draftReducer(inA, { type: "stampClinic", clinicId: B }).clinicId).toBe(A);
+  });
+
+  it("a new note («reset») is free again, for the clinic open then", () => {
+    const inA = draftReducer(emptyDraft, { type: "stampClinic", clinicId: A });
+    const fresh = draftReducer(inA, { type: "reset" });
+    expect(fresh.clinicId).toBeNull();
+    expect(draftReducer(fresh, { type: "stampClinic", clinicId: B }).clinicId).toBe(B);
+  });
+
+  it("an older saved draft (from before clinics were stamped) still reads, without a clinic", () => {
+    const { clinicId: _, ...old } = emptyDraft;
+    expect(parseDraft(JSON.stringify(old))?.clinicId).toBeNull();
+  });
+});

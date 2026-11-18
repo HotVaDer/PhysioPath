@@ -1,6 +1,8 @@
 "use client";
 // Sign-up, step 3: the clinic, how many beds, the agreement, and «Ολοκλήρωση εγγραφής».
 // Rooms, exercise stations and the team come later, from the home page («Επόμενα βήματα»).
+// The same form opens a second clinic («Νέα κλινική», mode "new"): never asks the name or the beds
+// (its rooms are set up afterwards), and «Δημιουργία κλινικής» instead.
 // The fields refill after an error (React clears a form once it's sent).
 import { useActionState, useEffect, useRef, useState } from "react";
 
@@ -8,19 +10,20 @@ import { Actions, SubmitButton } from "@/app/components/paper/Buttons";
 import { Counter } from "@/app/components/paper/Counter";
 import { LineField, LineSelect } from "@/app/components/paper/LineField";
 import { FormAlert } from "@/app/components/paper/Notes";
+import { createClinic } from "@/app/lib/clinics/actions";
 import { finishRegistration, type FormState } from "@/app/lib/onboarding/actions";
 import { CITIES } from "@/app/lib/onboarding/schema";
 import { cx } from "@/app/lib/cx";
 
 type Initial = { ownerName?: string; clinicName?: string; city?: string; phone?: string; beds?: number };
 
-export function ClinicForm({ initial }: { initial: Initial }) {
-  const [state, action] = useActionState<FormState, FormData>(finishRegistration, {});
+export function ClinicForm({ initial, mode = "register" }: { initial: Initial; mode?: "register" | "new" }) {
+  const [state, action] = useActionState<FormState, FormData>(mode === "new" ? createClinic : finishRegistration, {});
   const v = { ...initial, ...state.values };
   const e = state.errors ?? {};
   const [beds, setBeds] = useState(Number(v.beds) || initial.beds || 1);
-  // The name from step 1 is reused; ask only if the account has none.
-  const askName = !initial.ownerName;
+  // The name from step 1 is reused; ask only if the account has none (and never for a second clinic).
+  const askName = mode === "register" && !initial.ownerName;
 
   // After a failed «Ολοκλήρωση», go to the first field with a problem, so it is in view even on a
   // small screen (the error is read out with it).
@@ -80,17 +83,20 @@ export function ClinicForm({ initial }: { initial: Initial }) {
         />
       )}
 
-      <div className="flex flex-col gap-1">
-        <p id="beds-label" className="text-[19px] font-semibold">
-          Πόσα κρεβάτια θεραπείας έχετε;
-        </p>
-        <p id="beds-hint" className="text-muted">
-          Όλα μαζί. Τις αίθουσες τις ρυθμίζετε μετά.
-        </p>
-        <input type="hidden" name="beds" value={beds} />
-        <Counter label="Κρεβάτια θεραπείας" value={beds} onChange={setBeds} min={1} describedBy="beds-hint" className="pt-0.5" />
-        {e.beds && <p className="font-semibold text-error">Πρόβλημα: {e.beds}</p>}
-      </div>
+      {/* Only in sign-up: a second clinic sets its rooms and beds afterwards, from «Επόμενα βήματα». */}
+      {mode === "register" && (
+        <div className="flex flex-col gap-1">
+          <p id="beds-label" className="text-[19px] font-semibold">
+            Πόσα κρεβάτια θεραπείας έχετε;
+          </p>
+          <p id="beds-hint" className="text-muted">
+            Όλα μαζί. Τις αίθουσες τις ρυθμίζετε μετά.
+          </p>
+          <input type="hidden" name="beds" value={beds} />
+          <Counter label="Κρεβάτια θεραπείας" value={beds} onChange={setBeds} min={1} describedBy="beds-hint" className="pt-0.5" />
+          {e.beds && <p className="font-semibold text-error">Πρόβλημα: {e.beds}</p>}
+        </div>
+      )}
 
       <div className="flex flex-col gap-1 lg:col-span-2">
         <label
@@ -118,7 +124,11 @@ export function ClinicForm({ initial }: { initial: Initial }) {
       {/* The button, with «Τι σημαίνει αυτό;» beside it (it opens onto its own line underneath). */}
       <div className="lg:col-span-2">
         <Actions>
-          <SubmitButton pending="Ολοκλήρωση…">Ολοκλήρωση εγγραφής</SubmitButton>
+          {mode === "new" ? (
+            <SubmitButton pending="Δημιουργία…">Δημιουργία κλινικής</SubmitButton>
+          ) : (
+            <SubmitButton pending="Ολοκλήρωση…">Ολοκλήρωση εγγραφής</SubmitButton>
+          )}
           <details className="text-muted">
             <summary className="flex min-h-11 cursor-pointer items-center text-action underline underline-offset-[3px]">
               Τι σημαίνει η συμφωνία;

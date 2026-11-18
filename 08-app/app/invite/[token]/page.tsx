@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { Card } from "@/app/components/paper/Card";
 import { SignOut } from "@/app/components/paper/SignOut";
-import { currentUser } from "@/app/lib/onboarding/session";
+import { currentUser, loadProfile } from "@/app/lib/onboarding/session";
 import { AcceptForm } from "@/app/invite/[token]/AcceptForm";
 
 export const metadata: Metadata = { title: "Πρόσκληση" };
@@ -66,6 +66,12 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
   }
 
   const role = ROLE_TEXT[details.role ?? "assistant"];
+  // Already in another clinic: they join this one too, keeping their name (accept_invite does the same).
+  const profile = await loadProfile(supabase, user.id);
+  const member =
+    profile?.onboarded_at && profile.full_name && profile.clinic_name
+      ? { name: profile.full_name, clinic: profile.clinic_name }
+      : undefined;
   return (
     <Card label="Πρόσκληση">
       <div className="flex flex-col gap-2">
@@ -76,7 +82,11 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
         </p>
         <p className="text-muted">{role.text}</p>
       </div>
-      <AcceptForm token={token} name={typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : ""} />
+      <AcceptForm
+        token={token}
+        name={typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : ""}
+        member={member}
+      />
       <p className="text-base text-muted">
         Μπαίνετε με το email <span className="break-all font-semibold text-ink">{details.email}</span>.
       </p>

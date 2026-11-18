@@ -16,14 +16,15 @@ import { FormAlert } from "@/app/components/paper/Notes";
 import { Panel, PanelTitle, PartTitle } from "@/app/components/paper/StaffSheet";
 import { cx } from "@/app/lib/cx";
 import { approveNote, type ApproveState } from "@/app/lib/notes/actions";
-import { approvalErrors, type ApprovalErrors, type SlotOption } from "@/app/lib/notes/approval";
+import { approvalErrors, OTHER_CLINIC_NOTE, type ApprovalErrors, type SlotOption } from "@/app/lib/notes/approval";
 import type { ProgramListField } from "@/app/lib/notes/draft";
 import { useDraft } from "@/app/lib/notes/DraftContext";
 import { GESY_LABELS, isMissing } from "@/app/lib/notes/format";
 import { ACTIVITY_CODES, GESY_PARTS, type ActivityCode, type Exercise } from "@/app/lib/notes/schema";
 import { ProgramSummary } from "@/app/notes/ProgramSummary";
 
-type Props = { slots: SlotOption[]; notesPerPatient: Record<string, number>; signer: string; today: string };
+// clinicId: the clinic open now. The draft remembers the one it was started in (Draft.clinicId).
+type Props = { slots: SlotOption[]; notesPerPatient: Record<string, number>; signer: string; today: string; clinicId: string };
 
 const LISTS: { field: ProgramListField; label: string }[] = [
   { field: "avoid", label: "Αποφύγετε" },
@@ -52,7 +53,7 @@ const choice =
   "flex min-h-[52px] cursor-pointer items-center gap-3 rounded-md border-2 border-line bg-white px-4 py-2 has-[:checked]:border-[3px] has-[:checked]:border-action has-[:checked]:bg-note-green";
 const radio = "size-[22px] flex-none cursor-pointer accent-action";
 
-export function ReviewForm({ slots, notesPerPatient, signer, today }: Props) {
+export function ReviewForm({ slots, notesPerPatient, signer, today, clinicId }: Props) {
   const router = useRouter();
   const { draft, dispatch, ready } = useDraft();
   const [state, action] = useActionState<ApproveState, FormData>(approveNote, {});
@@ -91,6 +92,8 @@ export function ReviewForm({ slots, notesPerPatient, signer, today }: Props) {
   const questions = result.missing_or_unclear;
   const same = draft.mode === "same" && draft.base !== null;
   const needsAssessment = (draft.activityCode === "PHYS01" || draft.activityCode === "PHYS03") && !note.assessment_findings?.trim();
+  // Started in another clinic: its patient and beds aren't this one's (approveNote refuses it too).
+  const otherClinic = draft.clinicId !== null && draft.clinicId !== clinicId;
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     const found = approvalErrors({ patient, program, activityCode: draft.activityCode, where: draft.where });
@@ -116,10 +119,12 @@ export function ReviewForm({ slots, notesPerPatient, signer, today }: Props) {
     where: draft.where,
     mode: same ? "same" : "new",
     baseProgramId: same ? draft.base!.programId : null,
+    clinicId: draft.clinicId ?? clinicId, // not stamped yet (the first moment): it was started here
   });
 
   return (
     <div className="flex flex-col gap-8">
+      {otherClinic && <FormAlert>{OTHER_CLINIC_NOTE}</FormAlert>}
       <div className="flex flex-col gap-2">
         <Link href="/notes/record" className="min-h-11 content-center self-start">
           <span aria-hidden="true">←</span> Πίσω στην ηχογράφηση

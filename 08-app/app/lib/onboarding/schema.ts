@@ -106,6 +106,14 @@ export const RegisterClinicSchema = ClinicSchema.extend({
   consent: z.literal("on", { error: "Για να ολοκληρωθεί η εγγραφή, τσεκάρετε ότι συμφωνείτε." }),
 });
 
+// «Νέα κλινική» (/clinics/new), for someone already in a clinic: the same as sign-up's clinic step
+// without the name (they have one) and without the beds (user, 2026-11-18: confusing there; the rooms
+// are set up afterwards from «Επόμενα βήματα»). The agreement again: each clinic is responsible for its
+// own patients' data.
+export const NewClinicSchema = RegisterClinicSchema.omit({ ownerName: true, beds: true }).extend({
+  consent: z.literal("on", { error: "Για να δημιουργηθεί η κλινική, τσεκάρετε ότι συμφωνείτε." }),
+});
+
 // The one room sign-up creates (renamed, split or added to later from the home page).
 export const firstRoom = (beds: number) => [{ name: "Αίθουσα", beds, stations: 0 }];
 

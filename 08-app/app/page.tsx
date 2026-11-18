@@ -52,7 +52,7 @@ function NextStep({ n, href, title, text, done }: { n: number; href: Route; titl
 
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { supabase, profile } = await requireMember();
-  const { welcome, saved } = await searchParams;
+  const { welcome, saved, stale } = await searchParams;
   const isOwner = profile.role === "owner";
   const [{ data: clinic }, { data: rooms }, { count: invited }] = await Promise.all([
     supabase.from("clinics").select("name, city, phone, rooms_checked_at, team_checked_at").eq("id", profile.clinic_id).maybeSingle(),
@@ -64,7 +64,14 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const roleLabel = profile.role === "owner" ? "Υπεύθυνη/ος κλινικής" : ROLES[profile.role];
   const roomsDone = Boolean(clinic?.rooms_checked_at);
   const teamDone = Boolean(clinic?.team_checked_at) || (invited ?? 0) > 0;
-  const savedNote = typeof saved === "string" ? SAVED[saved] : undefined;
+  const savedNote =
+    saved === "clinic"
+      ? `Ανοίξατε την κλινική «${clinic?.name ?? ""}». Ό,τι βλέπετε τώρα είναι αυτής της κλινικής.`
+      : saved === "new-clinic"
+        ? `Η κλινική «${clinic?.name ?? ""}» δημιουργήθηκε και είναι ανοιχτή. Ρυθμίστε τους χώρους και την ομάδα της πιο κάτω.`
+        : typeof saved === "string"
+        ? SAVED[saved]
+        : undefined;
 
   return (
     <StaffSheet profile={profile} current="board">
@@ -80,6 +87,13 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           <p role="status" className="bg-note-green px-4 py-3">
             <span className="font-semibold">Η εγγραφή ολοκληρώθηκε. Η κλινική σας είναι έτοιμη.</span> Από εδώ ξεκινάτε κάθε
             νέα συνεδρία.
+          </p>
+        )}
+        {/* A form left open for another clinic (requireSameClinic): nothing was saved. */}
+        {stale === "1" && (
+          <p role="alert" className="bg-tab-yellow px-4 py-3">
+            <span className="font-semibold">Δεν αποθηκεύτηκε τίποτα.</span> Στο μεταξύ ανοίξατε άλλη κλινική, ίσως σε άλλη
+            καρτέλα. Τώρα είναι ανοιχτή η «{clinic?.name}». Για την άλλη, πατήστε «Αλλαγή» πάνω, δίπλα στο όνομα της κλινικής.
           </p>
         )}
         {savedNote && (
@@ -110,6 +124,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 <NextStep n={2} href="/settings/team" title="Καλέστε την ομάδα σας" text="Φυσιοθεραπευτές και βοηθούς, με το email τους." done={teamDone} />
                 {!teamDone && (
                   <form action={workAlone} className="pl-1">
+                    <input type="hidden" name="clinicId" value={profile.clinic_id ?? ""} />
                     <QuietSubmit pending="Αποθήκευση…">Δουλεύω μόνη/ος, δεν χρειάζεται</QuietSubmit>
                   </form>
                 )}

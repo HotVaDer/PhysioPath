@@ -34,6 +34,17 @@ describe("StaffSheet", () => {
     await expectNoA11yViolations(container);
   });
 
+  it("shows the open clinic with «Αλλαγή κλινικής» to the list of clinics", async () => {
+    const { container } = render(
+      <StaffSheet profile={{ role: "owner", full_name: "Μαρία", clinic_name: "Φυσιοθεραπεία Λεμεσού" }} current="board">
+        <p>…</p>
+      </StaffSheet>,
+    );
+    expect(screen.getByText("Φυσιοθεραπεία Λεμεσού")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Αλλαγή κλινικής" })).toHaveAttribute("href", "/clinics");
+    await expectNoA11yViolations(container);
+  });
+
   it("gives an assistant no «Νέα συνεδρία» link", () => {
     render(
       <StaffSheet profile={{ role: "assistant", full_name: "Άννα" }} current="board">

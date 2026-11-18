@@ -4,6 +4,7 @@ import {
   ClinicSchema,
   CoverSchema,
   CodeSchema,
+  NewClinicSchema,
   RegisterClinicSchema,
   RoomsSchema,
   SettingsRoomsSchema,
@@ -150,6 +151,19 @@ describe("sign-up, clinic step", () => {
     const r = RegisterClinicSchema.parse({ ...clinic, beds: "4", consent: "on" });
     expect(r.beds).toBe(4);
     expect(RoomsSchema.parse(firstRoom(r.beds))).toEqual([{ name: "Αίθουσα", beds: 4, stations: 0 }]);
+  });
+});
+
+describe("«Νέα κλινική» (a second clinic)", () => {
+  const clinic = { clinicName: "Ακτή 2", city: "Πάφος", phone: "26 000 000" };
+
+  it("needs no name or beds (set up later), but the agreement again, in its own words", () => {
+    expect(NewClinicSchema.parse({ ...clinic, beds: "3", consent: "on" })).toEqual({ ...clinic, consent: "on" });
+    const r = NewClinicSchema.safeParse(clinic);
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(fieldErrors(r.error)).toEqual({ consent: "Για να δημιουργηθεί η κλινική, τσεκάρετε ότι συμφωνείτε." });
+    }
   });
 });
 

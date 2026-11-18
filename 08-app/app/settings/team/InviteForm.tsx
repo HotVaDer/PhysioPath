@@ -18,12 +18,14 @@ const CHOICES: { role: Role; text: string }[] = [
   { role: "physio", text: "Ηχογραφεί, ελέγχει και εγκρίνει σημειώσεις και προγράμματα. Τίποτα δεν φτάνει στον ασθενή χωρίς την έγκρισή του." },
 ];
 
-export function InviteForm() {
+// clinicId: the clinic this page was opened for (requireSameClinic on the server).
+export function InviteForm({ clinicId }: { clinicId: string }) {
   const [state, action] = useActionState<FormState, FormData>(inviteMember, {});
   const chosen = (state.values?.role as Role | undefined) ?? "assistant";
 
   return (
     <form action={action} noValidate className="flex flex-col gap-4">
+      <input type="hidden" name="clinicId" value={clinicId} />
       <FormAlert>{state.message}</FormAlert>
       <LineField
         id="email"

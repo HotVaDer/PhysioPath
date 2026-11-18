@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { approvalErrors, cleanProgram, parseWhere, slotLabel, slotOptions } from "@/app/lib/notes/approval";
-import type { PatientProgram } from "@/app/lib/notes/schema";
+import { readProgram, type PatientProgram } from "@/app/lib/notes/schema";
 
 const ROOM = "11111111-2222-4333-8444-555555555555";
 
@@ -22,6 +22,25 @@ describe("cleanProgram", () => {
     expect(clean.exercises.map((e) => e.name)).toEqual(["Γέφυρα", "Καθίσματα"]);
     expect(clean.after_exercises).toEqual(["Πάγος"]);
     expect(clean.title).toBe("Πρόγραμμα ασκήσεων");
+  });
+
+  it("stamps the version of the program's shape", () => {
+    expect(cleanProgram(program(["Γέφυρα"])).version).toBe(1);
+  });
+});
+
+describe("readProgram", () => {
+  it("reads version 1 and programs saved before versions existed", () => {
+    const saved = cleanProgram(program(["Γέφυρα"]));
+    expect(readProgram(saved)?.exercises[0].name).toBe("Γέφυρα");
+    const { version: _, ...old } = saved;
+    expect(readProgram(old)?.exercises[0].name).toBe("Γέφυρα");
+  });
+
+  it("refuses a shape it doesn't know, or data that doesn't fit", () => {
+    expect(readProgram({ ...cleanProgram(program(["Γέφυρα"])), version: 2 })).toBeNull();
+    expect(readProgram({ version: 1, exercises: [{ sets: "banana" }] })).toBeNull();
+    expect(readProgram(null)).toBeNull();
   });
 });
 

@@ -77,7 +77,7 @@ export default async function TeamSettingsPage({ searchParams }: PageProps<"/set
             Καλέστε κάποιον
           </h2>
           {/* A new key after each send: the form starts empty, without the last error. */}
-          <InviteForm key={`${result}${sentTo}${sentAt}`} />
+          <InviteForm key={`${result}${sentTo}${sentAt}`} clinicId={profile.clinic_id} />
         </section>
 
         <section aria-labelledby="list" className="flex flex-col gap-2">
@@ -99,12 +99,14 @@ export default async function TeamSettingsPage({ searchParams }: PageProps<"/set
                   {status.open && (
                     <span className="flex flex-wrap gap-x-4">
                       <form action={resendInvite}>
+                        <input type="hidden" name="clinicId" value={profile.clinic_id} />
                         <input type="hidden" name="inviteId" value={invite.id} />
                         <QuietSubmit pending="Αποστολή…">
                           Ξανά αποστολή<span className="sr-only"> στο {invite.email}</span>
                         </QuietSubmit>
                       </form>
                       <form action={cancelInvite}>
+                        <input type="hidden" name="clinicId" value={profile.clinic_id} />
                         <input type="hidden" name="inviteId" value={invite.id} />
                         <QuietSubmit pending="Ακύρωση…">
                           Ακύρωση<span className="sr-only"> της πρόσκλησης στο {invite.email}</span>

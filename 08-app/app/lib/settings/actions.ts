@@ -10,14 +10,15 @@ import { z } from "zod";
 import type { FormState } from "@/app/lib/onboarding/actions";
 import { sendInvites } from "@/app/lib/onboarding/invites";
 import { MemberSchema, SettingsRoomsSchema, fieldErrors } from "@/app/lib/onboarding/schema";
-import { requireOwner } from "@/app/lib/onboarding/session";
+import { requireOwner, requireSameClinic } from "@/app/lib/onboarding/session";
 
 const now = () =>
   new Intl.DateTimeFormat("el-GR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Nicosia" }).format(new Date());
 
 // ---------- Χώροι: «Αποθήκευση» ----------
 export async function saveRooms(_: FormState, form: FormData): Promise<FormState> {
-  const { supabase } = await requireOwner();
+  const { supabase, profile } = await requireOwner();
+  requireSameClinic(form, profile);
   let raw: unknown = null;
   try {
     raw = JSON.parse(String(form.get("rooms") ?? ""));
@@ -47,6 +48,7 @@ export async function saveRooms(_: FormState, form: FormData): Promise<FormState
 // One email and one role per press, so nothing typed can be left behind unsent.
 export async function inviteMember(_: FormState, form: FormData): Promise<FormState> {
   const { supabase, profile } = await requireOwner();
+  requireSameClinic(form, profile);
   const values = { email: String(form.get("email") ?? ""), role: String(form.get("role") ?? "") };
   const parsed = MemberSchema.safeParse(values);
   if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
@@ -74,7 +76,8 @@ export async function inviteMember(_: FormState, form: FormData): Promise<FormSt
 
 // ---------- Ομάδα: «Ακύρωση» of an invite nobody accepted yet ----------
 export async function cancelInvite(form: FormData): Promise<void> {
-  const { supabase } = await requireOwner();
+  const { supabase, profile } = await requireOwner();
+  requireSameClinic(form, profile);
   const id = z.uuid().safeParse(form.get("inviteId"));
   if (!id.success) redirect("/settings/team");
   // RLS: only the owner, only their clinic, only invites not accepted yet.
@@ -84,8 +87,9 @@ export async function cancelInvite(form: FormData): Promise<void> {
 }
 
 // ---------- Home: «Δουλεύω μόνη/ος» (no team to invite) ----------
-export async function workAlone(): Promise<void> {
+export async function workAlone(form: FormData): Promise<void> {
   const { supabase, profile } = await requireOwner();
+  requireSameClinic(form, profile);
   await supabase.from("clinics").update({ team_checked_at: new Date().toISOString() }).eq("id", profile.clinic_id);
   redirect("/?saved=alone");
 }

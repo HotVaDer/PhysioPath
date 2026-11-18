@@ -309,3 +309,51 @@ Why: the user's mother and a collaborator couldn't finish sign-up. Plan: `~/.cla
   - Checked with a throwaway clinic (deleted after): visit 1 new program → visit 2 «Ίδιο πρόγραμμα» → same program,
     note 2 «Συνεδρία 2», card on bed 2; a new patient skips step 2. The Anthropic key works again: note-only mode
     returned only the GeSY note in 5 s, questions only about today, no program, nothing added.
+- Security review (user, 2026-11-17): the database now checks the **inside** of every saved program, not only
+  "an object with an exercises array", so a direct API insert that skips the app can't store a broken program.
+  Each saved program carries `"version": 1` (`PROGRAM_VERSION`, stamped by `cleanProgram`), and pages read
+  programs only through `readProgram()` in `app/lib/notes/schema.ts` (programs saved earlier, without a version,
+  read as version 1). Two indexes on `clinic_id` (programs, notes) keep the RLS filter fast as data grows.
+  Migration `20261117180000_program_shape.sql` + new RLS checks written; **not pushed yet** (the user pushes it).
+  75 tests pass, build OK.
+- **One login, several clinics** (user, 2026-11-17), phase A of 4 (database). Decided with the user: anyone already in a
+  clinic can open another one (they become its owner, at most 10); someone in a clinic can accept an invite from
+  another (a physio who works in two); each clinic stays completely separate. A `memberships` table (one row per
+  person per clinic, with the role there) is the source of truth; the profile's clinic now means "the clinic open
+  right now", and the database refuses a profile pointing at a clinic or role without a membership. The policies
+  and `my_clinic_id()` / `my_role()` are unchanged. New `my_clinics()`, `switch_clinic()`, `create_clinic()`;
+  sign-up, invites and «already in the team» use memberships; deleting the open clinic opens the next one.
+  Migration `20261117200000_many_clinics.sql` + 22 new RLS checks written, **not pushed yet** (the user pushes).
+  Next: B switching (top bar + /clinics), C /clinics/new, D every form carries its clinic (stale-tab guard).
+  - 2026-11-17: phase A pushed live (with the program-shape migration); RLS checks **165/165 pass**.
+  - Phase B (switching): the top bar shows the open clinic with «Αλλαγή» (`aria-label` «Αλλαγή κλινικής": the
+    sr-only span gave screen readers "Αλλαγήκλινικής"); `/clinics` «Οι κλινικές σας» lists each clinic with the role
+    there, «Ανοιχτή τώρα» or «Άνοιγμα» (`switchClinic` → `switch_clinic()`), then home says «Ανοίξατε την κλινική …».
+    The profile carries `clinic_name`; `loadMyClinics()`. The invite page doesn't ask the name of someone already in
+    a clinic (they keep it). 76 tests pass, build OK. Next: C `/clinics/new`, D stale-tab guard.
+  - Phase C (new clinic): `/clinics` has «+ Νέα κλινική» → `/clinics/new`, the sign-up clinic form in `mode="new"`
+    (no name field and, per the user 11-18, no beds: it starts with «Αίθουσα» · 1 bed and the owner sets the rooms from «Επόμενα βήματα»; «Δημιουργία κλινικής», the agreement again in its own words: each clinic is responsible for
+    its own patients' data). `createClinic` → `create_clinic()`; home then says «Η κλινική «…» δημιουργήθηκε και
+    είναι ανοιχτή» with that clinic's «Επόμενα βήματα». The 10-clinic limit has its own message. 77 tests, build OK.
+  - Phase D (stale-tab guard), 2026-11-18: opening another clinic changes it for every tab, so every form that saves
+    for the clinic carries the clinic it was opened for (hidden `clinicId`): rooms, invite, «Ξανά αποστολή»,
+    «Ακύρωση», «Δουλεύω μόνη/ος». `requireSameClinic()` (session.ts): no match → nothing saved, the open clinic's
+    home with a yellow note «Δεν αποθηκεύτηκε τίποτα. Στο μεταξύ ανοίξατε άλλη κλινική…» (`?stale=1`). The voice
+    note lives in the tab, so the draft is stamped with the clinic it was started in (`Draft.clinicId`,
+    `stampClinic`); the review page warns and `approveNote` refuses it while another clinic is open (the draft
+    stays). Not a security check (the database keeps every rule): it keeps work in the clinic meant. 80 tests,
+    build OK. **One login, several clinics: phases A–D done**, uncommitted.
+
+### Later (after the demo): two tabs, two clinics
+Asked by the user 2026-11-18, postponed. Today the open clinic is one per person (saved in the profile), so
+every tab and browser shows the same clinic; phase D only stops wrong-clinic saves. To work in two clinics
+side by side, each tab carries its own clinic:
+- **E1 database:** every server request sends the tab's clinic as a header; the two helpers that every policy
+  uses return it only if the person has a membership there (a faked header sees nothing), and the role there.
+  The policies stay the same; the owner-only functions use the helpers instead of the profile. RLS checks,
+  including a faked header.
+- **E2 addresses:** clinic pages move under `/c/[clinic]/…` (home, notes, programs, settings); `/` opens the
+  clinic used last; links and redirects stay in the same clinic.
+- **E3 server:** pages and actions make their database client for their tab's clinic; the hidden `clinicId`
+  from phase D becomes the clinic to save into (instead of a refusal).
+- **E4 top bar:** «Αλλαγή» lists the clinics, each can open in a new tab.

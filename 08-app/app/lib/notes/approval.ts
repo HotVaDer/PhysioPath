@@ -3,7 +3,7 @@
 import * as z from "zod";
 
 import { NoteLanguage } from "@/app/lib/notes/prompt";
-import { ActivityCode, ClinicalNote, PatientProgram } from "@/app/lib/notes/schema";
+import { ActivityCode, ClinicalNote, PatientProgram, PROGRAM_VERSION, type StoredProgram } from "@/app/lib/notes/schema";
 
 // "home" or "<room uuid>:<slot number>"
 const SLOT = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):(\d{1,2})$/;
@@ -19,15 +19,23 @@ export const Approval = z.object({
   // «Ίδιο πρόγραμμα»: today's note goes with this stored program (continue_program); "new" = approve_program.
   mode: z.enum(["new", "same"]).default("new"),
   baseProgramId: z.uuid().nullable().default(null),
+  // The clinic the note was started in (Draft.clinicId): approveNote refuses it while another is open.
+  clinicId: z.uuid().nullable().default(null),
 });
 export type Approval = z.infer<typeof Approval>;
 
+// Shown on the review page before «Έγκριση», and by approveNote if it's pressed anyway.
+export const OTHER_CLINIC_NOTE =
+  "Αυτή η σημείωση ξεκίνησε σε άλλη κλινική. Για να την εγκρίνετε, ανοίξτε εκείνη την κλινική με το «Αλλαγή» πάνω. Η σημείωση μένει εδώ, σε αυτή την καρτέλα.";
+
 export type ApprovalErrors = Partial<Record<"patient" | "exercises" | "activityCode" | "where", string>>;
 
-// The program as it will be saved: exercises without a name are left out, names trimmed.
-export function cleanProgram(program: PatientProgram): PatientProgram {
+// The program as it will be saved: exercises without a name are left out, names trimmed, and the
+// version of its shape stamped on it (see readProgram in schema.ts).
+export function cleanProgram(program: PatientProgram): StoredProgram {
   return {
     ...program,
+    version: PROGRAM_VERSION,
     title: program.title.trim() || "Πρόγραμμα ασκήσεων",
     exercises: program.exercises.filter((e) => e.name.trim()).map((e) => ({ ...e, name: e.name.trim() })),
     after_exercises: program.after_exercises.map((s) => s.trim()).filter(Boolean),

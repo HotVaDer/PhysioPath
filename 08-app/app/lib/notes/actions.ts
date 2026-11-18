@@ -5,7 +5,7 @@
 // program). Each is one transaction. Nothing reaches the patient before this.
 import { redirect } from "next/navigation";
 
-import { Approval, approvalErrors, cleanProgram, parseWhere, type ApprovalErrors } from "@/app/lib/notes/approval";
+import { Approval, approvalErrors, cleanProgram, OTHER_CLINIC_NOTE, parseWhere, type ApprovalErrors } from "@/app/lib/notes/approval";
 import { requireMember } from "@/app/lib/onboarding/session";
 
 export type ApproveState = {
@@ -29,6 +29,9 @@ export async function approveNote(_: ApproveState, form: FormData): Promise<Appr
   const parsed = Approval.safeParse(raw);
   if (!parsed.success) return { message: "Κάποιο πεδίο δεν διαβάστηκε. Ελέγξτε τη σημείωση και δοκιμάστε ξανά." };
   const a = parsed.data;
+  // Started in another clinic (opened since, maybe in another tab): its patient, program and beds are
+  // that clinic's. Nothing is saved; the draft stays in this tab for when that clinic is open again.
+  if (a.clinicId !== profile.clinic_id) return { message: OTHER_CLINIC_NOTE };
   const errors = approvalErrors(a);
   if (Object.keys(errors).length > 0) return { errors };
 

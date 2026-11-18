@@ -40,6 +40,7 @@ export default async function ReviewPage() {
         slots={slotOptions((rooms ?? []) as Room[], openSessions)}
         notesPerPatient={notesPerPatient}
         signer={profile.full_name ?? ""}
+        clinicId={profile.clinic_id!}
         today={today}
       />
     </StaffSheet>

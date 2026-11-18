@@ -10,5 +10,5 @@ import { requireMember } from "@/app/lib/onboarding/session";
 export default async function NotesLayout({ children }: { children: ReactNode }) {
   const { profile } = await requireMember();
   if (profile.role === "assistant") redirect("/");
-  return <DraftProvider>{children}</DraftProvider>;
+  return <DraftProvider clinicId={profile.clinic_id!}>{children}</DraftProvider>;
 }

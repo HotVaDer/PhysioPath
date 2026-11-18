@@ -9,12 +9,18 @@ import { redirect } from "next/navigation";
 import { DraftSchema, type Draft } from "@/app/lib/onboarding/schema";
 import { createClient, type Supabase } from "@/app/lib/supabase/server";
 
+// clinic_id is the clinic open right now (someone can belong to several: see my_clinics) and role is
+// the role in that clinic. clinic_name is that clinic's name, for the top bar.
 export type Profile = {
   clinic_id: string | null;
   role: "owner" | "physio" | "assistant";
   full_name: string | null;
   onboarded_at: string | null;
+  clinic_name: string | null;
 };
+
+// One of the clinics someone belongs to (public.my_clinics()).
+export type MyClinic = { id: string; name: string; city: string | null; role: Profile["role"]; current: boolean };
 
 export async function currentUser(): Promise<{ supabase: Supabase; user: User | null }> {
   const supabase = await createClient();
@@ -23,12 +29,23 @@ export async function currentUser(): Promise<{ supabase: Supabase; user: User | 
 }
 
 export async function loadProfile(supabase: Supabase, userId: string): Promise<Profile | null> {
+  // The clinic through the profile's own clinic_id (RLS shows only the open clinic anyway).
   const { data } = await supabase
     .from("profiles")
-    .select("clinic_id, role, full_name, onboarded_at")
+    .select("clinic_id, role, full_name, onboarded_at, clinic:clinics!profiles_clinic_id_fkey(name)")
     .eq("id", userId)
     .maybeSingle();
-  return (data as Profile | null) ?? null;
+  if (!data) return null;
+  // Without generated database types the client guesses a list here; one clinic per profile comes back.
+  const { clinic, ...profile } = data as unknown as Omit<Profile, "clinic_name"> & { clinic: { name: string } | null };
+  return { ...profile, clinic_name: clinic?.name ?? null };
+}
+
+// Every clinic the person belongs to, by name, with the one open now marked.
+export async function loadMyClinics(supabase: Supabase): Promise<MyClinic[]> {
+  const { data, error } = await supabase.rpc("my_clinics");
+  if (error) throw new Error(`Loading the clinics failed: ${error.message}`);
+  return (data as MyClinic[] | null) ?? [];
 }
 
 export async function loadDraft(supabase: Supabase): Promise<Draft> {
@@ -65,6 +82,15 @@ export async function requireMember() {
   const profile = await loadProfile(supabase, user.id);
   if (!profile?.onboarded_at || !profile.clinic_id) redirect("/register/clinic");
   return { supabase, user, profile };
+}
+
+// Every form that saves something for the clinic carries the clinic it was opened for (a hidden
+// "clinicId"). Opening another clinic changes it for every tab, so a page left open in another tab
+// would otherwise save into the clinic opened since. Not a security check (the person belongs to both,
+// and the database keeps every rule): it keeps their work in the clinic they meant. When it doesn't
+// match, nothing is saved and they land on the open clinic's home, with a note saying so (?stale=1).
+export function requireSameClinic(form: FormData, profile: Pick<Profile, "clinic_id">): void {
+  if (!profile.clinic_id || form.get("clinicId") !== profile.clinic_id) redirect("/?stale=1");
 }
 
 // For the owner's settings (rooms, team). Physios and assistants go home.

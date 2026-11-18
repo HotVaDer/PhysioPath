@@ -18,7 +18,8 @@ import { cx } from "@/app/lib/cx";
 type Card = SettingsRoom & { k: number };
 const MAX_ROOMS = 30;
 
-export function RoomsForm({ initial }: { initial: SettingsRoom[] }) {
+// clinicId: the clinic this page was opened for (requireSameClinic on the server).
+export function RoomsForm({ initial, clinicId }: { initial: SettingsRoom[]; clinicId: string }) {
   const [state, action] = useActionState<FormState, FormData>(saveRooms, {});
   const nextKey = useRef(initial.length);
   const [rooms, setRooms] = useState<Card[]>(initial.map((r, k) => ({ ...r, k })));
@@ -54,6 +55,7 @@ export function RoomsForm({ initial }: { initial: SettingsRoom[] }) {
 
   return (
     <form ref={form} action={action} noValidate className="flex flex-col gap-5">
+      <input type="hidden" name="clinicId" value={clinicId} />
       <input type="hidden" name="rooms" value={JSON.stringify(rooms.map(({ k: _, ...r }) => r))} />
       <FormAlert>{state.message}</FormAlert>
       {e.form && <FormAlert>{e.form}</FormAlert>}

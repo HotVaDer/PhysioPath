@@ -33,12 +33,16 @@ export const Draft = z.object({
   // keeps the stored program (base, read-only) and only today's GeSY note is written.
   mode: z.enum(["new", "same"]).default("new"),
   base: z.object({ programId: z.uuid(), approvedAt: z.string(), program: PatientProgram }).nullable().default(null),
+  // The clinic this note was started in (stamped once by DraftProvider). Someone in several clinics can
+  // open another one meanwhile: the patient, program and beds are the first clinic's, so «Έγκριση»
+  // refuses the note while another clinic is open.
+  clinicId: z.uuid().nullable().default(null),
 });
 export type Draft = z.infer<typeof Draft>;
 
 export const emptyDraft: Draft = {
   transcript: "", fixes: [], noteLang: "el", result: null, resultNoteLang: "el", timings: {}, removed: null,
-  patient: null, draftId: null, activityCode: null, where: null, mode: "new", base: null,
+  patient: null, draftId: null, activityCode: null, where: null, mode: "new", base: null, clinicId: null,
 };
 
 export const emptyExercise = (): Exercise => ({ name: "", sets: null, reps: null, hold: null, frequency: null, notes: null });
@@ -65,6 +69,7 @@ export type DraftAction =
   | { type: "removeExercise"; index: number }
   | { type: "undoRemove" }
   | { type: "setNote"; field: keyof ClinicalNote; value: string }
+  | { type: "stampClinic"; clinicId: string }
   | { type: "reset" };
 
 // Optional text: an emptied field means "not said" (null). Text is stored as typed, not trimmed,
@@ -126,6 +131,9 @@ export function draftReducer(draft: Draft, action: DraftAction): Draft {
       return { ...draft, activityCode: action.code };
     case "setWhere":
       return { ...draft, where: action.where };
+    case "stampClinic":
+      // Only once: a note keeps the clinic it was started in (a new note, after «reset», gets the open one).
+      return draft.clinicId ? draft : { ...draft, clinicId: action.clinicId };
     case "reset":
       return { ...emptyDraft, noteLang: draft.noteLang }; // keep the physio's language choice
   }

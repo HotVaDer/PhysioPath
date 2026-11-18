@@ -16,9 +16,15 @@ type DraftContextValue = {
 
 const DraftContext = createContext<DraftContextValue | null>(null);
 
-export function DraftProvider({ children }: { children: ReactNode }) {
+// clinicId: the clinic open now. A note without one (new, or after «reset») is stamped with it; a note
+// started in another clinic keeps that one (see Draft.clinicId).
+export function DraftProvider({ children, clinicId }: { children: ReactNode; clinicId: string }) {
   const [draft, dispatch] = useReducer(draftReducer, emptyDraft);
   const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (ready && !draft.clinicId) dispatch({ type: "stampClinic", clinicId });
+  }, [ready, draft.clinicId, clinicId]);
 
   // After the page appears, bring back the saved draft. (It can't be read during the first render:
   // the server rendered the page without it, and both renders have to match.)

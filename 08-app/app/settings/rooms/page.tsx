@@ -26,7 +26,7 @@ export default async function RoomsSettingsPage() {
             παράδειγμα ένα ποδήλατο ή ένα μονόζυγο. Οι αλλαγές γίνονται όταν πατήσετε «Αποθήκευση».
           </p>
         </div>
-        <RoomsForm initial={rooms ?? []} />
+        <RoomsForm initial={rooms ?? []} clinicId={profile.clinic_id} />
       </div>
     </StaffSheet>
   );

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import * as z from "zod";
 
 import { StaffSheet } from "@/app/components/paper/StaffSheet";
-import { PatientProgram } from "@/app/lib/notes/schema";
+import { readProgram } from "@/app/lib/notes/schema";
 import { requireMember } from "@/app/lib/onboarding/session";
 
 import { ProgramChoice } from "./ProgramChoice";
@@ -30,14 +30,14 @@ export default async function ProgramStepPage({ searchParams }: PageProps<"/note
       .maybeSingle(),
   ]);
   if (!patient) redirect("/notes/new");
-  const program = last ? PatientProgram.safeParse(last.program) : null;
-  if (!last || !program?.success) redirect("/notes/record"); // nothing stored: a new program
+  const program = last ? readProgram(last.program) : null;
+  if (!last || !program) redirect("/notes/record"); // nothing stored (or unreadable): a new program
 
   return (
     <StaffSheet profile={profile} current="new" step={{ n: 2, of: 4 }}>
       <ProgramChoice
         patient={{ id: patient.id as string, label: patient.label as string }}
-        stored={{ programId: last.id as string, approvedAt: last.approved_at as string, program: program.data }}
+        stored={{ programId: last.id as string, approvedAt: last.approved_at as string, program }}
       />
     </StaffSheet>
   );

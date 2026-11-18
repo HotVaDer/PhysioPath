@@ -15,7 +15,7 @@ import {
   firstRoom,
   type FieldErrors,
 } from "@/app/lib/onboarding/schema";
-import { currentUser, requireFormUser, requireMember, saveDraft } from "@/app/lib/onboarding/session";
+import { currentUser, requireFormUser, requireMember, requireSameClinic, saveDraft } from "@/app/lib/onboarding/session";
 import { sendInvites } from "@/app/lib/onboarding/invites";
 import { confirmLink, safeNext } from "@/app/lib/site";
 import { createAdminClient } from "@/app/lib/supabase/admin";
@@ -140,6 +140,7 @@ export async function finishRegistration(_: FormState, form: FormData): Promise<
 // server reads it with the secret key, but only after checking the invite belongs to the owner's clinic.
 export async function resendInvite(form: FormData): Promise<void> {
   const { supabase, profile } = await requireMember();
+  requireSameClinic(form, profile);
   const id = z.uuid().safeParse(form.get("inviteId"));
   const admin = createAdminClient();
   if (profile.role !== "owner" || !id.success || !admin) redirect("/settings/team?invite=not-sent");
@@ -176,7 +177,7 @@ export async function acceptInvite(_: FormState, form: FormData): Promise<FormSt
     const known: Record<string, string> = {
       "invite not valid": "Η πρόσκληση δεν ισχύει πια. Ζητήστε νέα από την κλινική.",
       "invite is for another email": "Η πρόσκληση είναι για άλλο email από αυτό που έχετε συνδεθεί.",
-      "already in a clinic": "Ανήκετε ήδη σε κλινική.",
+      "already in this clinic": "Είστε ήδη στην ομάδα αυτής της κλινικής.",
     };
     const message = Object.entries(known).find(([k]) => error.message.includes(k))?.[1];
     if (!message) console.error("accept_invite failed:", error);

@@ -70,6 +70,22 @@ export type ClinicalNote = z.infer<typeof ClinicalNote>;
 export type VoiceNoteResult = z.infer<typeof VoiceNoteResult>;
 export type NoteOnlyResult = z.infer<typeof NoteOnlyResult>;
 
+// ---------- programs as saved in the database ----------
+// An approved program is a record and is never rewritten, so every shape ever saved has to stay
+// readable. Each saved program carries the version of its shape; a new shape later = version 2,
+// a branch in readProgram() and the same version in private.valid_program() (the database check).
+export const PROGRAM_VERSION = 1;
+export type StoredProgram = PatientProgram & { version: typeof PROGRAM_VERSION };
+
+// The one way to read programs.program. No "version" (saved before 2026-11-17) is the same shape as 1.
+// null: a shape this code doesn't know, or data that doesn't fit it.
+export function readProgram(json: unknown): PatientProgram | null {
+  const version = json && typeof json === "object" && "version" in json ? json.version : 1;
+  if (version !== 1) return null;
+  const parsed = PatientProgram.safeParse(json);
+  return parsed.success ? parsed.data : null;
+}
+
 // The four GeSY parts, in the order GeSY lists them.
 export const GESY_PARTS = ["service_given", "assessment_findings", "treatment_plan", "progress"] as const;
 export type GesyPart = (typeof GESY_PARTS)[number];
