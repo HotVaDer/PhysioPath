@@ -1,5 +1,6 @@
-// Sign in again with an email link (no passwords): a small sign-in card, not the registration form.
-// Also where a used, expired or other-browser link lands.
+// Sign in again with a 6-digit email code (no passwords): a small sign-in card, not sign-up.
+// Also where a used, expired or other-browser link lands, and where an invited person comes when
+// they open their invite without being signed in (then it speaks about the invite, not "welcome back").
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -17,24 +18,37 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { user } = await currentUser();
   const target = safeNext(typeof next === "string" ? next : null);
   if (user) redirect(target as Route); // safeNext only lets our own paths through
+  const invite = target.startsWith("/invite/");
 
   return (
     <Card
-      label="ΣΥΝΔΕΣΗ"
+      label={invite ? "Πρόσκληση" : "Είσοδος"}
       footer={
-        <>
-          Νέα κλινική; <Link href="/register">Εγγραφή κλινικής</Link>
-        </>
+        invite ? undefined : (
+          <>
+            Νέα κλινική; <Link href="/register">Εγγραφή κλινικής</Link>
+          </>
+        )
       }
     >
-      <div className="flex flex-col gap-2">
-        <h1 className="font-display text-[32px] leading-[1.1] sm:text-[36px]">Καλώς ήρθατε ξανά</h1>
-        <p className="italic text-muted">Γράψτε το email σας. Σας στέλνουμε σύνδεσμο εισόδου, χωρίς κωδικό.</p>
+      {!invite && (
+        <Link href="/welcome" className="self-start">
+          <span aria-hidden="true">←</span> Πίσω
+        </Link>
+      )}
+      <div className="flex flex-col gap-1">
+        <h1 className="font-display text-[28px] leading-[1.15] sm:text-[32px]">
+          {invite ? "Δείτε την πρόσκλησή σας" : "Καλώς ήρθατε ξανά"}
+        </h1>
+        <p className="text-muted">
+          {invite ? "Γράψτε το email στο οποίο ήρθε η πρόσκληση. " : "Γράψτε το email σας. "}
+          Σας στέλνουμε έναν κωδικό 6 ψηφίων. Δεν χρειάζεται συνθηματικό.
+        </p>
       </div>
-      {link === "expired" && <FormAlert>Ο σύνδεσμος έχει ήδη χρησιμοποιηθεί ή έληξε. Ζητήστε έναν καινούργιο εδώ.</FormAlert>}
+      {link === "expired" && <FormAlert>Το κουμπί στο email έχει ήδη χρησιμοποιηθεί ή έληξε. Ζητήστε νέο κωδικό εδώ.</FormAlert>}
       {link === "other-browser" && (
         <FormAlert>
-          Ο σύνδεσμος άνοιξε σε άλλο πρόγραμμα περιήγησης ή συσκευή από αυτή που τον ζητήσατε. Ζητήστε έναν καινούργιο εδώ.
+          Το κουμπί στο email άνοιξε σε άλλο πρόγραμμα ή συσκευή. Ζητήστε νέο κωδικό εδώ και γράψτε τον σε αυτή τη σελίδα.
         </FormAlert>
       )}
       <LinkForm mode="login" next={target} />

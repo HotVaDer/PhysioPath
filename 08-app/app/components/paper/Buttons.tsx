@@ -1,6 +1,6 @@
 "use client";
 // The green buttons of the paper look. SubmitButton knows when its form is being sent (it
-// shows "Αποθήκευση…" and can't be pressed twice); PaperLink is a link that looks the same.
+// shows "Αποθήκευση…" and can't be pressed twice); PaperLink is a link that looks the same (or outlined).
 import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -34,9 +34,24 @@ export function QuietSubmit({ children, pending: pendingLabel }: { children: Rea
   );
 }
 
-export function PaperLink({ href, children }: { href: Route; children: ReactNode }) {
+// The same size as the green button, but outlined: for the second of two equal choices
+// (e.g. «Είσοδος» next to «Εγγραφή» on the welcome page).
+const outline =
+  "inline-flex min-h-14 items-center gap-2.5 border-[3px] border-action bg-white px-6 text-[19px] font-bold text-action no-underline hover:bg-note-green hover:text-action";
+
+export function PaperLink({
+  href,
+  children,
+  variant = "green",
+  className,
+}: {
+  href: Route;
+  children: ReactNode;
+  variant?: "green" | "outline";
+  className?: string;
+}) {
   return (
-    <Link href={href} className={cx(green, "self-start")}>
+    <Link href={href} className={cx(variant === "green" ? green : outline, "self-start", className)}>
       {children}
     </Link>
   );
@@ -44,5 +59,5 @@ export function PaperLink({ href, children }: { href: Route; children: ReactNode
 
 // The row at the bottom of a sheet: the main button and an optional quiet link next to it.
 export function Actions({ children }: { children: ReactNode }) {
-  return <div className="flex flex-wrap items-center gap-x-6 gap-y-3.5 pt-4">{children}</div>;
+  return <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-1">{children}</div>;
 }

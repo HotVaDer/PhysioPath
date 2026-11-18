@@ -1,38 +1,47 @@
 "use client";
-// «Αποδοχή πρόσκλησης»: the invitee types their name and joins the clinic.
+// «Αποδοχή»: the invited person writes their name (how the team will see them) and joins the clinic.
+// Someone already in another clinic keeps the name they have (it's theirs in every clinic): no field,
+// just a line saying so (member = their current clinic and name).
 import { useActionState } from "react";
 
-import { SubmitButton } from "@/app/components/paper/Buttons";
+import { Actions, SubmitButton } from "@/app/components/paper/Buttons";
+import { LineField } from "@/app/components/paper/LineField";
 import { FormAlert } from "@/app/components/paper/Notes";
 import { acceptInvite, type FormState } from "@/app/lib/onboarding/actions";
 
-export function AcceptForm({ token, name }: { token: string; name: string }) {
+type Props = { token: string; name: string; member?: { name: string; clinic: string } };
+
+export function AcceptForm({ token, name, member }: Props) {
   const [state, action] = useActionState<FormState, FormData>(acceptInvite, {});
-  const error = state.errors?.fullName;
   return (
     <form action={action} noValidate className="flex flex-col gap-4">
       <input type="hidden" name="token" value={token} />
       <FormAlert>{state.message}</FormAlert>
-      <div className="flex flex-col gap-0.5">
-        <label htmlFor="fullName" className="text-[15px]">
-          Το όνομά σας
-        </label>
-        <input
+      {member ? (
+        <>
+          <input type="hidden" name="fullName" value={member.name} />
+          <p>
+            Θα μπείτε με το όνομα <span className="font-semibold">{member.name}</span>. Η κλινική «{member.clinic}» μένει
+            όπως είναι: αλλάζετε κλινική με το «Αλλαγή», δίπλα στο όνομα της κλινικής.
+          </p>
+        </>
+      ) : (
+        <LineField
           id="fullName"
           name="fullName"
+          label="Το ονοματεπώνυμό σας"
+          hint="Έτσι θα σας βλέπει η υπόλοιπη ομάδα."
           autoComplete="name"
           defaultValue={state.values?.fullName ?? name}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? "fullName-error" : undefined}
-          className="min-h-11 border-0 border-b-2 border-ink bg-transparent px-1 font-typed text-xl text-ink"
+          error={state.errors?.fullName}
+          required
         />
-        {error && (
-          <p id="fullName-error" className="pt-1 font-semibold text-ink">
-            {error}
-          </p>
-        )}
-      </div>
-      <SubmitButton pending="Αποδοχή…">Αποδοχή πρόσκλησης</SubmitButton>
+      )}
+      <Actions>
+        <SubmitButton pending="Αποδοχή…">
+          Αποδοχή <span aria-hidden="true">→</span>
+        </SubmitButton>
+      </Actions>
     </form>
   );
 }

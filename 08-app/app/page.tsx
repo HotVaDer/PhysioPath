@@ -1,132 +1,153 @@
-// Home. For now a filed-form sheet with the clinic's details and, for the owner, the team's
-// invites (with «Ξανά αποστολή»). The room board moves here next (from 03-prototype, restyled in
-// the paper look). Not signed in → registration; signed in but the form isn't filed → the form.
+// Home: «Η αίθουσα», the room board (every role), «Νέα συνεδρία» for owner/physio and, for the owner,
+// «Επόμενα βήματα» after sign-up: ① the rooms (/settings/rooms) and ② the team (/settings/team), each
+// with ✓ once done. The clinic's details moved to «Κλινική» (/settings) on 2026-11-18.
+// Not signed in → the welcome page; signed in without a clinic → the last sign-up step.
+import type { Route } from "next";
 import type { Metadata } from "next";
+import Link from "next/link";
 
-import { QuietSubmit } from "@/app/components/paper/Buttons";
-import { FormAlert } from "@/app/components/paper/Notes";
-import { SignOut } from "@/app/components/paper/SignOut";
-import { Sheet } from "@/app/components/paper/Sheet";
-import { resendInvite } from "@/app/lib/onboarding/actions";
-import { ROLES, type Role } from "@/app/lib/onboarding/schema";
+import { PaperLink, QuietSubmit } from "@/app/components/paper/Buttons";
+import { RoomBoard } from "@/app/components/board/RoomBoard";
+import { StaffSheet } from "@/app/components/paper/StaffSheet";
+import { loadBoard } from "@/app/lib/board/board";
 import { requireMember } from "@/app/lib/onboarding/session";
+import { workAlone } from "@/app/lib/settings/actions";
+import { cx } from "@/app/lib/cx";
 
 export const metadata: Metadata = { title: "Η αίθουσα" };
 
-type Invite = { id: string; email: string; role: Role; expires_at: string; accepted_at: string | null };
+const SAVED: Record<string, string> = {
+  rooms: "Οι χώροι σας αποθηκεύτηκαν.",
+  alone: "Εντάξει, δουλεύετε μόνη/ος. Αν χρειαστεί, καλείτε κάποιον από «Κλινική» → «Ομάδα».",
+};
 
-function inviteStatus(invite: Invite): { text: string; canResend: boolean } {
-  if (invite.accepted_at) return { text: "μπήκε στην ομάδα ✓", canResend: false };
-  if (new Date(invite.expires_at) < new Date()) return { text: "η πρόσκληση έληξε", canResend: true };
-  return { text: "περιμένουμε να την αποδεχτεί", canResend: true };
+// One of the «Επόμενα βήματα»: a big card that is the link, with a number (or ✓ when done).
+function NextStep({ n, href, title, text, done }: { n: number; href: Route; title: string; text: string; done: boolean }) {
+  return (
+    <Link
+      href={href}
+      className="flex min-h-[76px] items-center gap-4 rounded-md border-2 border-line bg-white px-4 py-3 text-ink no-underline hover:border-action hover:text-ink"
+    >
+      <span
+        aria-hidden="true"
+        className={cx(
+          "flex h-11 w-11 flex-none items-center justify-center rounded-full text-xl font-bold",
+          done ? "bg-note-green text-action" : "bg-action text-white",
+        )}
+      >
+        {done ? "✓" : n}
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <span className="text-[19px] font-semibold">
+          {title}
+          {done && <span className="font-normal text-action"> · Έγινε</span>}
+        </span>
+        <span className="text-muted">{text}</span>
+      </span>
+      <span aria-hidden="true" className="ml-auto text-2xl text-action">
+        →
+      </span>
+    </Link>
+  );
 }
 
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { supabase, profile } = await requireMember();
-  const { invite: inviteResult, to, at } = await searchParams;
-  const sentTo = typeof to === "string" && to.length <= 254 ? to : null;
-  const sentAt = typeof at === "string" && /^\d{1,2}:\d{2}$/.test(at) ? at : null;
+  const { welcome, saved, stale } = await searchParams;
   const isOwner = profile.role === "owner";
-  const [{ data: clinic }, { data: rooms }, { data: invites }] = await Promise.all([
-    supabase.from("clinics").select("name, city, phone").eq("id", profile.clinic_id).maybeSingle(),
-    supabase.from("rooms").select("name, beds, stations").order("position"),
+  const [{ data: clinic }, board, { count: invited }] = await Promise.all([
+    supabase.from("clinics").select("name, rooms_checked_at, team_checked_at").eq("id", profile.clinic_id).maybeSingle(),
+    loadBoard(supabase),
     isOwner
-      ? supabase.from("invites").select("id, email, role, expires_at, accepted_at").order("created_at")
-      : Promise.resolve({ data: [] as Invite[] }),
+      ? supabase.from("invites").select("id", { count: "exact", head: true })
+      : Promise.resolve({ count: 0 }),
   ]);
-  const roleLabel = profile.role === "owner" ? "Υπεύθυνη/ος κλινικής" : ROLES[profile.role];
-  const canSend = Boolean(process.env.SUPABASE_SECRET_KEY);
+  const roomsDone = Boolean(clinic?.rooms_checked_at);
+  const teamDone = Boolean(clinic?.team_checked_at) || (invited ?? 0) > 0;
+  const savedNote =
+    saved === "clinic"
+      ? `Ανοίξατε την κλινική «${clinic?.name ?? ""}». Ό,τι βλέπετε τώρα είναι αυτής της κλινικής.`
+      : saved === "new-clinic"
+        ? `Η κλινική «${clinic?.name ?? ""}» δημιουργήθηκε και είναι ανοιχτή. Ρυθμίστε τους χώρους και την ομάδα της πιο κάτω.`
+        : typeof saved === "string"
+        ? SAVED[saved]
+        : undefined;
+
+  const newSession =
+    profile.role !== "assistant" ? (
+      <PaperLink href="/notes/new">
+        <span aria-hidden="true">+</span> Νέα συνεδρία
+      </PaperLink>
+    ) : null;
+
+  // Messages after sign-up or a save, and the owner's «Επόμενα βήματα»: under the title, above the board.
+  const notices = (
+    <>
+      {welcome === "1" && (
+        <p role="status" className="bg-note-green px-4 py-3">
+          <span className="font-semibold">Η εγγραφή ολοκληρώθηκε. Η κλινική σας είναι έτοιμη.</span> Από εδώ ξεκινάτε κάθε
+          νέα συνεδρία.
+        </p>
+      )}
+      {/* A form left open for another clinic (requireSameClinic): nothing was saved. */}
+      {stale === "1" && (
+        <p role="alert" className="bg-tab-yellow px-4 py-3">
+          <span className="font-semibold">Δεν αποθηκεύτηκε τίποτα.</span> Στο μεταξύ ανοίξατε άλλη κλινική, ίσως σε άλλη
+          καρτέλα. Τώρα είναι ανοιχτή η «{clinic?.name}». Για την άλλη, πατήστε «Αλλαγή» πάνω, δίπλα στο όνομα της κλινικής.
+        </p>
+      )}
+      {savedNote && (
+        <p role="status" className="bg-note-green px-4 py-3 font-semibold">
+          {savedNote}
+        </p>
+      )}
+
+      {isOwner && !(roomsDone && teamDone) && (
+        <section aria-labelledby="next" className="flex max-w-[640px] flex-col gap-3">
+          <div className="flex flex-col gap-0.5">
+            <h2 id="next" className="font-display text-[26px]">
+              Επόμενα βήματα
+            </h2>
+            <p className="text-muted">Δύο ακόμα, όποτε θέλετε. Τις σημειώσεις μπορείτε να τις ξεκινήσετε ήδη.</p>
+          </div>
+          <ol className="flex flex-col gap-3">
+            <li>
+              <NextStep n={1} href="/settings/rooms" title="Ρυθμίστε τους χώρους σας" text="Αίθουσες, κρεβάτια και θέσεις άσκησης." done={roomsDone} />
+            </li>
+            <li className="flex flex-col gap-1">
+              <NextStep n={2} href="/settings/team" title="Καλέστε την ομάδα σας" text="Φυσιοθεραπευτές και βοηθούς, με το email τους." done={teamDone} />
+              {!teamDone && (
+                <form action={workAlone} className="pl-1">
+                  <input type="hidden" name="clinicId" value={profile.clinic_id ?? ""} />
+                  <QuietSubmit pending="Αποθήκευση…">Δουλεύω μόνη/ος, δεν χρειάζεται</QuietSubmit>
+                </form>
+              )}
+            </li>
+          </ol>
+        </section>
+      )}
+    </>
+  );
 
   return (
-    <Sheet headerAside={<span className="font-typed">{clinic?.name}</span>}>
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="font-display text-[36px] leading-[1.08] sm:text-[42px]">Η αίθουσα</h1>
-          <p>
-            Καλώς ήρθατε, {profile.full_name}. <span className="text-muted">({roleLabel})</span>
+    <StaffSheet profile={profile} current="board" width="wide">
+      {board.rooms.length === 0 ? (
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+            <h1 className="flex-[1_1_320px] font-display text-[40px] leading-[1.05] sm:text-[44px]">Η αίθουσα</h1>
+            {newSession}
+          </div>
+          {notices}
+          <p className="bg-tab-yellow px-4 py-3">
+            Η κλινική δεν έχει ακόμα χώρους.{" "}
+            {isOwner ? <Link href="/settings/rooms">Ρυθμίστε πρώτα τους χώρους</Link> : "Ζητήστε από την/τον υπεύθυνη/ο να τους ρυθμίσει."}
           </p>
-          <p className="italic text-muted">Ο πίνακας της αίθουσας έρχεται εδώ σύντομα. Μέχρι τότε, αυτά κατατέθηκαν:</p>
         </div>
-
-        <dl className="flex flex-col border-b border-ledger">
-          <div className="flex flex-wrap gap-x-4 border-t border-ledger py-3">
-            <dt className="text-base text-muted sm:flex-[0_0_180px]">Κλινική</dt>
-            <dd className="font-typed text-[19px]">
-              {clinic?.name}
-              {clinic?.city ? `, ${clinic.city}` : ""}
-            </dd>
-          </div>
-          <div className="flex flex-wrap gap-x-4 border-t border-ledger py-3">
-            <dt className="text-base text-muted sm:flex-[0_0_180px]">Τηλέφωνο</dt>
-            <dd className="font-typed text-[19px]">{clinic?.phone}</dd>
-          </div>
-          <div className="flex flex-wrap gap-x-4 border-t border-ledger py-3">
-            <dt className="text-base text-muted sm:flex-[0_0_180px]">Χώροι</dt>
-            <dd className="font-typed text-[19px]">
-              {(rooms ?? []).map((r) => (
-                <span key={r.name} className="block">
-                  {r.name} · {r.beds} κρεβ. · {r.stations} θέσ.
-                </span>
-              ))}
-            </dd>
-          </div>
-        </dl>
-
-        {isOwner && (
-          <section aria-labelledby="team" className="flex flex-col gap-3">
-            <h2 id="team" className="font-display text-[26px]">
-              Ομάδα
-            </h2>
-            {inviteResult === "sent" && (
-              <p role="status" className="bg-note-green px-4 py-3">
-                <span className="font-semibold">
-                  Η πρόσκληση στάλθηκε ξανά{sentTo ? " στο " : ""}
-                  {sentTo && <span className="break-all font-typed">{sentTo}</span>}
-                  {sentAt ? ` στις ${sentAt}` : ""}.
-                </span>{" "}
-                Ισχύει για 7 μέρες. Αν δεν φαίνεται, να κοιτάξει στα ανεπιθύμητα.
-              </p>
-            )}
-            {inviteResult === "not-sent" && (
-              <FormAlert>
-                Η πρόσκληση{sentTo ? ` στο ${sentTo}` : ""} δεν στάλθηκε. Δοκιμάστε ξανά σε λίγο.
-              </FormAlert>
-            )}
-            {!canSend && process.env.NODE_ENV === "development" && (
-              <p className="bg-tab-yellow px-4 py-3 text-base">
-                Για προγραμματιστές: τα email πρόσκλησης χρειάζονται το <span className="font-typed">SUPABASE_SECRET_KEY</span> στο{" "}
-                <span className="font-typed">.env.local</span>.
-              </p>
-            )}
-            {(invites ?? []).length === 0 ? (
-              <p className="text-muted">Δεν έχετε καλέσει κανέναν ακόμα.</p>
-            ) : (
-              <ul className="flex flex-col border-b border-ledger">
-                {(invites as Invite[]).map((invite) => {
-                  const status = inviteStatus(invite);
-                  return (
-                    <li key={invite.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-ledger py-3">
-                      <span className="flex-[1_1_240px] break-all font-typed">{invite.email}</span>
-                      <span className="text-base">{ROLES[invite.role]}</span>
-                      <span className="text-base italic text-muted">{status.text}</span>
-                      {status.canResend && (
-                        <form action={resendInvite}>
-                          <input type="hidden" name="inviteId" value={invite.id} />
-                          <QuietSubmit pending="Αποστολή…">
-                            Ξανά αποστολή<span className="sr-only"> στο {invite.email}</span>
-                          </QuietSubmit>
-                        </form>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-        )}
-
-        <SignOut />
-      </div>
-    </Sheet>
+      ) : (
+        <RoomBoard initial={board} action={newSession}>
+          {notices}
+        </RoomBoard>
+      )}
+    </StaffSheet>
   );
 }

@@ -29,9 +29,13 @@ app/
   invite/[token]/      the invitee's yellow carbon copy («Αποδοχή πρόσκλησης»)
   login/               sign in again with an email link
   auth/confirm/        where every email link lands (swaps the one-time code for a login)
+  notes/               new note (record, samples, transcript) → review (program, GeSY note, where) → approve
+  programs/[id]/       approved sheet: stamp, QR for the patient, copy link and GeSY note
+  api/                 transcribe (audio → text) and generate (text → program + note), owner/physio only
   page.tsx             home (the room board comes here)
   components/paper/    Sheet, BinderTabs, LineField, Buttons, Notes (alert, stamp, attachment), SignOut
   lib/onboarding/      schema.ts (rules per sheet), session.ts (who's signed in, the draft), actions.ts
+  lib/notes/           the note pipeline: speech, proofread, generate, GeSY schema/prompt, draft, approval
   lib/supabase/        server.ts (as the signed-in person), admin.ts (secret key, invites only)
 proxy.ts               keeps the login fresh on every request
 supabase/              migrations + RLS checks (local only, git-ignored)
