@@ -1,24 +1,31 @@
 "use client";
-// The room board («Η αίθουσα»): one column per room, one box per bed or station, for every role.
-//   empty     «Κρεβάτι 2 · ελεύθερο»
-//   patient   name, program, the exercise they are on now + «Σετ 2 από 3», «1 από 4 ασκήσεις»
-//   calling   the whole box pink (pain) or yellow (question), with a sign and «πριν από 2 λεπτά»
-//   done      «✓ Τελείωσε τις ασκήσεις» (the card stays until someone presses «Τέλος»)
-// A state is never shown by colour alone: there is always a word and a shape.
-// Cards whose room was deleted go under «Χωρίς θέση». Asks the server every 3 s (paused while the tab
-// is hidden); new calls are announced to screen readers and counted in the tab's title.
+// The room board («Η αίθουσα»), for every role. Layout from the design canvas, page «Αίθουσα», board
+// «Physio · room board» (https://claude.ai/artifact/SNapakX6eXEUocFVggDnWu, project/RoomBoard.dc.html),
+// redrawn in the plain look (2026-11-18): paper colours, Literata, green actions, square corners.
+//   1. «Η αίθουσα», «Ενημερώθηκε τώρα», «+ Νέα συνεδρία»
+//   2. Summary: four numbers (in the room / need you / exercising / finished) and who needs you, in the
+//      order they called
+//   3. What the signs mean
+//   4. One card per patient, in room and bed order (cards never move): a big name, the program, the
+//      state with its sign, numbered exercise boxes, the exercise now with its sets, and the buttons.
+//      Only patients who need you get colour: the whole card red for pain, yellow for a question.
+// A state is never colour alone: there is always a word and a shape. Asks the server every 3 s (paused
+// while the tab is hidden); new calls are announced to screen readers and counted in the tab's title.
 import type { Route } from "next";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { finishCard, seeCall } from "@/app/lib/board/actions";
 import type { BoardCard, BoardData } from "@/app/lib/board/board";
-import { boardStatus, CALL_WORDS, exercisesDone, minutesAgo, nowExercise } from "@/app/lib/board/session";
+import { boardStatus, exercisesDone, isDone, minutesAgo, nowExercise, type BoardStatus, type CallReason } from "@/app/lib/board/session";
 import { cx } from "@/app/lib/cx";
-import { slotLabel, type Room } from "@/app/lib/notes/approval";
+import { slotLabel } from "@/app/lib/notes/approval";
 
 const POLL_MS = 3000;
 const TITLE = "Η αίθουσα · PhysioPath";
+const REASON: Record<CallReason, string> = { pain: "Πόνος", question: "Απορία" };
+
+type Result = { ok: true } | { ok: false; message: string };
 
 async function fetchBoard(): Promise<BoardData> {
   const response = await fetch("/api/board", { cache: "no-store" });
@@ -26,7 +33,11 @@ async function fetchBoard(): Promise<BoardData> {
   return (await response.json()) as BoardData;
 }
 
-export function RoomBoard({ initial }: { initial: BoardData }) {
+// The card's look: plain for most, red for pain, yellow for a question.
+type Tone = "plain" | "pain" | "question";
+const toneOf = (card: BoardCard): Tone => (card.call ? card.call.reason : "plain");
+
+export function RoomBoard({ initial, action, children }: { initial: BoardData; action?: ReactNode; children?: ReactNode }) {
   const [board, setBoard] = useState(initial);
   const [offline, setOffline] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -37,10 +48,10 @@ export function RoomBoard({ initial }: { initial: BoardData }) {
   const refresh = useCallback(async () => {
     try {
       const fresh = await fetchBoard();
-      // Say each new call once, for screen readers: «Γιώργος, Κρεβάτι 2: πονάει».
+      // Say each new call once, for screen readers: «Μαρία: χρειάζεται εσάς, πόνος».
       const freshCalls = fresh.cards.filter((c) => c.call && !seenCalls.current.has(`${c.id}@${c.call.at}`));
       if (freshCalls.length) {
-        setAnnounce(freshCalls.map((c) => `${c.label}: ${CALL_WORDS[c.call!.reason].toLowerCase()}`).join(". "));
+        setAnnounce(freshCalls.map((c) => `${c.label}: χρειάζεται εσάς, ${REASON[c.call!.reason].toLowerCase()}`).join(". "));
         freshCalls.forEach((c) => seenCalls.current.add(`${c.id}@${c.call!.at}`));
       }
       setBoard(fresh);
@@ -65,7 +76,20 @@ export function RoomBoard({ initial }: { initial: BoardData }) {
     };
   }, [refresh]);
 
-  const calling = board.cards.filter((c) => c.call).sort((a, b) => a.call!.at.localeCompare(b.call!.at));
+  // Cards in room and bed order, so they never jump around; cards whose room was deleted come last.
+  const roomOrder = new Map(board.rooms.map((r, i) => [r.id, i]));
+  const placeOf = (card: BoardCard) => {
+    const room = card.roomId ? board.rooms.find((r) => r.id === card.roomId) : undefined;
+    return room && card.slot ? `${room.name} · ${slotLabel(room, card.slot)}` : "Χωρίς θέση";
+  };
+  const cards = [...board.cards].sort(
+    (a, b) => (roomOrder.get(a.roomId ?? "") ?? 999) - (roomOrder.get(b.roomId ?? "") ?? 999) || (a.slot ?? 0) - (b.slot ?? 0),
+  );
+  const statuses = cards.map((c) => boardStatus(c));
+  const count = (s: BoardStatus) => statuses.filter((x) => x === s).length;
+  const calling = cards.filter((c) => c.call).sort((a, b) => a.call!.at.localeCompare(b.call!.at));
+  const freePlaces = board.rooms.reduce((n, r) => n + r.beds + r.stations, 0) - cards.filter((c) => c.roomId && roomOrder.has(c.roomId)).length;
+
   useEffect(() => {
     document.title = calling.length ? `(${calling.length}) ${TITLE}` : TITLE;
     return () => {
@@ -73,226 +97,312 @@ export function RoomBoard({ initial }: { initial: BoardData }) {
     };
   }, [calling.length]);
 
-  async function act(run: () => Promise<{ ok: true } | { ok: false; message: string }>) {
+  async function act(run: () => Promise<Result>) {
     setMessage(null);
     const result = await run();
     if (!result.ok) setMessage(result.message);
     await refresh();
   }
 
-  const roomIds = new Set(board.rooms.map((r) => r.id));
-  const placeless = board.cards.filter((c) => !c.roomId || !roomIds.has(c.roomId));
-  const cardAt = (room: Room, slot: number) => board.cards.find((c) => c.roomId === room.id && c.slot === slot);
-
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
       <div aria-live="assertive" className="sr-only">
         {announce}
       </div>
 
-      {/* One line: how many, and who is waiting, oldest call first. */}
-      <div role="status" className="flex flex-col gap-1">
-        <p className="text-[19px]">
-          {board.cards.length === 0
-            ? "Κανένας ασθενής στην αίθουσα αυτή τη στιγμή."
-            : `${board.cards.length} ${board.cards.length === 1 ? "ασθενής" : "ασθενείς"} · ${
-                calling.length === 0 ? "κανείς δεν σας καλεί" : calling.length === 1 ? "1 σας καλεί" : `${calling.length} σας καλούν`
-              }`}
+      {/* 1. Title, whether it is live, and the main action */}
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+        <h1 className="flex-[1_1_320px] font-display text-[40px] leading-[1.05] sm:text-[44px]">Η αίθουσα</h1>
+        <p role="status" className="flex items-center gap-2 text-base text-muted">
+          <span aria-hidden="true" className={cx("h-2.5 w-2.5 rounded-full", offline ? "bg-error" : "bg-action")} />
+          {offline ? "Χωρίς σύνδεση · δοκιμάζουμε ξανά" : "Ενημερώθηκε τώρα"}
         </p>
-        {calling.length > 0 && (
-          <p className="font-semibold">
-            Με τη σειρά που κάλεσαν: {calling.map((c) => `${c.label} (${CALL_WORDS[c.call!.reason].toLowerCase()})`).join(", ")}
-          </p>
-        )}
+        {action}
       </div>
 
-      {offline && (
-        <p role="alert" className="bg-tab-pink px-4 py-3">
-          <span className="font-semibold">Χάθηκε η σύνδεση.</span> Δοκιμάζουμε ξανά κάθε λίγα δευτερόλεπτα· ό,τι βλέπετε
-          μπορεί να είναι παλιό.
-        </p>
-      )}
+      {children}
+
       {message && (
         <p role="alert" className="bg-tab-yellow px-4 py-3">
           {message}
         </p>
       )}
 
-      <div className="grid gap-x-6 gap-y-8 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
-        {board.rooms.map((room) => (
-          <section key={room.id} aria-labelledby={`room-${room.id}`} className="flex flex-col gap-3">
-            <h2 id={`room-${room.id}`} className="border-b-2 border-ink pb-1 font-display text-[24px]">
-              {room.name}
-            </h2>
-            <ul className="flex flex-col gap-3">
-              {Array.from({ length: room.beds + room.stations }, (_, i) => {
-                const slot = i + 1;
-                const card = cardAt(room, slot);
-                return (
-                  <li key={slot}>
-                    {card ? (
-                      <CardBox card={card} place={slotLabel(room, slot)} now={now} onAct={act} />
-                    ) : (
-                      <div className="flex min-h-[64px] items-center border-2 border-dashed border-hairline px-4 text-muted">
-                        {slotLabel(room, slot)} · ελεύθερο
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ))}
-
-        {placeless.length > 0 && (
-          <section aria-labelledby="room-none" className="flex flex-col gap-3">
-            <h2 id="room-none" className="border-b-2 border-ink pb-1 font-display text-[24px]">
-              Χωρίς θέση
-            </h2>
-            <ul className="flex flex-col gap-3">
-              {placeless.map((card) => (
-                <li key={card.id}>
-                  <CardBox card={card} place="Χωρίς θέση" now={now} onAct={act} />
+      {/* 2. Summary: four numbers, and who needs you in the order they called */}
+      <section aria-labelledby="summary" className="flex flex-wrap gap-x-8 gap-y-5 border-2 border-hairline bg-white px-5 py-5">
+        <h2 id="summary" className="sr-only">
+          Σύνοψη αίθουσας
+        </h2>
+        <dl className="grid flex-[1_1_520px] grid-cols-2 gap-3 sm:grid-cols-4">
+          <Count label="Στην αίθουσα" value={cards.length} />
+          <Count label="Χρειάζονται εσάς" value={count("calling")} tone={count("calling") > 0 ? "alarm" : "plain"} />
+          <Count label="Ασκούνται" value={count("working")} />
+          <Count label="Τελείωσαν" value={count("done")} tone="done" />
+        </dl>
+        <div className="flex flex-[1_1_340px] flex-col gap-2">
+          <p className="text-base font-bold text-muted">Σας χρειάζονται, με τη σειρά που κάλεσαν</p>
+          {calling.length === 0 ? (
+            <p className="text-muted">Κανείς δεν σας περιμένει.</p>
+          ) : (
+            <ol className="flex flex-col gap-2">
+              {calling.map((c) => (
+                <li
+                  key={c.id}
+                  className={cx("flex min-h-12 flex-wrap items-center gap-x-2.5 gap-y-0.5 px-3 py-1.5", c.call!.reason === "pain" ? "bg-tab-pink" : "bg-tab-yellow")}
+                >
+                  <Sign status={c.call!.reason} />
+                  <span>
+                    <span className="font-bold">{c.label}</span> · <span className={cx("font-bold", c.call!.reason === "pain" && "text-error")}>{REASON[c.call!.reason]}</span>
+                  </span>
+                  <span className="ml-auto whitespace-nowrap text-base text-muted">{minutesAgo(c.call!.at, now)}</span>
                 </li>
               ))}
-            </ul>
-          </section>
-        )}
-      </div>
+            </ol>
+          )}
+        </div>
+      </section>
+
+      {/* 3. What the signs mean */}
+      <ul aria-label="Τι σημαίνουν τα σήματα" className="flex flex-wrap gap-x-6 gap-y-2 text-base text-muted">
+        <li className="flex items-center gap-2">
+          <Sign status="working" /> Ασκείται
+        </li>
+        <li className="flex items-center gap-2">
+          <Sign status="question" /> Απορία
+        </li>
+        <li className="flex items-center gap-2">
+          <Sign status="pain" /> Πόνος
+        </li>
+        <li className="flex items-center gap-2">
+          <Sign status="done" /> Τελείωσε
+        </li>
+      </ul>
+
+      {/* 4. The cards */}
+      {cards.length === 0 ? (
+        <p className="border-2 border-dashed border-hairline px-5 py-8 text-center text-muted">
+          Κανένας ασθενής στην αίθουσα αυτή τη στιγμή. Όταν εγκρίνετε ένα πρόγραμμα σε κρεβάτι ή θέση, εμφανίζεται εδώ.
+        </p>
+      ) : (
+        <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))]">
+          {cards.map((card) => (
+            <PatientCard key={card.id} card={card} place={placeOf(card)} now={now} onAct={act} />
+          ))}
+        </div>
+      )}
+
+      <p className="text-base text-muted">
+        Οι κάρτες μένουν στη θέση τους. Χρώμα παίρνουν μόνο όσοι σας χρειάζονται.
+        {board.rooms.length > 0 && ` Ελεύθερες θέσεις: ${Math.max(0, freePlaces)}.`}
+      </p>
     </div>
   );
 }
 
-// A small sign next to the state, so it isn't colour alone: ! in a square for pain, ? in a circle for a question.
-function Sign({ reason }: { reason: "pain" | "question" }) {
+function Count({ label, value, tone = "plain" }: { label: string; value: number; tone?: "plain" | "alarm" | "done" }) {
   return (
-    <span
-      aria-hidden="true"
+    <div
       className={cx(
-        "flex h-8 w-8 flex-none items-center justify-center text-[20px] font-bold text-white",
-        reason === "pain" ? "bg-error" : "rounded-full bg-ink",
+        "flex flex-col-reverse gap-0.5 px-4 py-3.5",
+        tone === "alarm" ? "bg-error text-white" : tone === "done" ? "bg-note-green text-action" : "bg-sheet",
       )}
     >
-      {reason === "pain" ? "!" : "?"}
-    </span>
+      <dt className={cx("text-base font-semibold", tone === "plain" && "text-muted")}>{label}</dt>
+      <dd className="font-display text-[40px] leading-none">{value}</dd>
+    </div>
   );
 }
 
-function CardBox({
-  card,
-  place,
-  now,
-  onAct,
-}: {
-  card: BoardCard;
-  place: string;
-  now: Date;
-  onAct: (run: () => Promise<{ ok: true } | { ok: false; message: string }>) => Promise<void>;
-}) {
+// The four signs, each its own shape: half-filled circle = exercising, ? in a circle = question,
+// ! in an octagon = pain, ✓ in a square = finished. `inverse`: drawn on the red card.
+const OCTAGON = "polygon(29% 0, 71% 0, 100% 29%, 100% 71%, 71% 100%, 29% 100%, 0 71%, 0 29%)";
+function Sign({ status, inverse = false }: { status: BoardStatus | CallReason; inverse?: boolean }) {
+  const base = "flex h-[22px] w-[22px] flex-none items-center justify-center text-[14px] font-extrabold";
+  if (status === "pain")
+    return (
+      <span aria-hidden="true" className={cx(base, inverse ? "bg-white text-error" : "bg-error text-white")} style={{ clipPath: OCTAGON }}>
+        !
+      </span>
+    );
+  if (status === "question")
+    return (
+      <span aria-hidden="true" className={cx(base, "rounded-full bg-ink text-tab-yellow")}>
+        ?
+      </span>
+    );
+  if (status === "done")
+    return (
+      <span aria-hidden="true" className={cx(base, "bg-action text-white")}>
+        ✓
+      </span>
+    );
+  return <span aria-hidden="true" className="h-[22px] w-[22px] flex-none rounded-full border-[3px] border-ink bg-[linear-gradient(90deg,var(--color-ink)_50%,transparent_50%)]" />;
+}
+
+// The colours of everything inside a card, per tone.
+const LOOK: Record<Tone, { card: string; muted: string; now: string; box: { done: string; current: string; todo: string }; bar: string; barTodo: string; barHalf: string }> = {
+  plain: {
+    card: "border-2 border-hairline bg-white text-ink",
+    muted: "text-muted",
+    now: "border border-hairline bg-sheet",
+    box: { done: "bg-action text-white", current: "border-[3px] border-action text-ink", todo: "border-2 border-line text-muted" },
+    bar: "bg-action border-action",
+    barTodo: "border-line",
+    barHalf: "border-action bg-[linear-gradient(90deg,var(--color-action)_50%,transparent_50%)]",
+  },
+  pain: {
+    card: "bg-error text-white",
+    muted: "text-white",
+    now: "bg-[#6f170d]",
+    box: { done: "bg-white text-error", current: "border-[3px] border-white bg-[#6f170d] text-white", todo: "border-2 border-dashed border-white text-white" },
+    bar: "bg-white border-white",
+    barTodo: "border-white",
+    barHalf: "border-white bg-[linear-gradient(90deg,#fff_50%,transparent_50%)]",
+  },
+  question: {
+    card: "border-2 border-ink bg-tab-yellow text-ink",
+    muted: "text-ink",
+    now: "border border-ink bg-[#fbf3d0]",
+    box: { done: "bg-ink text-tab-yellow", current: "border-[3px] border-ink bg-[#fbf3d0] text-ink", todo: "border-2 border-dashed border-ink text-ink" },
+    bar: "bg-ink border-ink",
+    barTodo: "border-ink",
+    barHalf: "border-ink bg-[linear-gradient(90deg,var(--color-ink)_50%,transparent_50%)]",
+  },
+};
+
+function PatientCard({ card, place, now, onAct }: { card: BoardCard; place: string; now: Date; onAct: (run: () => Promise<Result>) => Promise<void> }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const tone = toneOf(card);
+  const look = LOOK[tone];
   const status = boardStatus(card);
   const index = nowExercise(card);
   const total = card.setsTarget.length;
   const done = exercisesDone(card);
+  const headingId = `card-${card.id}`;
 
-  async function run(fn: () => Promise<{ ok: true } | { ok: false; message: string }>) {
+  async function run(fn: () => Promise<Result>) {
     setBusy(true);
     await onAct(fn);
     setBusy(false);
     setConfirming(false);
   }
 
+  // For screen readers, the boxes in one sentence: «Ασκήσεις: η 1 έγινε, τώρα η 2 από 3».
+  const doneList = card.setsTarget.map((_, i) => i).filter((i) => isDone(card, i) && i !== index);
+  const sentence =
+    index < 0
+      ? `Ασκήσεις: και οι ${total} έγιναν`
+      : `Ασκήσεις: ${doneList.length ? `${doneList.map((i) => i + 1).join(", ")} έγιναν, ` : ""}τώρα η ${index + 1} από ${total}`;
+
+  const primary = tone === "pain" ? "bg-white text-error" : tone === "question" ? "bg-ink text-tab-yellow" : "bg-action text-white hover:bg-action-hover";
+  const secondary =
+    tone === "pain" ? "border-2 border-white text-white" : tone === "question" ? "border-2 border-ink text-ink" : "border-2 border-line bg-white text-ink hover:border-action";
+  const button = "inline-flex min-h-12 cursor-pointer items-center gap-1.5 px-3.5 font-bold no-underline disabled:cursor-wait disabled:opacity-70";
+
   return (
-    <article
-      aria-label={`${place}: ${card.label}`}
-      className={cx(
-        "flex flex-col gap-2 border-2 px-4 py-3",
-        card.call?.reason === "pain" ? "border-error bg-tab-pink" : card.call ? "border-ink bg-tab-yellow" : "border-line bg-white",
-      )}
-    >
-      <p className="flex flex-wrap items-baseline justify-between gap-x-3 text-base text-muted">
-        <span>{place}</span>
-        <span>{card.title}</span>
-      </p>
-      <p className="font-display text-[22px] leading-tight">{card.label}</p>
-
-      {status === "calling" && card.call && (
-        <p className="flex items-center gap-2 font-semibold">
-          <Sign reason={card.call.reason} />
-          <span>
-            Σας καλεί · {CALL_WORDS[card.call.reason]} · {minutesAgo(card.call.at, now)}
-          </span>
-        </p>
-      )}
-
-      {index >= 0 ? (
-        <p>
-          <span className="text-muted">Τώρα: </span>
-          <span className="font-semibold">{card.exercises[index] ?? `Άσκηση ${index + 1}`}</span>
-          {card.setsTarget[index] > 1 && (
-            <span>
-              {" "}
-              · Σετ {Math.min(card.setsDone[index] + 1, card.setsTarget[index])} από {card.setsTarget[index]}
-            </span>
-          )}
-        </p>
-      ) : (
-        <p className="font-semibold text-action">✓ Τελείωσε τις ασκήσεις</p>
-      )}
-
-      {/* Progress: one bar per exercise (filled = done, dark = now), and the same in words. */}
-      <div className="flex flex-col gap-1">
-        <div className="flex gap-1" aria-hidden="true">
-          {card.setsTarget.map((target, i) => (
-            <span key={i} className={cx("h-2 flex-1", card.setsDone[i] >= target ? "bg-action" : i === index ? "bg-ink" : "bg-hairline")} />
-          ))}
-        </div>
-        <p className="text-base text-muted">
-          {done} από {total} {total === 1 ? "άσκηση" : "ασκήσεις"}
-        </p>
+    <article aria-labelledby={headingId} className={cx("flex flex-col gap-3 p-[22px]", look.card)}>
+      <div>
+        <p className={cx("text-base", look.muted)}>{place}</p>
+        <h2 id={headingId} className="font-display text-[34px] leading-[1.05]">
+          {card.label}
+        </h2>
+        <p className={cx("mt-1 text-[20px] font-semibold", look.muted)}>{card.title}</p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 pt-1">
-        {card.call && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void run(() => seeCall(card.id, card.call!.at))}
-            className="min-h-11 cursor-pointer bg-ink px-4 font-bold text-white hover:bg-action disabled:opacity-70"
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Sign status={card.call ? card.call.reason : status} inverse={tone === "pain"} />
+        {card.call ? (
+          <>
+            <span className="font-bold">Χρειάζεται εσάς · {REASON[card.call.reason]}</span>
+            <span>{minutesAgo(card.call.at, now)}</span>
+          </>
+        ) : status === "done" ? (
+          <span className="font-bold text-action">Τελείωσε</span>
+        ) : (
+          <span className="font-bold">Ασκείται</span>
+        )}
+      </p>
+
+      <ol aria-label={sentence} className="flex flex-wrap gap-2">
+        {card.setsTarget.map((_, i) => (
+          <li
+            key={i}
+            aria-hidden="true"
+            className={cx(
+              "flex h-10 w-10 items-center justify-center text-[18px] font-bold",
+              i === index ? look.box.current : isDone(card, i) ? look.box.done : look.box.todo,
+            )}
           >
-            Το είδα
+            {i + 1}
+          </li>
+        ))}
+      </ol>
+
+      {index >= 0 ? (
+        <div className={cx("flex flex-col gap-0.5 px-4 py-3", look.now)}>
+          <span className="text-[22px] font-bold leading-tight">{card.exercises[index] ?? `Άσκηση ${index + 1}`}</span>
+          <SetBars done={card.setsDone[index]} target={card.setsTarget[index]} look={look} />
+        </div>
+      ) : (
+        <div className={cx("flex flex-col gap-0.5 px-4 py-3", tone === "plain" ? "border border-action bg-note-green text-action" : look.now)}>
+          <span className="text-base font-semibold">Όλες οι ασκήσεις</span>
+          <span className="text-[22px] font-bold leading-tight">
+            {done} από {total} έγιναν
+          </span>
+        </div>
+      )}
+
+      <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
+        {card.call && (
+          <button type="button" disabled={busy} onClick={() => void run(() => seeCall(card.id, card.call!.at))} className={cx(button, primary)}>
+            <span aria-hidden="true">✓</span> Το είδα
           </button>
         )}
-        <Link href={`/programs/${card.programId}` as Route} aria-label={`QR για ${card.label}`} className="min-h-11 content-center">
-          QR
-        </Link>
         {confirming ? (
-          <span className="flex flex-wrap items-center gap-x-3">
-            <span>Τέλος για {card.label};</span>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void run(() => finishCard(card.id))}
-              className="min-h-11 cursor-pointer bg-action px-4 font-bold text-white hover:bg-action-hover disabled:opacity-70"
-            >
-              Ναι, τέλος
+          <span className="flex flex-wrap items-center gap-2.5">
+            <span className="font-semibold">Ολοκλήρωση για {card.label};</span>
+            <button type="button" disabled={busy} onClick={() => void run(() => finishCard(card.id))} className={cx(button, card.call ? secondary : primary)}>
+              Ναι
             </button>
-            <button type="button" onClick={() => setConfirming(false)} className="min-h-11 cursor-pointer text-action underline underline-offset-[3px]">
+            <button type="button" onClick={() => setConfirming(false)} className={cx(button, secondary)}>
               Όχι
             </button>
           </span>
         ) : (
           <button
             type="button"
-            aria-label={`Τέλος για ${card.label}`}
+            aria-label={`Ολοκλήρωση για ${card.label}`}
             onClick={() => setConfirming(true)}
-            className="min-h-11 cursor-pointer text-action underline underline-offset-[3px] hover:text-ink"
+            className={cx(button, status === "done" && !card.call ? primary : secondary)}
           >
-            Τέλος
+            Ολοκλήρωση
           </button>
+        )}
+        {!card.call && !confirming && (
+          <Link href={`/programs/${card.programId}` as Route} aria-label={`QR / οθόνη ασθενή για ${card.label}`} className={cx(button, secondary)}>
+            QR / οθόνη ασθενή
+          </Link>
         )}
       </div>
     </article>
+  );
+}
+
+// The sets of the exercise now: one bar per set, filled = done, half = the one in progress.
+function SetBars({ done, target, look }: { done: number; target: number; look: (typeof LOOK)[Tone] }) {
+  if (target <= 1) return null;
+  return (
+    <span role="img" aria-label={`Σετ ${Math.min(done + 1, target)} από ${target}`} className="mt-2 flex max-w-[220px] gap-1.5">
+      {Array.from({ length: target }, (_, i) => (
+        <span
+          key={i}
+          className={cx(
+            "h-3.5 flex-1 border-2",
+            i < done ? look.bar : i === done ? look.barHalf : look.barTodo,
+          )}
+        />
+      ))}
+    </span>
   );
 }

@@ -37,56 +37,72 @@ afterEach(() => {
 });
 
 describe("RoomBoard", () => {
-  it("shows every bed and station: free, or the patient with the exercise they are on", () => {
+  it("one card per patient: place, name, program, state, exercise boxes, the exercise now", () => {
     render(<RoomBoard initial={board([card({})])} />);
-    expect(screen.getByRole("heading", { name: "Αίθουσα 1" })).toBeInTheDocument();
-    const bed = screen.getByRole("article", { name: "Κρεβάτι 1: Γιώργος Δ." });
-    expect(within(bed).getByText("Καθίσματα")).toBeInTheDocument();
-    expect(within(bed).getByText(/Σετ 2 από 3/)).toBeInTheDocument();
-    expect(within(bed).getByText("1 από 3 ασκήσεις")).toBeInTheDocument();
-    expect(screen.getByText("Κρεβάτι 2 · ελεύθερο")).toBeInTheDocument();
-    expect(screen.getByText("Θέση 1 · ελεύθερο")).toBeInTheDocument();
-    expect(screen.getByText("1 ασθενής · κανείς δεν σας καλεί")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Η αίθουσα" })).toBeInTheDocument();
+    const cardEl = screen.getByRole("article", { name: "Γιώργος Δ." });
+    expect(within(cardEl).getByText("Αίθουσα 1 · Κρεβάτι 1")).toBeInTheDocument();
+    expect(within(cardEl).getByText("Αριστερό γόνατο")).toBeInTheDocument();
+    expect(within(cardEl).getByText("Ασκείται")).toBeInTheDocument();
+    expect(within(cardEl).getByRole("list", { name: "Ασκήσεις: 1 έγιναν, τώρα η 2 από 3" })).toBeInTheDocument();
+    expect(within(cardEl).getByText("Καθίσματα")).toBeInTheDocument();
+    expect(within(cardEl).getByRole("img", { name: "Σετ 2 από 3" })).toBeInTheDocument();
+    expect(screen.getByText(/Ελεύθερες θέσεις: 2\./)).toBeInTheDocument();
   });
 
-  it("a call: words and a sign, the waiting order, and «Το είδα» clears only that call", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(board([card({})])), { status: 200 })));
+  it("the summary counts, and who needs you in the order they called", () => {
     const at = new Date(Date.now() - 3 * 60_000).toISOString();
     render(
       <RoomBoard
         initial={board([
           card({ call: { reason: "pain", at } }),
           card({ id: "aaaaaaaa-0000-4000-8000-000000000002", slot: 2, label: "Μαρία", call: { reason: "question", at: new Date().toISOString() } }),
+          card({ id: "aaaaaaaa-0000-4000-8000-000000000003", slot: 3, label: "Ελένη", setsDone: [3, 3, 1] }),
         ])}
       />,
     );
-    expect(screen.getByText("2 ασθενείς · 2 σας καλούν")).toBeInTheDocument();
-    expect(screen.getByText("Με τη σειρά που κάλεσαν: Γιώργος Δ. (πονάει), Μαρία (έχει απορία)")).toBeInTheDocument();
-    const bed = screen.getByRole("article", { name: "Κρεβάτι 1: Γιώργος Δ." });
-    expect(within(bed).getByText(/Σας καλεί · Πονάει · πριν από 3 λεπτά/)).toBeInTheDocument();
+    const summary = screen.getByRole("region", { name: "Σύνοψη αίθουσας" });
+    const value = (label: string) => within(summary).getByText(label).nextElementSibling?.textContent ?? within(summary).getByText(label).previousElementSibling?.textContent;
+    expect(value("Στην αίθουσα")).toBe("3");
+    expect(value("Χρειάζονται εσάς")).toBe("2");
+    expect(value("Τελείωσαν")).toBe("1");
+    const waiting = within(summary).getAllByRole("listitem").map((li) => li.textContent);
+    expect(waiting[0]).toMatch(/Γιώργος Δ\. · Πόνος.*πριν από 3 λεπτά/);
+    expect(waiting[1]).toMatch(/Μαρία · Απορία.*μόλις τώρα/);
+  });
 
-    await userEvent.click(within(bed).getByRole("button", { name: "Το είδα" }));
+  it("«Το είδα» clears only the call that was seen", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(board([card({})])), { status: 200 })));
+    const at = new Date(Date.now() - 2 * 60_000).toISOString();
+    render(<RoomBoard initial={board([card({ call: { reason: "pain", at } })])} />);
+    const cardEl = screen.getByRole("article", { name: "Γιώργος Δ." });
+    expect(within(cardEl).getByText("Χρειάζεται εσάς · Πόνος")).toBeInTheDocument();
+    await userEvent.click(within(cardEl).getByRole("button", { name: "Το είδα" }));
     expect(actions.seeCall).toHaveBeenCalledWith("aaaaaaaa-0000-4000-8000-000000000001", at);
   });
 
-  it("«Τέλος» asks first, then closes the card", async () => {
+  it("«Ολοκλήρωση» asks first, then closes the card", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(board([])), { status: 200 })));
     render(<RoomBoard initial={board([card({ setsDone: [3, 3, 1] })])} />);
-    expect(screen.getByText("✓ Τελείωσε τις ασκήσεις")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Τέλος για Γιώργος Δ." }));
+    expect(screen.getByText("3 από 3 έγιναν")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Ολοκλήρωση για Γιώργος Δ." }));
     expect(actions.finishCard).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: "Ναι, τέλος" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ναι" }));
     expect(actions.finishCard).toHaveBeenCalledWith("aaaaaaaa-0000-4000-8000-000000000001");
   });
 
-  it("a card whose room was deleted goes under «Χωρίς θέση»", () => {
-    render(<RoomBoard initial={board([card({ roomId: null, slot: null })])} />);
-    expect(screen.getByRole("heading", { name: "Χωρίς θέση" })).toBeInTheDocument();
-    expect(screen.getByRole("article", { name: "Χωρίς θέση: Γιώργος Δ." })).toBeInTheDocument();
+  it("a card whose room was deleted says «Χωρίς θέση»; no patients says so", () => {
+    const { unmount } = render(<RoomBoard initial={board([card({ roomId: null, slot: null })])} />);
+    expect(within(screen.getByRole("article", { name: "Γιώργος Δ." })).getByText("Χωρίς θέση")).toBeInTheDocument();
+    unmount();
+    render(<RoomBoard initial={board([])} />);
+    expect(screen.getByText(/Κανένας ασθενής στην αίθουσα/)).toBeInTheDocument();
   });
 
   it("has no accessibility problems", async () => {
-    const { container } = render(<RoomBoard initial={board([card({ call: { reason: "pain", at: new Date().toISOString() } })])} />);
+    const { container } = render(
+      <RoomBoard initial={board([card({ call: { reason: "pain", at: new Date().toISOString() } }), card({ id: "aaaaaaaa-0000-4000-8000-000000000002", slot: 2 })])} />,
+    );
     await expectNoA11yViolations(container);
   });
 });

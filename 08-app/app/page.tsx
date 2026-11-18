@@ -10,7 +10,6 @@ import { PaperLink, QuietSubmit } from "@/app/components/paper/Buttons";
 import { RoomBoard } from "@/app/components/board/RoomBoard";
 import { StaffSheet } from "@/app/components/paper/StaffSheet";
 import { loadBoard } from "@/app/lib/board/board";
-import { ROLES } from "@/app/lib/onboarding/schema";
 import { requireMember } from "@/app/lib/onboarding/session";
 import { workAlone } from "@/app/lib/settings/actions";
 import { cx } from "@/app/lib/cx";
@@ -63,7 +62,6 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       ? supabase.from("invites").select("id", { count: "exact", head: true })
       : Promise.resolve({ count: 0 }),
   ]);
-  const roleLabel = profile.role === "owner" ? "Υπεύθυνη/ος κλινικής" : ROLES[profile.role];
   const roomsDone = Boolean(clinic?.rooms_checked_at);
   const teamDone = Boolean(clinic?.team_checked_at) || (invited ?? 0) > 0;
   const savedNote =
@@ -75,75 +73,81 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         ? SAVED[saved]
         : undefined;
 
+  const newSession =
+    profile.role !== "assistant" ? (
+      <PaperLink href="/notes/new">
+        <span aria-hidden="true">+</span> Νέα συνεδρία
+      </PaperLink>
+    ) : null;
+
+  // Messages after sign-up or a save, and the owner's «Επόμενα βήματα»: under the title, above the board.
+  const notices = (
+    <>
+      {welcome === "1" && (
+        <p role="status" className="bg-note-green px-4 py-3">
+          <span className="font-semibold">Η εγγραφή ολοκληρώθηκε. Η κλινική σας είναι έτοιμη.</span> Από εδώ ξεκινάτε κάθε
+          νέα συνεδρία.
+        </p>
+      )}
+      {/* A form left open for another clinic (requireSameClinic): nothing was saved. */}
+      {stale === "1" && (
+        <p role="alert" className="bg-tab-yellow px-4 py-3">
+          <span className="font-semibold">Δεν αποθηκεύτηκε τίποτα.</span> Στο μεταξύ ανοίξατε άλλη κλινική, ίσως σε άλλη
+          καρτέλα. Τώρα είναι ανοιχτή η «{clinic?.name}». Για την άλλη, πατήστε «Αλλαγή» πάνω, δίπλα στο όνομα της κλινικής.
+        </p>
+      )}
+      {savedNote && (
+        <p role="status" className="bg-note-green px-4 py-3 font-semibold">
+          {savedNote}
+        </p>
+      )}
+
+      {isOwner && !(roomsDone && teamDone) && (
+        <section aria-labelledby="next" className="flex max-w-[640px] flex-col gap-3">
+          <div className="flex flex-col gap-0.5">
+            <h2 id="next" className="font-display text-[26px]">
+              Επόμενα βήματα
+            </h2>
+            <p className="text-muted">Δύο ακόμα, όποτε θέλετε. Τις σημειώσεις μπορείτε να τις ξεκινήσετε ήδη.</p>
+          </div>
+          <ol className="flex flex-col gap-3">
+            <li>
+              <NextStep n={1} href="/settings/rooms" title="Ρυθμίστε τους χώρους σας" text="Αίθουσες, κρεβάτια και θέσεις άσκησης." done={roomsDone} />
+            </li>
+            <li className="flex flex-col gap-1">
+              <NextStep n={2} href="/settings/team" title="Καλέστε την ομάδα σας" text="Φυσιοθεραπευτές και βοηθούς, με το email τους." done={teamDone} />
+              {!teamDone && (
+                <form action={workAlone} className="pl-1">
+                  <input type="hidden" name="clinicId" value={profile.clinic_id ?? ""} />
+                  <QuietSubmit pending="Αποθήκευση…">Δουλεύω μόνη/ος, δεν χρειάζεται</QuietSubmit>
+                </form>
+              )}
+            </li>
+          </ol>
+        </section>
+      )}
+    </>
+  );
+
   return (
     <StaffSheet profile={profile} current="board" width="wide">
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="font-display text-[36px] leading-[1.08] sm:text-[42px]">Η αίθουσα</h1>
-          <p>
-            Καλώς ήρθατε, {profile.full_name}. <span className="text-muted">({roleLabel})</span>
-          </p>
-        </div>
-
-        {welcome === "1" && (
-          <p role="status" className="bg-note-green px-4 py-3">
-            <span className="font-semibold">Η εγγραφή ολοκληρώθηκε. Η κλινική σας είναι έτοιμη.</span> Από εδώ ξεκινάτε κάθε
-            νέα συνεδρία.
-          </p>
-        )}
-        {/* A form left open for another clinic (requireSameClinic): nothing was saved. */}
-        {stale === "1" && (
-          <p role="alert" className="bg-tab-yellow px-4 py-3">
-            <span className="font-semibold">Δεν αποθηκεύτηκε τίποτα.</span> Στο μεταξύ ανοίξατε άλλη κλινική, ίσως σε άλλη
-            καρτέλα. Τώρα είναι ανοιχτή η «{clinic?.name}». Για την άλλη, πατήστε «Αλλαγή» πάνω, δίπλα στο όνομα της κλινικής.
-          </p>
-        )}
-        {savedNote && (
-          <p role="status" className="bg-note-green px-4 py-3 font-semibold">
-            {savedNote}
-          </p>
-        )}
-
-        {profile.role !== "assistant" && (
-          <PaperLink href="/notes/new">
-            <span aria-hidden="true">+</span> Νέα συνεδρία
-          </PaperLink>
-        )}
-
-        {isOwner && !(roomsDone && teamDone) && (
-          <section aria-labelledby="next" className="flex max-w-[640px] flex-col gap-3">
-            <div className="flex flex-col gap-0.5">
-              <h2 id="next" className="font-display text-[26px]">
-                Επόμενα βήματα
-              </h2>
-              <p className="text-muted">Δύο ακόμα, όποτε θέλετε. Τις σημειώσεις μπορείτε να τις ξεκινήσετε ήδη.</p>
-            </div>
-            <ol className="flex flex-col gap-3">
-              <li>
-                <NextStep n={1} href="/settings/rooms" title="Ρυθμίστε τους χώρους σας" text="Αίθουσες, κρεβάτια και θέσεις άσκησης." done={roomsDone} />
-              </li>
-              <li className="flex flex-col gap-1">
-                <NextStep n={2} href="/settings/team" title="Καλέστε την ομάδα σας" text="Φυσιοθεραπευτές και βοηθούς, με το email τους." done={teamDone} />
-                {!teamDone && (
-                  <form action={workAlone} className="pl-1">
-                    <input type="hidden" name="clinicId" value={profile.clinic_id ?? ""} />
-                    <QuietSubmit pending="Αποθήκευση…">Δουλεύω μόνη/ος, δεν χρειάζεται</QuietSubmit>
-                  </form>
-                )}
-              </li>
-            </ol>
-          </section>
-        )}
-
-        {board.rooms.length === 0 ? (
+      {board.rooms.length === 0 ? (
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+            <h1 className="flex-[1_1_320px] font-display text-[40px] leading-[1.05] sm:text-[44px]">Η αίθουσα</h1>
+            {newSession}
+          </div>
+          {notices}
           <p className="bg-tab-yellow px-4 py-3">
             Η κλινική δεν έχει ακόμα χώρους.{" "}
             {isOwner ? <Link href="/settings/rooms">Ρυθμίστε πρώτα τους χώρους</Link> : "Ζητήστε από την/τον υπεύθυνη/ο να τους ρυθμίσει."}
           </p>
-        ) : (
-          <RoomBoard initial={board} />
-        )}
-      </div>
+        </div>
+      ) : (
+        <RoomBoard initial={board} action={newSession}>
+          {notices}
+        </RoomBoard>
+      )}
     </StaffSheet>
   );
 }

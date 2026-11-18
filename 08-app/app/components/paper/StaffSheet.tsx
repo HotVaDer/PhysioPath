@@ -35,14 +35,11 @@ type Props = {
 export function StaffSheet({ children, profile, current, step, width = "narrow" }: Props) {
   const links = LINKS.filter((link) => !link.physioOnly || profile.role !== "assistant");
   return (
-    <div className="flex min-h-dvh flex-col">
+    // The desk with the faint «Φ» marks, as on welcome, sign-up and sign-in (globals.css .desk-pattern).
+    <div className="desk-pattern flex min-h-dvh flex-col">
       <header className="border-b-2 border-hairline bg-sheet">
-        <div
-          className={cx(
-            "mx-auto flex flex-wrap items-center gap-x-6 gap-y-1 px-4 py-2 sm:px-6",
-            width === "wide" ? "max-w-[1360px]" : "max-w-[1060px]",
-          )}
-        >
+        {/* The same width on every page (not the sheet's), so the bar never jumps between one and two lines. */}
+        <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-x-6 gap-y-1 px-4 py-2 sm:px-6">
           <Link href="/" className="no-underline" aria-label="PhysioPath, αρχική">
             <Logo />
           </Link>

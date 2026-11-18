@@ -227,9 +227,9 @@ export function SessionScreen({ token, initial }: { token: string; initial: Pati
   // ---------- after «Τέλος» from the staff ----------
   if (finished) {
     return (
-      <div className="min-h-dvh bg-sheet text-[1rem] leading-normal">
+      <div className="desk-pattern min-h-dvh text-[1rem] leading-normal">
         {topBar}
-        <main id="main" className="mx-auto flex max-w-xl flex-col gap-4 px-4 pt-10 pb-16">
+        <main id="main" className="mx-auto flex min-h-dvh max-w-xl flex-col gap-4 bg-sheet px-4 pt-10 pb-16">
           <p aria-hidden="true" className="font-display text-[3rem] leading-none text-action">
             ✓
           </p>
@@ -249,10 +249,10 @@ export function SessionScreen({ token, initial }: { token: string; initial: Pati
   }
 
   return (
-    <div className="min-h-dvh bg-sheet text-[1rem] leading-normal">
+    <div className="desk-pattern min-h-dvh text-[1rem] leading-normal">
       {topBar}
 
-      <main id="main" className="mx-auto flex max-w-xl flex-col gap-6 px-4 pt-4 pb-[11rem]">
+      <main id="main" className="mx-auto flex min-h-dvh max-w-xl flex-col gap-6 bg-sheet px-4 pt-4 pb-[11rem]">
         {/* Where we are: «Άσκηση 1 από 3», a thin line in parts, «Όλες» opens the list. */}
         <nav aria-label="Οι ασκήσεις της συνεδρίας" className="flex flex-col gap-2">
           <div className="flex items-baseline justify-between gap-4">
