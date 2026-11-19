@@ -34,7 +34,11 @@ function linkError(error: { status?: number; code?: string; message: string }): 
     return "Στείλαμε ήδη κωδικό πριν από λίγο. Περιμένετε ένα λεπτό και ξαναδοκιμάστε.";
   }
   if (error.code === "captcha_failed" || /captcha/i.test(error.message)) {
-    return "Ο έλεγχος ασφαλείας δεν ολοκληρώθηκε. Περιμένετε λίγο ή ανανεώστε τη σελίδα και δοκιμάστε ξανά.";
+    console.error("Captcha refused by Supabase:", error.message); // e.g. "no captcha_token found", "invalid-input-response"
+    if (/no captcha_token/i.test(error.message)) {
+      return "Περιμένετε να ολοκληρωθεί ο έλεγχος ασφαλείας (το κουτάκι πάνω από το κουμπί) και πατήστε ξανά.";
+    }
+    return "Ο έλεγχος ασφαλείας δεν ολοκληρώθηκε. Ανανεώστε τη σελίδα και δοκιμάστε ξανά.";
   }
   if (error.code === "otp_disabled" || /signups not allowed/i.test(error.message)) {
     return "Δεν βρήκαμε λογαριασμό με αυτό το email. Για νέα κλινική, πατήστε «Εγγραφή κλινικής» πιο κάτω.";
