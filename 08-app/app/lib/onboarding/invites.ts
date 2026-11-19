@@ -3,7 +3,7 @@
 import "server-only";
 
 import { confirmLink } from "@/app/lib/site";
-import { createAdminClient, createAnonClient } from "@/app/lib/supabase/admin";
+import { createAdminClient } from "@/app/lib/supabase/admin";
 
 // One email per invite. New people get our invite email (supabase/templates/invite.html; Supabase
 // also creates their account); people who already have an account get a sign-in link instead.
@@ -28,7 +28,9 @@ export async function sendInvites(
       continue;
     }
     if (error.code === "email_exists" || error.status === 422) {
-      const again = await createAnonClient().auth.signInWithOtp({
+      // Through the admin client: Supabase skips the "not a robot" check for the secret key
+      // (the owner already passed sign-in; there's no form on this side).
+      const again = await admin.auth.signInWithOtp({
         email: invite.email,
         options: { shouldCreateUser: false, emailRedirectTo: redirectTo },
       });

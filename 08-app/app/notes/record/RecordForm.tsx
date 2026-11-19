@@ -1,6 +1,6 @@
 "use client";
 // «Νέα συνεδρία», step 3 of 4: the recording (or a file, or a sample) for the patient chosen in step 1,
-// and the text we heard, with the proofreader's fixes and undo, then «Δημιουργία προγράμματος» (step 4).
+// and the text we heard (the physio can correct it), then «Δημιουργία προγράμματος» (step 4).
 // «Ίδιο πρόγραμμα» (step 2): they talk about today only, and «Δημιουργία σημείωσης» writes just the GeSY
 // note; the stored program goes into the result unchanged (it is never sent to the AI).
 // Everything is kept in the draft (sessionStorage), so going back and forth between the steps loses nothing.
@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { fieldBox } from "@/app/components/paper/LineField";
 import { FormAlert } from "@/app/components/paper/Notes";
-import { Panel, PanelTitle, PartTitle } from "@/app/components/paper/StaffSheet";
+import { PartTitle } from "@/app/components/paper/StaffSheet";
 import { cx } from "@/app/lib/cx";
 import { ApiError, generateNote, generateProgram, transcribeAudio } from "@/app/lib/notes/api";
 import { useDraft } from "@/app/lib/notes/DraftContext";
@@ -45,8 +45,8 @@ export function RecordForm({ samples }: { samples: Sample[] }) {
     setBusy("transcribing");
     try {
       const heard = await transcribeAudio(audio);
-      dispatch({ type: "transcribed", text: heard.text, fixes: heard.fixes, seconds: heard.seconds, proofreadSeconds: heard.proofreadSeconds, recordingSeconds: seconds });
-      setHeardSeconds(heard.seconds + heard.proofreadSeconds);
+      dispatch({ type: "transcribed", text: heard.text, seconds: heard.seconds, recordingSeconds: seconds });
+      setHeardSeconds(heard.seconds);
       requestAnimationFrame(() => textRef.current?.focus());
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Η ηχογράφηση δεν διαβάστηκε. Δοκιμάστε ξανά.");
@@ -234,29 +234,6 @@ export function RecordForm({ samples }: { samples: Sample[] }) {
               className={cx(fieldBox(), "resize-y py-2.5 text-lg leading-relaxed")}
             />
           </div>
-
-          {draft.fixes.length > 0 && (
-            <Panel tint="green" labelledBy="fix-h">
-              <PanelTitle id="fix-h">Διορθώσαμε {draft.fixes.length === 1 ? "1 λέξη" : `${draft.fixes.length} λέξεις`}</PanelTitle>
-              <p>Λέξεις που ακούστηκαν λάθος. Αριθμούς, πλευρά και ασκήσεις δεν τα αλλάζουμε ποτέ.</p>
-              <ul className="flex flex-col">
-                {draft.fixes.map((fix, i) => (
-                  <li key={`${fix.heard}-${i}`} className="flex min-h-11 flex-wrap items-center gap-x-3.5 gap-y-1 border-t border-hairline">
-                    <span>
-                      «{fix.heard}» → «<strong>{fix.corrected}</strong>»
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => dispatch({ type: "undoFix", index: i })}
-                      className="min-h-11 cursor-pointer text-action underline underline-offset-[3px] hover:text-ink"
-                    >
-                      Αναίρεση<span className="sr-only">: «{fix.corrected}» πίσω σε «{fix.heard}»</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </Panel>
-          )}
 
           <fieldset className="flex flex-wrap items-center gap-x-6 gap-y-1">
             <legend className="float-left mr-4">Η κλινική σημείωση στα:</legend>

@@ -3,21 +3,18 @@
 // (same state + same action → same new state, no React needed).
 import * as z from "zod";
 
-import { Fix, undoFix } from "@/app/lib/notes/fixes";
 import { NoteLanguage } from "@/app/lib/notes/prompt";
 import { ActivityCode, Exercise, PatientProgram, VoiceNoteResult, type ClinicalNote } from "@/app/lib/notes/schema";
 
 const Timings = z.object({
   recording: z.number().optional(), // seconds of audio
   transcribe: z.number().optional(), // seconds speech-to-text took
-  proofread: z.number().optional(), // seconds the proofreader took
   generate: z.number().optional(), // seconds Claude took
 });
 
 // Also used to check a draft read back from sessionStorage, so a broken or old one is ignored.
 export const Draft = z.object({
   transcript: z.string(),
-  fixes: z.array(Fix).default([]), // words the proofreader corrected in the transcript, for undo
   noteLang: NoteLanguage, // language for the next clinical note
   result: VoiceNoteResult.nullable(),
   resultNoteLang: NoteLanguage, // language the current note was written in
@@ -42,7 +39,7 @@ export const Draft = z.object({
 export type Draft = z.infer<typeof Draft>;
 
 export const emptyDraft: Draft = {
-  transcript: "", fixes: [], noteLang: "el", result: null, resultNoteLang: "el", timings: {}, removed: null,
+  transcript: "", noteLang: "el", result: null, resultNoteLang: "el", timings: {}, removed: null,
   patient: null, draftId: null, activityCode: null, where: null, mode: "new", base: null, clinicId: null,
 };
 
@@ -55,8 +52,7 @@ export type DraftAction =
   | { type: "restore"; draft: Draft }
   | { type: "typeTranscript"; text: string }
   | { type: "pickSample"; text: string }
-  | { type: "transcribed"; text: string; fixes: Fix[]; seconds: number; proofreadSeconds?: number; recordingSeconds?: number }
-  | { type: "undoFix"; index: number }
+  | { type: "transcribed"; text: string; seconds: number; recordingSeconds?: number }
   | { type: "setNoteLang"; lang: NoteLanguage }
   | { type: "generated"; result: VoiceNoteResult; seconds: number; noteLang: NoteLanguage; draftId: string }
   | { type: "setPatient"; patient: { id: string | null; label: string } | null }
@@ -93,19 +89,13 @@ export function draftReducer(draft: Draft, action: DraftAction): Draft {
     case "typeTranscript":
       return { ...draft, transcript: action.text };
     case "pickSample":
-      return { ...draft, transcript: action.text, fixes: [], timings: {} }; // no recording, so no timings or fixes
+      return { ...draft, transcript: action.text, timings: {} }; // no recording, so no timings
     case "transcribed":
       return {
         ...draft,
         transcript: action.text,
-        fixes: action.fixes,
-        timings: { recording: action.recordingSeconds, transcribe: action.seconds, proofread: action.proofreadSeconds || undefined },
+        timings: { recording: action.recordingSeconds, transcribe: action.seconds },
       };
-    case "undoFix": {
-      const fix = draft.fixes[action.index];
-      if (!fix) return draft;
-      return { ...draft, transcript: undoFix(draft.transcript, fix), fixes: draft.fixes.filter((_, i) => i !== action.index) };
-    }
     case "setNoteLang":
       return { ...draft, noteLang: action.lang };
     case "generated":

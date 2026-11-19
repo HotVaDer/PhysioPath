@@ -1,19 +1,19 @@
 // The browser's side of app/api/transcribe and app/api/generate. Errors come back as ApiError with a
 // Greek message that can be shown as is, also when Vercel answers with its own HTML page
 // (413 for a too-large upload, 504 when a function runs out of time).
-import type { Fix } from "@/app/lib/notes/fixes";
 import { AUDIO_TOO_LARGE } from "@/app/lib/notes/limits";
 import type { NoteLanguage } from "@/app/lib/notes/prompt";
 import type { NoteOnlyResult, VoiceNoteResult } from "@/app/lib/notes/schema";
 
 export class ApiError extends Error {}
 
-// text = after proofreading; raw = what speech-to-text wrote; fixes = what changed between them (for undo).
-export type TranscribeResponse = { text: string; raw: string; fixes: Fix[]; seconds: number; proofreadSeconds: number };
+// text = what speech-to-text wrote; seconds = how long it took.
+export type TranscribeResponse = { text: string; seconds: number };
 export type GenerateResponse = { result: VoiceNoteResult; seconds: number };
 export type GenerateNoteResponse = { result: NoteOnlyResult; seconds: number };
 
 const STATUS_MESSAGES: Record<number, string> = {
+  429: "Πολλά αιτήματα. Περιμένετε λίγο και δοκιμάστε ξανά.",
   401: "Η σύνδεσή σας έληξε. Συνδεθείτε ξανά.",
   403: "Μόνο οι φυσιοθεραπευτές γράφουν σημειώσεις.",
   413: AUDIO_TOO_LARGE,

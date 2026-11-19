@@ -35,7 +35,7 @@ app/
   page.tsx             home (the room board comes here)
   components/paper/    Sheet, BinderTabs, LineField, Buttons, Notes (alert, stamp, attachment), SignOut
   lib/onboarding/      schema.ts (rules per sheet), session.ts (who's signed in, the draft), actions.ts
-  lib/notes/           the note pipeline: speech, proofread, generate, GeSY schema/prompt, draft, approval
+  lib/notes/           the note pipeline: speech, generate, AI limits, GeSY schema/prompt, draft, approval
   lib/supabase/        server.ts (as the signed-in person), admin.ts (secret key, invites only)
 proxy.ts               keeps the login fresh on every request
 supabase/              migrations + RLS checks (local only, git-ignored)

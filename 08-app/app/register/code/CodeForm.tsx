@@ -9,6 +9,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Actions, SubmitButton } from "@/app/components/paper/Buttons";
+import { Captcha } from "@/app/components/paper/Captcha";
 import { LineField } from "@/app/components/paper/LineField";
 import { FormAlert } from "@/app/components/paper/Notes";
 import { resendCode, verifyCode, type FormState } from "@/app/lib/onboarding/actions";
@@ -53,6 +54,7 @@ function NoEmailHelp(props: Props) {
             {resent.notice}
           </p>
         )}
+        <Captcha resetKey={resent} />
         <ResendButton />
       </form>
       <p>

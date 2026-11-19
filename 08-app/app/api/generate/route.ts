@@ -3,7 +3,7 @@
 import * as z from "zod";
 
 import { GenerationError, generate } from "@/app/lib/notes/generate";
-import { HttpError, readBody, requirePhysioApi, respond } from "@/app/lib/notes/http";
+import { HttpError, countAiCall, readBody, requirePhysioApi, respond } from "@/app/lib/notes/http";
 import { GenerateMode, NoteLanguage } from "@/app/lib/notes/prompt";
 
 // Claude takes about 20 s with effort medium; generate.ts gives up at 50 s plus one retry.
@@ -17,7 +17,7 @@ const Body = z.object({
 
 export async function POST(request: Request) {
   return respond(async () => {
-    await requirePhysioApi();
+    const { supabase } = await requirePhysioApi();
     if (!request.headers.get("content-type")?.startsWith("application/json")) throw new HttpError(415, "Λάθος αίτημα.");
     let data: unknown;
     try {
@@ -28,6 +28,7 @@ export async function POST(request: Request) {
     }
     const body = Body.safeParse(data);
     if (!body.success) throw new HttpError(400, body.error.issues[0]?.message ?? "Λάθος αίτημα.");
+    await countAiCall(supabase, "generate"); // only a valid request is counted
     return generate(body.data.transcript, body.data.noteLang, body.data.mode);
   }, [GenerationError]);
 }

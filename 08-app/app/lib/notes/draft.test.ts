@@ -35,24 +35,9 @@ const exercises = (draft: Draft) => draft.result!.program.exercises;
 
 describe("draftReducer: before there's a result", () => {
   it("a recording replaces the text and the timings", () => {
-    const draft = draftReducer({ ...emptyDraft, timings: { generate: 9 } }, { type: "transcribed", text: "Γεια", fixes: [], seconds: 1.8, recordingSeconds: 42 });
+    const draft = draftReducer({ ...emptyDraft, timings: { generate: 9 } }, { type: "transcribed", text: "Γεια", seconds: 1.8, recordingSeconds: 42 });
     expect(draft.transcript).toBe("Γεια");
     expect(draft.timings).toEqual({ recording: 42, transcribe: 1.8 });
-  });
-
-  it("keeps the proofreader's fixes, and undo puts the heard word back", () => {
-    const fixes = [{ heard: "εχείρηση", corrected: "εγχείρηση" }];
-    const draft = draftReducer(emptyDraft, { type: "transcribed", text: "Έκανε την εγχείρηση.", fixes, seconds: 2, proofreadSeconds: 1.1 });
-    expect(draft.fixes).toEqual(fixes);
-    expect(draft.timings.proofread).toBe(1.1);
-    const undone = draftReducer(draft, { type: "undoFix", index: 0 });
-    expect(undone.transcript).toBe("Έκανε την εχείρηση.");
-    expect(undone.fixes).toEqual([]);
-  });
-
-  it("a sample clears the fixes", () => {
-    const draft = { ...emptyDraft, fixes: [{ heard: "α", corrected: "β" }] };
-    expect(draftReducer(draft, { type: "pickSample", text: "Δείγμα" }).fixes).toEqual([]);
   });
 
   it("a sample clears the timings; typing keeps them", () => {

@@ -384,3 +384,19 @@ fix the «τώρα» gap, clinic details move to «Κλινική».
 - Note: a dev server started before new files exist can serve stale Tailwind CSS: restart `npm run dev`.
 - Still to do: the end-to-end run with two browsers (approve → scan → set, jump, pain → «Το είδα» → «Τέλος»),
   then push; phase 5 (`/p/<token>`); the app-wide design pass the user asked for.
+
+## 2026-11-19 · Code-review fixes, Phase A: money and demo safety
+Plan: `~/.claude/plans/1-4-i-think-now-lazy-castle.md` (5 phases, from `docs/code-review.md`).
+- **AI limits** (`20261119120000_ai_limits.sql`, pushed live after a rolled-back trial): counters in `private`
+  (`ai_usage` per clinic per day, `ai_usage_user` per person per minute, `ai_usage_total` per day). RLS on, no
+  policies, all rights revoked. `public.use_ai(kind)` (definer, owner or physio) counts and refuses:
+  3 programs / 6 recordings a minute per person, 40 / 80 a day per clinic, 400 each a day for the whole app.
+  A refused call adds nothing. Both AI routes call it (`countAiCall` in `app/lib/notes/http.ts`) before the AI,
+  and the refusal becomes a 429 with a Greek message (`app/lib/notes/ai-limits.ts`). RLS checks **183/183** (+15).
+- **Captcha** (Cloudflare Turnstile): `app/components/paper/Captcha.tsx` on sign-in, sign-up and «νέο κωδικό».
+  The token goes into `signInWithOtp`. It is hidden until `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set; Supabase's
+  captcha stays off until then. Invite emails to existing accounts now use the admin client (no captcha needed).
+- **Proofreading removed** (`proofread.ts`, `fixes.ts` and the «Διορθώσαμε» box): OpenAI's text goes straight in.
+- Checks: `tsc` clean, **124 tests**.
+- Later (user's choice): checking that a clinic is real (registry number + admin approval page), and billing
+  from the `ai_usage` counts.
