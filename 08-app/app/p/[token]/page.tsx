@@ -1,9 +1,6 @@
 // The patient's home program: what they open at home after a session. No login: the secret token in
 // the link is the key. Design «Γράμμα από την κλινική» (2026-11-18, replaces the PRHome board); what
 // the patient sees is in HomeProgramLetter, which gets the data as props.
-//
-// STARTER (for AndreasVas04): the data part is done and safe; the design is yours.
-// See CONTRIBUTING.md § "Your piece" for the full checklist.
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
