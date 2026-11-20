@@ -11,6 +11,9 @@
 //      Only patients who need you get colour: the whole card red for pain, yellow for a question.
 // A state is never colour alone: there is always a word and a shape. Asks the server every 3 s (paused
 // while the tab is hidden); new calls are announced to screen readers and counted in the tab's title.
+// Clinic Wi-Fi drops: a press that doesn't reach the server says so on its card and the buttons work
+// again; a refresh that started before a press can't put back what the press changed; signed out →
+// the board stops asking and hides the patients.
 import type { Route } from "next";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -27,8 +30,25 @@ const REASON: Record<CallReason, string> = { pain: "Πόνος", question: "Απ
 
 type Result = { ok: true } | { ok: false; message: string };
 
+const NOT_SENT = "Δεν στάλθηκε. Ελέγξτε τη σύνδεση και πατήστε ξανά.";
+const NO_ANSWER = "Δεν πήραμε απάντηση. Ελέγξτε τη σύνδεση και πατήστε ξανά.";
+const PRESS_WAIT_MS = 10_000; // a press with no answer by then is reported, so the card never hangs
+
+// A press that has no answer in time: some networks hold a request instead of failing it.
+class NoAnswer extends Error {}
+function inTime<T>(promise: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new NoAnswer()), PRESS_WAIT_MS);
+  });
+  return Promise.race([promise, late]).finally(() => clearTimeout(timer));
+}
+
+class SignedOut extends Error {}
+
 async function fetchBoard(): Promise<BoardData> {
   const response = await fetch("/api/board", { cache: "no-store" });
+  if (response.status === 401) throw new SignedOut();
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return (await response.json()) as BoardData;
 }
@@ -40,14 +60,21 @@ const toneOf = (card: BoardCard): Tone => (card.call ? card.call.reason : "plain
 export function RoomBoard({ initial, action, children }: { initial: BoardData; action?: ReactNode; children?: ReactNode }) {
   const [board, setBoard] = useState(initial);
   const [offline, setOffline] = useState(false);
+  const [signedOut, setSignedOut] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
   const [now, setNow] = useState(() => new Date());
   const seenCalls = useRef(new Set(initial.cards.filter((c) => c.call).map((c) => `${c.id}@${c.call!.at}`)));
+  // Goes up when a press starts and again when it ends. A refresh that started at another number
+  // is older than the press, so its answer may not have the change yet: it is thrown away.
+  const version = useRef(0);
+  const stopped = useRef(false);
 
   const refresh = useCallback(async () => {
+    const asked = version.current;
     try {
       const fresh = await fetchBoard();
+      if (asked !== version.current || stopped.current) return;
       // Say each new call once, for screen readers: «Μαρία: χρειάζεται εσάς, πόνος».
       const freshCalls = fresh.cards.filter((c) => c.call && !seenCalls.current.has(`${c.id}@${c.call.at}`));
       if (freshCalls.length) {
@@ -57,21 +84,27 @@ export function RoomBoard({ initial, action, children }: { initial: BoardData; a
       setBoard(fresh);
       setNow(new Date());
       setOffline(false);
-    } catch {
-      setOffline(true);
+    } catch (error) {
+      if (stopped.current) return;
+      if (error instanceof SignedOut) {
+        stopped.current = true; // no more asking, and no more names on screen
+        setSignedOut(true);
+        return;
+      }
+      if (asked === version.current) setOffline(true);
     }
   }, []);
 
   useEffect(() => {
-    let stopped = false;
+    let gone = false;
     let timer: ReturnType<typeof setTimeout>;
     const tick = async () => {
       if (!document.hidden) await refresh();
-      if (!stopped) timer = setTimeout(tick, POLL_MS);
+      if (!gone && !stopped.current) timer = setTimeout(tick, POLL_MS);
     };
     timer = setTimeout(tick, POLL_MS);
     return () => {
-      stopped = true;
+      gone = true;
       clearTimeout(timer);
     };
   }, [refresh]);
@@ -97,11 +130,40 @@ export function RoomBoard({ initial, action, children }: { initial: BoardData; a
     };
   }, [calling.length]);
 
-  async function act(run: () => Promise<Result>) {
+  // A press on a card. Returns the message for that card when the press didn't reach the server
+  // (no connection): nothing changed, so it can simply be pressed again.
+  async function act(run: () => Promise<Result>): Promise<string | null> {
     setMessage(null);
-    const result = await run();
-    if (!result.ok) setMessage(result.message);
-    await refresh();
+    version.current++;
+    let problem: string | null = null;
+    try {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) throw new Error("offline"); // don't even try
+      const result = await inTime(run());
+      if (!result.ok) setMessage(result.message);
+    } catch (error) {
+      problem = error instanceof NoAnswer ? NO_ANSWER : NOT_SENT;
+      setOffline(true);
+    }
+    version.current++;
+    // Show the board as it is now. After a failed press the network is probably down too, so the
+    // card doesn't wait for this; after a good one it waits, but never longer than PRESS_WAIT_MS.
+    if (problem) void refresh();
+    else await inTime(refresh()).catch(() => {});
+    return problem;
+  }
+
+  if (signedOut) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="font-display text-[40px] leading-[1.05] sm:text-[44px]">Η αίθουσα</h1>
+        <p role="alert" className="bg-tab-yellow px-4 py-3">
+          Αποσυνδεθήκατε, γι&apos; αυτό η αίθουσα δεν ανανεώνεται πια.
+        </p>
+        <Link href="/login" className="inline-flex min-h-12 items-center self-start bg-action px-5 font-bold text-white no-underline hover:bg-action-hover">
+          Είσοδος
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -117,6 +179,7 @@ export function RoomBoard({ initial, action, children }: { initial: BoardData; a
           <span aria-hidden="true" className={cx("h-2.5 w-2.5 rounded-full", offline ? "bg-error" : "bg-action")} />
           {offline ? "Χωρίς σύνδεση · δοκιμάζουμε ξανά" : "Ενημερώθηκε τώρα"}
         </p>
+        <FullScreenButton />
         {action}
       </div>
 
@@ -199,6 +262,34 @@ export function RoomBoard({ initial, action, children }: { initial: BoardData; a
   );
 }
 
+// «Πλήρης οθόνη»: the board alone on the screen (the two-tab way of working: board here, work in the
+// other tab). Shown only where the browser can do it (not on an iPhone); Esc also leaves.
+function FullScreenButton() {
+  const [can, setCan] = useState(false);
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    setCan(Boolean(document.fullscreenEnabled));
+    const update = () => setOn(Boolean(document.fullscreenElement));
+    update();
+    document.addEventListener("fullscreenchange", update);
+    return () => document.removeEventListener("fullscreenchange", update);
+  }, []);
+  if (!can) return null;
+  const toggle = () => {
+    const done = on ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    done.catch(() => {}); // refused (e.g. not from a click): nothing changes
+  };
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      className="inline-flex min-h-12 cursor-pointer items-center gap-2 border-2 border-line bg-white px-4 font-bold text-ink hover:border-action"
+    >
+      <span aria-hidden="true">{on ? "⤡" : "⤢"}</span> {on ? "Έξοδος από πλήρη οθόνη" : "Πλήρης οθόνη"}
+    </button>
+  );
+}
+
 function Count({ label, value, tone = "plain" }: { label: string; value: number; tone?: "plain" | "alarm" | "done" }) {
   return (
     <div
@@ -270,9 +361,10 @@ const LOOK: Record<Tone, { card: string; muted: string; now: string; box: { done
   },
 };
 
-function PatientCard({ card, place, now, onAct }: { card: BoardCard; place: string; now: Date; onAct: (run: () => Promise<Result>) => Promise<void> }) {
+function PatientCard({ card, place, now, onAct }: { card: BoardCard; place: string; now: Date; onAct: (run: () => Promise<Result>) => Promise<string | null> }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
   const tone = toneOf(card);
   const look = LOOK[tone];
   const status = boardStatus(card);
@@ -283,9 +375,15 @@ function PatientCard({ card, place, now, onAct }: { card: BoardCard; place: stri
 
   async function run(fn: () => Promise<Result>) {
     setBusy(true);
-    await onAct(fn);
-    setBusy(false);
-    setConfirming(false);
+    setProblem(null);
+    try {
+      setProblem(await onAct(fn));
+    } catch {
+      setProblem(NOT_SENT);
+    } finally {
+      setBusy(false); // the buttons always work again
+      setConfirming(false);
+    }
   }
 
   // For screen readers, the boxes in one sentence: «Ασκήσεις: η 1 έγινε, τώρα η 2 από 3».
@@ -353,6 +451,12 @@ function PatientCard({ card, place, now, onAct }: { card: BoardCard; place: stri
         </div>
       )}
 
+      {problem && (
+        <p role="alert" className={cx("px-3 py-2 font-semibold", tone === "plain" ? "bg-tab-pink text-ink" : "border-2 border-current")}>
+          {problem}
+        </p>
+      )}
+
       <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
         {card.call && (
           <button type="button" disabled={busy} onClick={() => void run(() => seeCall(card.id, card.call!.at))} className={cx(button, primary)}>
@@ -380,7 +484,12 @@ function PatientCard({ card, place, now, onAct }: { card: BoardCard; place: stri
           </button>
         )}
         {!card.call && !confirming && (
-          <Link href={`/programs/${card.programId}` as Route} aria-label={`QR / οθόνη ασθενή για ${card.label}`} className={cx(button, secondary)}>
+          <Link
+            href={`/programs/${card.programId}` as Route}
+            target="_blank"
+            aria-label={`QR / οθόνη ασθενή για ${card.label} (ανοίγει σε νέα καρτέλα)`}
+            className={cx(button, secondary)}
+          >
             QR / οθόνη ασθενή
           </Link>
         )}

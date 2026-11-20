@@ -2,10 +2,10 @@
 // The green buttons of the paper look. SubmitButton knows when its form is being sent (it
 // shows "Αποθήκευση…" and can't be pressed twice); PaperLink is a link that looks the same (or outlined).
 import type { Route } from "next";
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 
+import { TabLink } from "@/app/components/paper/TabLink";
 import { cx } from "@/app/lib/cx";
 
 const green =
@@ -44,16 +44,18 @@ export function PaperLink({
   children,
   variant = "green",
   className,
+  tab,
 }: {
   href: Route;
   children: ReactNode;
   variant?: "green" | "outline";
   className?: string;
+  tab?: string; // the browser tab it belongs in (TabLink, app/lib/tabs.ts)
 }) {
   return (
-    <Link href={href} className={cx(variant === "green" ? green : outline, "self-start", className)}>
+    <TabLink href={href} tab={tab} className={cx(variant === "green" ? green : outline, "self-start", className)}>
       {children}
-    </Link>
+    </TabLink>
   );
 }
 

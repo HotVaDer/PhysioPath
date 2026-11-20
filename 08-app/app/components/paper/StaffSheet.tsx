@@ -10,16 +10,19 @@ import type { ReactNode } from "react";
 
 import { Logo } from "@/app/components/paper/Logo";
 import { StepBar } from "@/app/components/paper/Sheet";
+import { TabLink } from "@/app/components/paper/TabLink";
 import { SignOut } from "@/app/components/paper/SignOut";
 import { cx } from "@/app/lib/cx";
 import type { Profile } from "@/app/lib/onboarding/session";
+import { BOARD_TAB, CLINIC_TAB, WORK_TAB } from "@/app/lib/tabs";
 
 export type StaffTab = "board" | "new" | "clinic";
 
-const LINKS: { id: StaffTab; href: Route; label: string; physioOnly?: boolean }[] = [
-  { id: "board", href: "/", label: "Αίθουσα" },
-  { id: "new", href: "/notes/new", label: "Νέα συνεδρία", physioOnly: true },
-  { id: "clinic", href: "/settings", label: "Κλινική" },
+// tab: which browser tab the link belongs in (two-tab way of working, app/lib/tabs.ts).
+const LINKS: { id: StaffTab; href: Route; label: string; physioOnly?: boolean; tab?: string }[] = [
+  { id: "board", href: "/", label: "Αίθουσα", tab: BOARD_TAB },
+  { id: "new", href: "/notes/new", label: "Νέα συνεδρία", physioOnly: true, tab: WORK_TAB },
+  { id: "clinic", href: "/settings", label: "Κλινική", tab: CLINIC_TAB },
 ];
 
 const ROLE_LABELS: Record<Profile["role"], string> = { owner: "Υπεύθυνη/ος", physio: "Φυσιοθεραπευτής", assistant: "Βοηθός" };
@@ -40,15 +43,16 @@ export function StaffSheet({ children, profile, current, step, width = "narrow" 
       <header className="border-b-2 border-hairline bg-sheet">
         {/* The same width on every page (not the sheet's), so the bar never jumps between one and two lines. */}
         <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-x-6 gap-y-1 px-4 py-2 sm:px-6">
-          <Link href="/" className="no-underline" aria-label="PhysioPath, αρχική">
+          <TabLink href="/" tab={BOARD_TAB} className="no-underline" aria-label="PhysioPath, αρχική">
             <Logo />
-          </Link>
+          </TabLink>
           <nav aria-label="Κύρια πλοήγηση" className="order-last w-full sm:order-none sm:w-auto">
             <ul className="flex gap-1">
               {links.map((link) => (
                 <li key={link.id}>
-                  <Link
+                  <TabLink
                     href={link.href}
+                    tab={link.tab}
                     aria-current={link.id === current ? "page" : undefined}
                     className={cx(
                       "flex min-h-[52px] items-center border-b-4 px-3.5 text-[19px] no-underline",
@@ -58,7 +62,7 @@ export function StaffSheet({ children, profile, current, step, width = "narrow" 
                     )}
                   >
                     {link.label}
-                  </Link>
+                  </TabLink>
                 </li>
               ))}
             </ul>

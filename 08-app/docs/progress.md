@@ -400,3 +400,21 @@ Plan: `~/.claude/plans/1-4-i-think-now-lazy-castle.md` (5 phases, from `docs/cod
 - Checks: `tsc` clean, **124 tests**.
 - Later (user's choice): checking that a clinic is real (registry number + admin approval page), and billing
   from the `ai_usage` counts.
+
+## 2026-11-20 · Code-review fixes, Phase B: the board and the note flow
+No database changes. Each step was tested by the user in Firefox, Safari and Chromium.
+- **Wi-Fi drops (1.7):** a board press that fails says «Δεν στάλθηκε…» on its card. No answer in 10 s says
+  «Δεν πήραμε απάντηση…». The buttons always work again. An old refresh can't undo a press (version counter).
+  A 401 stops polling and hides names. New `app/error.tsx` (Greek, «Δοκιμάστε ξανά»).
+- **Two tabs (1.1, 1.3):** named tabs (`app/lib/tabs.ts`, `TabLink`/`TabName`): board, work, clinic. The top bar
+  goes to the right tab (Safari and Chrome switch to it; Firefox won't let sites switch tabs, so there it opens a
+  new one). «Πλήρης οθόνη» on the board, and «QR / οθόνη ασθενή» opens in a new tab. `ClearDraft` runs only on
+  `?approved=1`. «Αλλαγή ασθενή» is locked while the AI works. A late answer for another patient is dropped
+  (`noteFor`), and one that arrives after the physio left is still saved (`DraftProvider` safety net).
+- **Old text (1.2):** `resultTranscript` + `isStale`. «Το κείμενο άλλαξε…» with «Νέο πρόγραμμα» / «Κράτα αυτό»
+  (`app/notes/StaleNotice.tsx`). «Έγκριση» waits until the physio chooses.
+- **Whose note (1.10):** `Draft.userId`. Someone else's saved note is thrown away, «Αποσύνδεση» deletes it, and
+  sign-out is for this browser only (`scope: "local"`).
+- Checks: `tsc` clean, **158 tests**, build OK.
+- Later: an offline page (service worker) for page loads; a failed sign-in check should show an error page, not
+  /welcome (seen once with a 43 s call to Supabase).

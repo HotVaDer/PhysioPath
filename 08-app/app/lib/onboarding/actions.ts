@@ -198,8 +198,10 @@ export async function acceptInvite(_: FormState, form: FormData): Promise<FormSt
 }
 
 // ---------- Sign out ----------
+// Only this browser: the board on the clinic's computer, signed in as the same person, stays signed in.
+// (Supabase's default, "global", would sign out every device.)
 export async function signOut(): Promise<void> {
   const { supabase } = await currentUser();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/welcome");
 }
