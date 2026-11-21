@@ -12,12 +12,12 @@
 // never guesses the patient's gender.
 import type { ReactNode } from "react";
 
+import { AvoidIcon, CalendarIcon, PhoneIcon } from "@/app/components/patient/icons";
 import { PatientSheet } from "@/app/components/patient/PatientSheet";
 import { cx } from "@/app/lib/cx";
 import { doseLines, isBlank } from "@/app/lib/notes/format";
 import { ExerciseChecklist, type ChecklistExercise } from "@/app/p/[token]/ExerciseChecklist";
 import { HomeBar } from "@/app/p/[token]/HomeBar";
-import { AvoidIcon, CalendarIcon, PhoneIcon } from "@/app/p/[token]/icons";
 
 type Text = string | null | undefined;
 

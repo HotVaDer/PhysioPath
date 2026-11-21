@@ -6,9 +6,9 @@
 import { useState } from "react";
 
 import { LogoMark } from "@/app/components/paper/Logo";
+import { PrinterIcon } from "@/app/components/patient/icons";
 import { TextSizeControl, useTextSize } from "@/app/components/patient/TextSize";
 import { cx } from "@/app/lib/cx";
-import { PrinterIcon } from "@/app/p/[token]/icons";
 
 const tool = "flex min-h-[3rem] cursor-pointer items-center gap-2 border-2 px-3 text-[0.95rem] font-bold";
 

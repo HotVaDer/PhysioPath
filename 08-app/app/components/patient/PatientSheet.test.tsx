@@ -31,6 +31,25 @@ describe("PatientSheet", () => {
     expect(bar).toHaveClass("print:hidden"); // jsdom can't print; the class is what hides it on paper
     expect(screen.getByRole("main")).not.toContainElement(bar);
     expect(screen.getByRole("main").lastElementChild).toHaveTextContent("Το ενέκρινε η φυσιοθεραπεύτρια.");
+    expect(bar).not.toHaveClass("sticky"); // the home program's bar scrolls away
+    await expectNoA11yViolations(container);
+  });
+
+  it("for the session screen: a bar that stays at the top and a bottom bar under the thumb, outside the sheet", async () => {
+    const { container } = render(
+      <PatientSheet
+        stickyBar
+        letterhead={<p>Φυσιοθεραπεία Ελιά</p>}
+        bar={<button type="button">Αα</button>}
+        bottomBar={<button type="button">Τελείωσα το σετ 1</button>}
+      >
+        <h1>Ολίσθηση στον τοίχο</h1>
+      </PatientSheet>,
+    );
+    expect(screen.getByRole("button", { name: "Αα" }).closest("header")).toHaveClass("sticky", "top-0");
+    const bottom = screen.getByRole("button", { name: "Τελείωσα το σετ 1" }).parentElement!.parentElement!;
+    expect(bottom).toHaveClass("sticky", "bottom-0", "print:hidden");
+    expect(screen.getByRole("main")).not.toContainElement(bottom);
     await expectNoA11yViolations(container);
   });
 });

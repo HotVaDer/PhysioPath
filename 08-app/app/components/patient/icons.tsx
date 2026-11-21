@@ -1,4 +1,4 @@
-// Line icons for the home program, drawn in the text colour. Decoration only (aria-hidden): the word
+// Line icons for the patient's pages (home program and session), drawn in the text colour. Decoration only (aria-hidden): the word
 // next to each one says the same, so nothing depends on the picture (or on colour, on a grey printer).
 import { cx } from "@/app/lib/cx";
 
@@ -40,6 +40,39 @@ export function PrinterIcon({ className }: IconProps) {
       <path d="M6 9V3h12v6" />
       <rect x="3" y="9" width="18" height="8" rx="1" />
       <path d="M6 14h12v7H6z" />
+    </svg>
+  );
+}
+
+// «Φυσιοθεραπευτής» (calling the physio): a bell.
+export function BellIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={cx("flex-none", className)} {...line}>
+      <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />
+      <path d="M10 21h4" />
+    </svg>
+  );
+}
+
+// «Όλες οι ασκήσεις»: a short list.
+export function ListIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={cx("flex-none", className)} {...line}>
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <circle cx="4.5" cy="6" r="1.2" />
+      <circle cx="4.5" cy="12" r="1.2" />
+      <circle cx="4.5" cy="18" r="1.2" />
+    </svg>
+  );
+}
+
+// The home program (the link after the session): a house.
+export function HouseIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={cx("flex-none", className)} {...line}>
+      <path d="M3.5 11 12 4l8.5 7" />
+      <path d="M6 9.5V20h12V9.5" />
+      <path d="M10 20v-5h4v5" />
     </svg>
   );
 }
