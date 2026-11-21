@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -32,9 +32,23 @@ const card = (over: Partial<BoardCard>): BoardCard => ({
 const board = (cards: BoardCard[]): BoardData => ({ rooms: [{ id: ROOM, name: "Αίθουσα 1", beds: 2, stations: 1 }], cards });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
+
+// The board asks every 3 s: fake clocks, and a fetch whose answers the test hands out one by one.
+function controlledFetch() {
+  const pending: ((r: Response) => void)[] = [];
+  const fetch = vi.fn(() => new Promise<Response>((resolve) => pending.push(resolve)));
+  vi.stubGlobal("fetch", fetch);
+  const answer = async (i: number, response: Response) => {
+    await act(async () => pending[i](response));
+  };
+  return { fetch, answer };
+}
+const json = (data: BoardData) => new Response(JSON.stringify(data), { status: 200 });
+const nextPoll = () => act(async () => vi.advanceTimersByTime(3000));
 
 describe("RoomBoard", () => {
   it("one card per patient: place, name, program, state, exercise boxes, the exercise now", () => {
@@ -91,6 +105,37 @@ describe("RoomBoard", () => {
     expect(actions.finishCard).toHaveBeenCalledWith("aaaaaaaa-0000-4000-8000-000000000001");
   });
 
+  describe("two tabs: the board in one, the work in the other", () => {
+    it("«QR / οθόνη ασθενή» opens in a new tab, so the note being written in the other tab stays", () => {
+      render(<RoomBoard initial={board([card({})])} />);
+      const qr = screen.getByRole("link", { name: /QR \/ οθόνη ασθενή για Γιώργος Δ\./ });
+      expect(qr).toHaveAttribute("href", "/programs/bbbbbbbb-0000-4000-8000-000000000001");
+      expect(qr).toHaveAttribute("target", "_blank");
+    });
+
+    it("«Πλήρης οθόνη» puts the board alone on the screen, and the same button leaves", async () => {
+      const request = vi.fn(async () => {
+        Object.defineProperty(document, "fullscreenElement", { configurable: true, value: document.documentElement });
+        document.dispatchEvent(new Event("fullscreenchange"));
+      });
+      Object.defineProperty(document, "fullscreenEnabled", { configurable: true, value: true });
+      Object.defineProperty(document, "fullscreenElement", { configurable: true, value: null });
+      Object.defineProperty(document.documentElement, "requestFullscreen", { configurable: true, value: request });
+      render(<RoomBoard initial={board([])} />);
+      await userEvent.click(screen.getByRole("button", { name: /Πλήρης οθόνη/ }));
+      expect(request).toHaveBeenCalledOnce();
+      expect(screen.getByRole("button", { name: /Έξοδος από πλήρη οθόνη/ })).toBeInTheDocument();
+      // clean up for the other tests
+      Object.defineProperty(document, "fullscreenEnabled", { configurable: true, value: undefined });
+      Object.defineProperty(document, "fullscreenElement", { configurable: true, value: undefined });
+    });
+
+    it("no full-screen button where the browser can't do it (an iPhone)", () => {
+      render(<RoomBoard initial={board([])} />);
+      expect(screen.queryByRole("button", { name: /Πλήρης οθόνη/ })).not.toBeInTheDocument();
+    });
+  });
+
   it("a card whose room was deleted says «Χωρίς θέση»; no patients says so", () => {
     const { unmount } = render(<RoomBoard initial={board([card({ roomId: null, slot: null })])} />);
     expect(within(screen.getByRole("article", { name: "Γιώργος Δ." })).getByText("Χωρίς θέση")).toBeInTheDocument();
@@ -104,5 +149,93 @@ describe("RoomBoard", () => {
       <RoomBoard initial={board([card({ call: { reason: "pain", at: new Date().toISOString() } }), card({ id: "aaaaaaaa-0000-4000-8000-000000000002", slot: 2 })])} />,
     );
     await expectNoA11yViolations(container);
+  });
+
+  describe("when the clinic's Wi-Fi drops", () => {
+    it("a press that doesn't reach the server says so on its card, and the buttons work again", async () => {
+      vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Failed to fetch"); }));
+      actions.seeCall.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+      render(<RoomBoard initial={board([card({ call: { reason: "pain", at: new Date().toISOString() } })])} />);
+      const cardEl = screen.getByRole("article", { name: "Γιώργος Δ." });
+      await userEvent.click(within(cardEl).getByRole("button", { name: "Το είδα" }));
+      expect(within(cardEl).getByRole("alert")).toHaveTextContent("Δεν στάλθηκε. Ελέγξτε τη σύνδεση και πατήστε ξανά.");
+      expect(within(cardEl).getByRole("button", { name: "Το είδα" })).toBeEnabled();
+      expect(screen.getByText("Χωρίς σύνδεση · δοκιμάζουμε ξανά")).toBeInTheDocument();
+      // Pressing again works, and the message goes away.
+      await userEvent.click(within(cardEl).getByRole("button", { name: "Το είδα" }));
+      expect(actions.seeCall).toHaveBeenCalledTimes(2);
+      expect(within(cardEl).queryByText(/Δεν στάλθηκε/)).not.toBeInTheDocument();
+    });
+
+    it("the device is offline: the press isn't even tried, and the card says so", async () => {
+      vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Failed to fetch"); }));
+      vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+      render(<RoomBoard initial={board([card({ setsDone: [3, 3, 1] })])} />);
+      await userEvent.click(screen.getByRole("button", { name: "Ολοκλήρωση για Γιώργος Δ." }));
+      await userEvent.click(screen.getByRole("button", { name: "Ναι" }));
+      expect(actions.finishCard).not.toHaveBeenCalled();
+      expect(screen.getByRole("alert")).toHaveTextContent("Δεν στάλθηκε");
+      expect(screen.getByRole("button", { name: "Ολοκλήρωση για Γιώργος Δ." })).toBeEnabled();
+      vi.restoreAllMocks();
+    });
+
+    it("a press with no answer for 10 s is reported, and the buttons work again", async () => {
+      vi.useFakeTimers();
+      controlledFetch(); // the refresh after it never answers either
+      actions.seeCall.mockImplementationOnce(() => new Promise(() => {})); // held by the network
+      render(<RoomBoard initial={board([card({ call: { reason: "question", at: new Date().toISOString() } })])} />);
+      act(() => screen.getByRole("button", { name: "Το είδα" }).click());
+      expect(screen.getByRole("button", { name: "Το είδα" })).toBeDisabled();
+      await act(async () => vi.advanceTimersByTime(10_000));
+      expect(screen.getByRole("alert")).toHaveTextContent("Δεν πήραμε απάντηση");
+      expect(screen.getByRole("button", { name: "Το είδα" })).toBeEnabled();
+    });
+
+    it("a refresh that started before «Το είδα» can't bring the call back", async () => {
+      vi.useFakeTimers();
+      const { fetch, answer } = controlledFetch();
+      const at = new Date().toISOString();
+      const calling = board([card({ call: { reason: "pain", at } })]);
+      render(<RoomBoard initial={calling} />);
+      await nextPoll(); // refresh 0 starts and waits (slow Wi-Fi)
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      // «Το είδα»: the press, then the board asks again (refresh 1).
+      let pressed!: Promise<void>;
+      act(() => {
+        pressed = userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(screen.getByRole("button", { name: "Το είδα" }));
+      });
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+      await answer(1, json(board([card({})]))); // after the press: no call
+      await act(async () => pressed);
+      expect(screen.queryByText("Χρειάζεται εσάς · Πόνος")).not.toBeInTheDocument();
+
+      await answer(0, json(calling)); // the old refresh arrives last, from before the press
+      expect(screen.queryByText("Χρειάζεται εσάς · Πόνος")).not.toBeInTheDocument();
+    });
+
+    it("signed out: the board stops asking and hides the patients", async () => {
+      vi.useFakeTimers();
+      const { fetch, answer } = controlledFetch();
+      render(<RoomBoard initial={board([card({})])} />);
+      await nextPoll();
+      await answer(0, new Response(JSON.stringify({ error: "x" }), { status: 401 }));
+      expect(screen.getByRole("alert")).toHaveTextContent("Αποσυνδεθήκατε");
+      expect(screen.getByRole("link", { name: "Είσοδος" })).toHaveAttribute("href", "/login");
+      expect(screen.queryByRole("article")).not.toBeInTheDocument();
+      expect(screen.queryByText("Γιώργος Δ.")).not.toBeInTheDocument();
+      await nextPoll();
+      await nextPoll();
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("no connection on a refresh: «Χωρίς σύνδεση», and the patients stay on screen", async () => {
+      vi.useFakeTimers();
+      vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Failed to fetch"); }));
+      render(<RoomBoard initial={board([card({})])} />);
+      await nextPoll();
+      expect(screen.getByText("Χωρίς σύνδεση · δοκιμάζουμε ξανά")).toBeInTheDocument();
+      expect(screen.getByRole("article", { name: "Γιώργος Δ." })).toBeInTheDocument();
+    });
   });
 });

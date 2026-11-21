@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { draftReducer, emptyDraft, parseDraft, type Draft } from "@/app/lib/notes/draft";
+import { draftReducer, emptyDraft, isStale, noteFor, parseDraft, type Draft } from "@/app/lib/notes/draft";
 import type { VoiceNoteResult } from "@/app/lib/notes/schema";
 
 const DRAFT_ID = "5b3c0d6e-8f41-4a2b-9c7d-1e2f3a4b5c6d";
@@ -35,24 +35,9 @@ const exercises = (draft: Draft) => draft.result!.program.exercises;
 
 describe("draftReducer: before there's a result", () => {
   it("a recording replaces the text and the timings", () => {
-    const draft = draftReducer({ ...emptyDraft, timings: { generate: 9 } }, { type: "transcribed", text: "Γεια", fixes: [], seconds: 1.8, recordingSeconds: 42 });
+    const draft = draftReducer({ ...emptyDraft, timings: { generate: 9 } }, { type: "transcribed", text: "Γεια", seconds: 1.8, recordingSeconds: 42 });
     expect(draft.transcript).toBe("Γεια");
     expect(draft.timings).toEqual({ recording: 42, transcribe: 1.8 });
-  });
-
-  it("keeps the proofreader's fixes, and undo puts the heard word back", () => {
-    const fixes = [{ heard: "εχείρηση", corrected: "εγχείρηση" }];
-    const draft = draftReducer(emptyDraft, { type: "transcribed", text: "Έκανε την εγχείρηση.", fixes, seconds: 2, proofreadSeconds: 1.1 });
-    expect(draft.fixes).toEqual(fixes);
-    expect(draft.timings.proofread).toBe(1.1);
-    const undone = draftReducer(draft, { type: "undoFix", index: 0 });
-    expect(undone.transcript).toBe("Έκανε την εχείρηση.");
-    expect(undone.fixes).toEqual([]);
-  });
-
-  it("a sample clears the fixes", () => {
-    const draft = { ...emptyDraft, fixes: [{ heard: "α", corrected: "β" }] };
-    expect(draftReducer(draft, { type: "pickSample", text: "Δείγμα" }).fixes).toEqual([]);
   });
 
   it("a sample clears the timings; typing keeps them", () => {
@@ -150,6 +135,73 @@ describe("draftReducer: editing the program", () => {
   it("reset starts over but keeps the note language choice", () => {
     const draft = draftReducer({ ...withResult, noteLang: "en" }, { type: "reset" });
     expect(draft).toEqual({ ...emptyDraft, noteLang: "en" });
+  });
+});
+
+describe("draftReducer: a slow answer for someone else", () => {
+  const forMaria = { ...emptyDraft, patient: { id: null, label: "Μαρία" } };
+  const forNikos = draftReducer(forMaria, { type: "setPatient", patient: { id: null, label: "Νίκος" } });
+  const startedFor = noteFor(forMaria);
+
+  it("a program made for Μαρία, arriving after the physio picked Νίκος, is thrown away", () => {
+    const late = draftReducer(forNikos, { type: "generated", result, seconds: 20, noteLang: "el", draftId: DRAFT_ID, startedFor });
+    expect(late).toBe(forNikos);
+    expect(late.result).toBeNull();
+  });
+
+  it("the same for a recording's text", () => {
+    const late = draftReducer(forNikos, { type: "transcribed", text: "Για τη Μαρία", seconds: 3, startedFor });
+    expect(late.transcript).toBe("");
+  });
+
+  it("switching between new program and «Ίδιο πρόγραμμα» meanwhile also counts as someone else", () => {
+    const base = { programId: "6b3c0d6e-8f41-4a2b-9c7d-1e2f3a4b5c6d", approvedAt: "2026-11-01T10:00:00Z", program: result.program };
+    const same = draftReducer(forMaria, { type: "setMode", mode: "same", base });
+    const late = draftReducer(same, { type: "generated", result, seconds: 20, noteLang: "el", draftId: DRAFT_ID, startedFor });
+    expect(late.result).toBeNull();
+  });
+
+  it("an answer for the note on screen goes in as always", () => {
+    const fine = draftReducer(forMaria, { type: "generated", result, seconds: 20, noteLang: "el", draftId: DRAFT_ID, startedFor });
+    expect(fine.result).toEqual(result);
+    expect(draftReducer(forMaria, { type: "transcribed", text: "Γεια", seconds: 2, startedFor }).transcript).toBe("Γεια");
+  });
+});
+
+describe("isStale: the text changed after the program was made", () => {
+  const typed = draftReducer(emptyDraft, { type: "typeTranscript", text: "Γέφυρα 3 σετ" });
+  const made = draftReducer(typed, { type: "generated", result, seconds: 20, noteLang: "el", draftId: DRAFT_ID, transcript: "Γέφυρα 3 σετ" });
+
+  it("right after the program is made, it matches its text", () => {
+    expect(made.resultTranscript).toBe("Γέφυρα 3 σετ");
+    expect(isStale(made)).toBe(false);
+  });
+
+  it("typing, a new recording or an example afterwards makes it stale", () => {
+    expect(isStale(draftReducer(made, { type: "typeTranscript", text: "Γέφυρα 5 σετ" }))).toBe(true);
+    expect(isStale(draftReducer(made, { type: "transcribed", text: "Άλλη ηχογράφηση", seconds: 2 }))).toBe(true);
+    expect(isStale(draftReducer(made, { type: "pickSample", text: "Δείγμα" }))).toBe(true);
+  });
+
+  it("a space or a new line at the end doesn't count", () => {
+    expect(isStale(draftReducer(made, { type: "typeTranscript", text: "Γέφυρα 3 σετ \n" }))).toBe(false);
+  });
+
+  it("the text the program was made from is the one that was sent, even if typing went on meanwhile", () => {
+    const meanwhile = draftReducer(typed, { type: "typeTranscript", text: "Γέφυρα 3 σετ, και πάγος" });
+    const late = draftReducer(meanwhile, { type: "generated", result, seconds: 20, noteLang: "el", draftId: DRAFT_ID, transcript: "Γέφυρα 3 σετ" });
+    expect(isStale(late)).toBe(true);
+  });
+
+  it("«Κράτα αυτό»: the physio keeps it, so it's no longer stale", () => {
+    const changed = draftReducer(made, { type: "typeTranscript", text: "Γέφυρα 5 σετ" });
+    const kept = draftReducer(changed, { type: "keepResult" });
+    expect(isStale(kept)).toBe(false);
+    expect(kept.result).toEqual(result);
+  });
+
+  it("a draft saved before this change (no text kept) is never called stale", () => {
+    expect(isStale({ ...made, resultTranscript: null, transcript: "κάτι άλλο" })).toBe(false);
   });
 });
 

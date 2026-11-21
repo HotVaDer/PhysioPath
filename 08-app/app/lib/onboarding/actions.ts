@@ -33,6 +33,13 @@ function linkError(error: { status?: number; code?: string; message: string }): 
   if (error.status === 429 || error.code?.includes("rate_limit")) {
     return "Στείλαμε ήδη κωδικό πριν από λίγο. Περιμένετε ένα λεπτό και ξαναδοκιμάστε.";
   }
+  if (error.code === "captcha_failed" || /captcha/i.test(error.message)) {
+    console.error("Captcha refused by Supabase:", error.message); // e.g. "no captcha_token found", "invalid-input-response"
+    if (/no captcha_token/i.test(error.message)) {
+      return "Περιμένετε να ολοκληρωθεί ο έλεγχος ασφαλείας (το κουτάκι πάνω από το κουμπί) και πατήστε ξανά.";
+    }
+    return "Ο έλεγχος ασφαλείας δεν ολοκληρώθηκε. Ανανεώστε τη σελίδα και δοκιμάστε ξανά.";
+  }
   if (error.code === "otp_disabled" || /signups not allowed/i.test(error.message)) {
     return "Δεν βρήκαμε λογαριασμό με αυτό το email. Για νέα κλινική, πατήστε «Εγγραφή κλινικής» πιο κάτω.";
   }
@@ -42,7 +49,8 @@ function linkError(error: { status?: number; code?: string; message: string }): 
 
 // Sends the email with the 6-digit code and the button (supabase/templates/confirmation.html for a
 // new account, magic_link.html for an existing one). Returns a message when it didn't work.
-async function sendCode(email: string, login: boolean, next: string, fullName?: string): Promise<string | null> {
+// captchaToken: from the "not a robot" check in the form (app/components/paper/Captcha.tsx).
+async function sendCode(email: string, login: boolean, next: string, captchaToken: string | undefined, fullName?: string): Promise<string | null> {
   const { supabase } = await currentUser();
   const { error } = await supabase.auth.signInWithOtp({
     email,
@@ -50,10 +58,13 @@ async function sendCode(email: string, login: boolean, next: string, fullName?: 
       shouldCreateUser: !login, // the login page never creates accounts by accident
       emailRedirectTo: confirmLink(next), // where the button in the email goes
       data: fullName ? { full_name: fullName } : undefined,
+      captchaToken,
     },
   });
   return error ? linkError(error) : null;
 }
+
+const captchaToken = (form: FormData) => String(form.get("captchaToken") ?? "").slice(0, 4096) || undefined;
 
 // Where the code page lives, with the email (and, for login, where to go after).
 function codePage(email: string, login: boolean, next: string): string {
@@ -73,7 +84,7 @@ export async function sendLink(_: FormState, form: FormData): Promise<FormState>
 
   const next = safeNext(String(form.get("next") ?? ""), login ? "/" : "/register/clinic");
   const fullName = cover?.success ? cover.data.fullName : undefined;
-  const problem = await sendCode(parsed.data.email, login, next, fullName);
+  const problem = await sendCode(parsed.data.email, login, next, captchaToken(form), fullName);
   if (problem) return { message: problem, values };
   redirect(codePage(parsed.data.email, login, next) as Route); // only our own two code pages
 }
@@ -108,7 +119,7 @@ export async function resendCode(_: FormState, form: FormData): Promise<FormStat
   const email = LoginSchema.safeParse({ email: form.get("email") });
   if (!email.success) redirect(login ? "/login" : "/register");
   const next = safeNext(String(form.get("next") ?? ""), login ? "/" : "/register/clinic");
-  const problem = await sendCode(email.data.email, login, next);
+  const problem = await sendCode(email.data.email, login, next, captchaToken(form));
   if (problem) return { message: problem };
   const at = new Intl.DateTimeFormat("el-GR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Nicosia" }).format(new Date());
   return { notice: `Στείλαμε νέο κωδικό στις ${at}. Ο προηγούμενος δεν ισχύει πια.` };
@@ -187,8 +198,10 @@ export async function acceptInvite(_: FormState, form: FormData): Promise<FormSt
 }
 
 // ---------- Sign out ----------
+// Only this browser: the board on the clinic's computer, signed in as the same person, stays signed in.
+// (Supabase's default, "global", would sign out every device.)
 export async function signOut(): Promise<void> {
   const { supabase } = await currentUser();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/welcome");
 }

@@ -3,21 +3,18 @@
 // (same state + same action → same new state, no React needed).
 import * as z from "zod";
 
-import { Fix, undoFix } from "@/app/lib/notes/fixes";
 import { NoteLanguage } from "@/app/lib/notes/prompt";
 import { ActivityCode, Exercise, PatientProgram, VoiceNoteResult, type ClinicalNote } from "@/app/lib/notes/schema";
 
 const Timings = z.object({
   recording: z.number().optional(), // seconds of audio
   transcribe: z.number().optional(), // seconds speech-to-text took
-  proofread: z.number().optional(), // seconds the proofreader took
   generate: z.number().optional(), // seconds Claude took
 });
 
 // Also used to check a draft read back from sessionStorage, so a broken or old one is ignored.
 export const Draft = z.object({
   transcript: z.string(),
-  fixes: z.array(Fix).default([]), // words the proofreader corrected in the transcript, for undo
   noteLang: NoteLanguage, // language for the next clinical note
   result: VoiceNoteResult.nullable(),
   resultNoteLang: NoteLanguage, // language the current note was written in
@@ -38,12 +35,18 @@ export const Draft = z.object({
   // open another one meanwhile: the patient, program and beds are this clinic's, so «Έγκριση» refuses
   // the note while another clinic is open.
   clinicId: z.uuid().nullable().default(null),
+  // The text the result was made from. If the physio changes the text afterwards (records again, types,
+  // picks an example), the result no longer matches it: see isStale. null on drafts saved before this.
+  resultTranscript: z.string().nullable().default(null),
+  // Who is writing this note: stamped by DraftProvider with the signed-in person. Another person signing
+  // in on the same tab (a shared clinic computer) never gets it: DraftProvider throws it away.
+  userId: z.uuid().nullable().default(null),
 });
 export type Draft = z.infer<typeof Draft>;
 
 export const emptyDraft: Draft = {
-  transcript: "", fixes: [], noteLang: "el", result: null, resultNoteLang: "el", timings: {}, removed: null,
-  patient: null, draftId: null, activityCode: null, where: null, mode: "new", base: null, clinicId: null,
+  transcript: "", noteLang: "el", result: null, resultNoteLang: "el", timings: {}, removed: null,
+  patient: null, draftId: null, activityCode: null, where: null, mode: "new", base: null, clinicId: null, resultTranscript: null, userId: null,
 };
 
 export const emptyExercise = (): Exercise => ({ name: "", sets: null, reps: null, hold: null, frequency: null, notes: null });
@@ -55,10 +58,10 @@ export type DraftAction =
   | { type: "restore"; draft: Draft }
   | { type: "typeTranscript"; text: string }
   | { type: "pickSample"; text: string }
-  | { type: "transcribed"; text: string; fixes: Fix[]; seconds: number; proofreadSeconds?: number; recordingSeconds?: number }
-  | { type: "undoFix"; index: number }
+  | { type: "transcribed"; text: string; seconds: number; recordingSeconds?: number; startedFor?: string }
   | { type: "setNoteLang"; lang: NoteLanguage }
-  | { type: "generated"; result: VoiceNoteResult; seconds: number; noteLang: NoteLanguage; draftId: string }
+  | { type: "generated"; result: VoiceNoteResult; seconds: number; noteLang: NoteLanguage; draftId: string; startedFor?: string; transcript?: string }
+  | { type: "keepResult" }
   | { type: "setPatient"; patient: { id: string | null; label: string } | null }
   | { type: "setMode"; mode: "new" | "same"; base: Draft["base"] }
   | { type: "setActivityCode"; code: ActivityCode | null }
@@ -71,6 +74,7 @@ export type DraftAction =
   | { type: "undoRemove" }
   | { type: "setNote"; field: keyof ClinicalNote; value: string }
   | { type: "stampClinic"; clinicId: string }
+  | { type: "stampUser"; userId: string }
   | { type: "reset" };
 
 // Optional text: an emptied field means "not said" (null). Text is stored as typed, not trimmed,
@@ -86,26 +90,36 @@ function exerciseValue(field: keyof Exercise, value: string): Exercise[keyof Exe
   return optional(value);
 }
 
+// Which note a slow answer belongs to: the patient, and new program or «Ίδιο πρόγραμμα» (and which one).
+// The recording and the generation take seconds; RecordForm stamps this when it starts, and an answer
+// that arrives after the physio picked someone or something else is thrown away (startedFor).
+export function noteFor(draft: Draft): string {
+  return JSON.stringify([draft.patient?.id ?? null, draft.patient?.label ?? null, draft.mode, draft.base?.programId ?? null]);
+}
+
+// The text changed after the program (or note) was made from it: approving it would approve something
+// made from words the physio has since replaced. Spaces and line breaks at the ends don't count.
+export function isStale(draft: Draft): boolean {
+  return draft.result !== null && draft.resultTranscript !== null && draft.resultTranscript.trim() !== draft.transcript.trim();
+}
+
 export function draftReducer(draft: Draft, action: DraftAction): Draft {
+  if ((action.type === "transcribed" || action.type === "generated") && action.startedFor !== undefined && action.startedFor !== noteFor(draft)) {
+    return draft; // a late answer for another patient (or the other choice): never put it on this one
+  }
   switch (action.type) {
     case "restore":
       return action.draft;
     case "typeTranscript":
       return { ...draft, transcript: action.text };
     case "pickSample":
-      return { ...draft, transcript: action.text, fixes: [], timings: {} }; // no recording, so no timings or fixes
+      return { ...draft, transcript: action.text, timings: {} }; // no recording, so no timings
     case "transcribed":
       return {
         ...draft,
         transcript: action.text,
-        fixes: action.fixes,
-        timings: { recording: action.recordingSeconds, transcribe: action.seconds, proofread: action.proofreadSeconds || undefined },
+        timings: { recording: action.recordingSeconds, transcribe: action.seconds },
       };
-    case "undoFix": {
-      const fix = draft.fixes[action.index];
-      if (!fix) return draft;
-      return { ...draft, transcript: undoFix(draft.transcript, fix), fixes: draft.fixes.filter((_, i) => i !== action.index) };
-    }
     case "setNoteLang":
       return { ...draft, noteLang: action.lang };
     case "generated":
@@ -116,7 +130,11 @@ export function draftReducer(draft: Draft, action: DraftAction): Draft {
         timings: { ...draft.timings, generate: action.seconds },
         removed: null,
         draftId: action.draftId,
+        resultTranscript: action.transcript ?? draft.transcript, // the text that was sent
       };
+    case "keepResult":
+      // «Κράτα αυτό»: the physio checked that the result still fits the changed text.
+      return draft.result ? { ...draft, resultTranscript: draft.transcript } : draft;
     case "setPatient": {
       // Another patient: the program choice and anything generated belonged to the old one.
       // The patient is chosen from the open clinic's list, so the note now belongs to the open clinic:
@@ -138,6 +156,8 @@ export function draftReducer(draft: Draft, action: DraftAction): Draft {
     case "stampClinic":
       // Only once: a note keeps the clinic it was started in (a new note, after «reset», gets the open one).
       return draft.clinicId ? draft : { ...draft, clinicId: action.clinicId };
+    case "stampUser":
+      return draft.userId ? draft : { ...draft, userId: action.userId };
     case "reset":
       return { ...emptyDraft, noteLang: draft.noteLang }; // keep the physio's language choice
   }

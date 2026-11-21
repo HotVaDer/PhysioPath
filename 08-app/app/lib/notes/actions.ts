@@ -81,6 +81,9 @@ export async function approveNote(_: ApproveState, form: FormData): Promise<Appr
 
   const saved = data as { programId?: string; noteId?: string } | null;
   if (!saved?.programId) return { message: "Η έγκριση δεν αποθηκεύτηκε. Δοκιμάστε ξανά σε λίγο." };
-  // ?note: this visit (one program can have many visits: «Ίδιο πρόγραμμα»).
-  redirect(`/programs/${saved.programId}${saved.noteId ? `?note=${saved.noteId}` : ""}`);
+  // ?note: this visit (one program can have many visits: «Ίδιο πρόγραμμα»). ?approved=1: just approved,
+  // so the page clears the draft (opening the same page from the board must not).
+  const query = new URLSearchParams({ approved: "1" });
+  if (saved.noteId) query.set("note", saved.noteId);
+  redirect(`/programs/${saved.programId}?${query}`);
 }

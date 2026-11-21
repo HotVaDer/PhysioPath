@@ -4,6 +4,7 @@
 import { useActionState } from "react";
 
 import { Actions, SubmitButton } from "@/app/components/paper/Buttons";
+import { Captcha } from "@/app/components/paper/Captcha";
 import { LineField } from "@/app/components/paper/LineField";
 import { FormAlert } from "@/app/components/paper/Notes";
 import { sendLink, type FormState } from "@/app/lib/onboarding/actions";
@@ -39,6 +40,7 @@ export function LinkForm({ mode, next }: { mode: "register" | "login"; next?: st
         hint={mode === "register" ? "Θα σας στείλουμε εκεί έναν κωδικό 6 ψηφίων." : undefined} // sign-in says it above
         required
       />
+      <Captcha resetKey={state} />
       <Actions>
         <SubmitButton pending="Αποστολή…">
           {mode === "register" ? "Συνέχεια" : "Στείλτε μου κωδικό"} <span aria-hidden="true">→</span>

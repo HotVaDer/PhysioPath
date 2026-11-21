@@ -2,6 +2,7 @@
 // who may call them, size limits, and errors as { error } JSON with a Greek message.
 import "server-only";
 
+import { aiRefusal } from "@/app/lib/notes/ai-limits";
 import { loadProfile, currentUser, type Profile } from "@/app/lib/onboarding/session";
 import type { Supabase } from "@/app/lib/supabase/server";
 
@@ -22,6 +23,17 @@ export async function requirePhysioApi(): Promise<{ supabase: Supabase; profile:
   if (!profile?.clinic_id) throw new HttpError(401, "Η σύνδεσή σας έληξε. Συνδεθείτε ξανά.");
   if (profile.role === "assistant") throw new HttpError(403, "Μόνο οι φυσιοθεραπευτές γράφουν σημειώσεις.");
   return { supabase, profile };
+}
+
+// Counts one paid AI call in the database (public.use_ai, migration 20261119120000_ai_limits.sql)
+// before the AI is called. Over a limit → 429 with a Greek message, and the AI is never called.
+// The database does the counting, so a script calling our routes can't get around it.
+export async function countAiCall(supabase: Supabase, kind: "generate" | "transcribe"): Promise<void> {
+  const { error } = await supabase.rpc("use_ai", { p_kind: kind });
+  if (!error) return;
+  const refusal = aiRefusal(error.message);
+  if (refusal) throw new HttpError(refusal.status, refusal.message);
+  throw new Error(`use_ai failed: ${error.message}`); // → 500, details in the server log only
 }
 
 // Reads the body but stops as soon as it passes the limit, so a huge upload is never held in memory.

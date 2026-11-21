@@ -6,7 +6,7 @@
 // device it stands still: a small wave and the three lines already written.
 import { useEffect, useRef, useState } from "react";
 
-const PROGRAM = ["Γέφυρα γλουτών · 3 × 10", "Πλάγιες άρσεις · 2 × 12", "Διάταση γάμπας · 30″"];
+const PROGRAM = ["Έλξεις μονόζυγου · 3 × 8", "Βυθίσεις · 3 × 10", "Καθίσματα · 3 × 12"];
 const TOTAL = PROGRAM.join("").length;
 
 // One loop, in ms: speak, write, then hold the written lines.

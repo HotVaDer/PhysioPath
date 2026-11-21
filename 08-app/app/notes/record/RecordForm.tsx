@@ -1,24 +1,27 @@
 "use client";
 // «Νέα συνεδρία», step 3 of 4: the recording (or a file, or a sample) for the patient chosen in step 1,
-// and the text we heard, with the proofreader's fixes and undo, then «Δημιουργία προγράμματος» (step 4).
+// and the text we heard (the physio can correct it), then «Δημιουργία προγράμματος» (step 4).
 // «Ίδιο πρόγραμμα» (step 2): they talk about today only, and «Δημιουργία σημείωσης» writes just the GeSY
 // note; the stored program goes into the result unchanged (it is never sent to the AI).
 // Everything is kept in the draft (sessionStorage), so going back and forth between the steps loses nothing.
 // Plain look (2026-11-17): the record button as the main green button, the text in a white box, no italics.
+import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { fieldBox } from "@/app/components/paper/LineField";
 import { FormAlert } from "@/app/components/paper/Notes";
-import { Panel, PanelTitle, PartTitle } from "@/app/components/paper/StaffSheet";
+import { PartTitle } from "@/app/components/paper/StaffSheet";
 import { cx } from "@/app/lib/cx";
 import { ApiError, generateNote, generateProgram, transcribeAudio } from "@/app/lib/notes/api";
 import { useDraft } from "@/app/lib/notes/DraftContext";
+import { isStale, noteFor } from "@/app/lib/notes/draft";
 import { formatClock } from "@/app/lib/notes/format";
 import { AUDIO_TOO_LARGE, MAX_AUDIO_BYTES } from "@/app/lib/notes/limits";
 import type { Sample } from "@/app/lib/notes/samples";
 import { MAX_RECORDING_SECONDS, useRecorder } from "@/app/lib/notes/useRecorder";
+import { StaleNotice } from "@/app/notes/StaleNotice";
 
 type Busy = null | "transcribing" | "generating";
 
@@ -38,15 +41,24 @@ export function RecordForm({ samples }: { samples: Sample[] }) {
   const [heardSeconds, setHeardSeconds] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
+  // Still on this page? A slow answer must not move the physio away from wherever they went meanwhile.
+  const here = useRef(true);
+  useEffect(() => {
+    here.current = true;
+    return () => {
+      here.current = false;
+    };
+  }, []);
 
   async function handleAudio(audio: Blob, seconds?: number) {
     if (audio.size > MAX_AUDIO_BYTES) return setError(AUDIO_TOO_LARGE);
     setError(null);
     setBusy("transcribing");
+    const startedFor = noteFor(draft);
     try {
       const heard = await transcribeAudio(audio);
-      dispatch({ type: "transcribed", text: heard.text, fixes: heard.fixes, seconds: heard.seconds, proofreadSeconds: heard.proofreadSeconds, recordingSeconds: seconds });
-      setHeardSeconds(heard.seconds + heard.proofreadSeconds);
+      dispatch({ type: "transcribed", text: heard.text, seconds: heard.seconds, recordingSeconds: seconds, startedFor });
+      setHeardSeconds(heard.seconds);
       requestAnimationFrame(() => textRef.current?.focus());
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Η ηχογράφηση δεν διαβάστηκε. Δοκιμάστε ξανά.");
@@ -67,16 +79,18 @@ export function RecordForm({ samples }: { samples: Sample[] }) {
     if (!draft.transcript.trim()) return setError("Ηχογραφήστε ή γράψτε πρώτα τη σημείωση.");
     setError(null);
     setBusy("generating");
+    const startedFor = noteFor(draft);
+    const sent = draft.transcript; // what the result is made from (isStale)
     try {
       if (same && draft.base) {
         const { result, seconds } = await generateNote(draft.transcript, draft.noteLang);
         const full = { program: draft.base.program, note: result.note, missing_or_unclear: result.missing_or_unclear };
-        dispatch({ type: "generated", result: full, seconds, noteLang: draft.noteLang, draftId: crypto.randomUUID() });
+        dispatch({ type: "generated", result: full, seconds, noteLang: draft.noteLang, draftId: crypto.randomUUID(), startedFor, transcript: sent });
       } else {
         const { result, seconds } = await generateProgram(draft.transcript, draft.noteLang);
-        dispatch({ type: "generated", result, seconds, noteLang: draft.noteLang, draftId: crypto.randomUUID() });
+        dispatch({ type: "generated", result, seconds, noteLang: draft.noteLang, draftId: crypto.randomUUID(), startedFor, transcript: sent });
       }
-      router.push("/notes/review");
+      if (here.current) router.push("/notes/review");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : same ? "Η σημείωση δεν γράφτηκε. Δοκιμάστε ξανά." : "Το πρόγραμμα δεν γράφτηκε. Δοκιμάστε ξανά.");
       setBusy(null);
@@ -100,18 +114,18 @@ export function RecordForm({ samples }: { samples: Sample[] }) {
             Για: <strong>{patientLabel}</strong>
             {draft.patient.id ? "" : " (νέος ασθενής)"}
           </span>
-          <Link href="/notes/new" className="min-h-11 content-center text-base">
+          <ChangeLink href="/notes/new" locked={busy !== null || recording}>
             Αλλαγή ασθενή
-          </Link>
+          </ChangeLink>
         </p>
         {programStep && (
           <p className="flex flex-wrap items-center gap-x-4 text-[19px]">
             <span>
               Πρόγραμμα: <strong>{same ? "ίδιο" : "νέο"}</strong>
             </span>
-            <Link href={programStep} className="min-h-11 content-center text-base">
+            <ChangeLink href={programStep} locked={busy !== null || recording}>
               Αλλαγή
-            </Link>
+            </ChangeLink>
           </p>
         )}
       </div>
@@ -235,29 +249,6 @@ export function RecordForm({ samples }: { samples: Sample[] }) {
             />
           </div>
 
-          {draft.fixes.length > 0 && (
-            <Panel tint="green" labelledBy="fix-h">
-              <PanelTitle id="fix-h">Διορθώσαμε {draft.fixes.length === 1 ? "1 λέξη" : `${draft.fixes.length} λέξεις`}</PanelTitle>
-              <p>Λέξεις που ακούστηκαν λάθος. Αριθμούς, πλευρά και ασκήσεις δεν τα αλλάζουμε ποτέ.</p>
-              <ul className="flex flex-col">
-                {draft.fixes.map((fix, i) => (
-                  <li key={`${fix.heard}-${i}`} className="flex min-h-11 flex-wrap items-center gap-x-3.5 gap-y-1 border-t border-hairline">
-                    <span>
-                      «{fix.heard}» → «<strong>{fix.corrected}</strong>»
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => dispatch({ type: "undoFix", index: i })}
-                      className="min-h-11 cursor-pointer text-action underline underline-offset-[3px] hover:text-ink"
-                    >
-                      Αναίρεση<span className="sr-only">: «{fix.corrected}» πίσω σε «{fix.heard}»</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </Panel>
-          )}
-
           <fieldset className="flex flex-wrap items-center gap-x-6 gap-y-1">
             <legend className="float-left mr-4">Η κλινική σημείωση στα:</legend>
             <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
@@ -285,15 +276,42 @@ export function RecordForm({ samples }: { samples: Sample[] }) {
               {busy === "generating" ? "Περίπου 20 δευτερόλεπτα. Μην κλείσετε τη σελίδα." : "Περίπου 20 δευτερόλεπτα."}
             </span>
           </div>
-          {draft.result && busy === null && (
+          {draft.result && busy === null && !isStale(draft) && (
             <p>
               Υπάρχει ήδη {same ? "σημείωση" : "πρόγραμμα"} από αυτό το κείμενο. <Link href="/notes/review">Συνέχεια στον έλεγχο</Link>
             </p>
+          )}
+          {draft.result && busy === null && isStale(draft) && (
+            <StaleNotice
+              same={same}
+              onNew={() => void create()}
+              onKeep={() => {
+                dispatch({ type: "keepResult" });
+                router.push("/notes/review");
+              }}
+            />
           )}
         </section>
       )}
 
       <FormAlert>{error}</FormAlert>
     </div>
+  );
+}
+
+// «Αλλαγή ασθενή» / «Αλλαγή»: plain text while a recording or a program is under way, so the answer
+// can't land on someone else (the reducer throws such answers away too, see noteFor).
+function ChangeLink({ href, locked, children }: { href: Route; locked: boolean; children: ReactNode }) {
+  if (locked) {
+    return (
+      <span aria-disabled="true" title="Περιμένετε να τελειώσει" className="min-h-11 content-center text-base text-muted">
+        {children}
+      </span>
+    );
+  }
+  return (
+    <Link href={href} className="min-h-11 content-center text-base">
+      {children}
+    </Link>
   );
 }

@@ -29,7 +29,11 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
   // ?note: which visit (one program can have many: «Ίδιο πρόγραμμα»). Without it: the latest one.
-  const noteId = z.uuid().safeParse((await searchParams).note);
+  // ?approved=1: we came straight from «Έγκριση», so the draft is done. From the board's «QR / οθόνη
+  // ασθενή» there is no such flag, and a note being written in that tab stays.
+  const query = await searchParams;
+  const noteId = z.uuid().safeParse(query.note);
+  const justApproved = query.approved === "1";
   const { supabase, user, profile } = await requireMember();
 
   const { data: program } = await supabase
@@ -83,7 +87,7 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
 
   return (
     <StaffSheet profile={profile}>
-      <ClearDraft />
+      {justApproved && <ClearDraft />}
       <div className="flex flex-col gap-7">
         <p className="self-start rounded-md bg-note-green px-4 py-3 text-[19px]">
           <span className="font-bold text-action">✓ Εγκρίθηκε</span> στις {day.format(approvedAt)}, {time.format(approvedAt)}

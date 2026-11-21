@@ -17,11 +17,12 @@ import { Panel, PanelTitle, PartTitle } from "@/app/components/paper/StaffSheet"
 import { cx } from "@/app/lib/cx";
 import { approveNote, type ApproveState } from "@/app/lib/notes/actions";
 import { approvalErrors, OTHER_CLINIC_NOTE, type ApprovalErrors, type SlotOption } from "@/app/lib/notes/approval";
-import type { ProgramListField } from "@/app/lib/notes/draft";
+import { isStale, type ProgramListField } from "@/app/lib/notes/draft";
 import { useDraft } from "@/app/lib/notes/DraftContext";
 import { GESY_LABELS, isMissing } from "@/app/lib/notes/format";
 import { ACTIVITY_CODES, GESY_PARTS, type ActivityCode, type Exercise } from "@/app/lib/notes/schema";
 import { ProgramSummary } from "@/app/notes/ProgramSummary";
+import { StaleNotice } from "@/app/notes/StaleNotice";
 
 // clinicId: the clinic open now. The draft remembers the one it was started in (Draft.clinicId).
 type Props = { slots: SlotOption[]; notesPerPatient: Record<string, number>; signer: string; today: string; clinicId: string };
@@ -94,8 +95,15 @@ export function ReviewForm({ slots, notesPerPatient, signer, today, clinicId }: 
   const needsAssessment = (draft.activityCode === "PHYS01" || draft.activityCode === "PHYS03") && !note.assessment_findings?.trim();
   // Started in another clinic: its patient and beds aren't this one's (approveNote refuses it too).
   const otherClinic = draft.clinicId !== null && draft.clinicId !== clinicId;
+  // The text changed after this was made: «Έγκριση» waits until the physio makes a new one or keeps this.
+  const stale = isStale(draft);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
+    if (stale) {
+      event.preventDefault();
+      requestAnimationFrame(() => document.getElementById("stale")?.scrollIntoView({ block: "center" }));
+      return;
+    }
     const found = approvalErrors({ patient, program, activityCode: draft.activityCode, where: draft.where });
     setLocal(found);
     if (Object.keys(found).length > 0) {
@@ -125,6 +133,11 @@ export function ReviewForm({ slots, notesPerPatient, signer, today, clinicId }: 
   return (
     <div className="flex flex-col gap-8">
       {otherClinic && <FormAlert>{OTHER_CLINIC_NOTE}</FormAlert>}
+      {stale && (
+        <div id="stale">
+          <StaleNotice same={same} onKeep={() => dispatch({ type: "keepResult" })} />
+        </div>
+      )}
       <div className="flex flex-col gap-2">
         <Link href="/notes/record" className="min-h-11 content-center self-start">
           <span aria-hidden="true">←</span> Πίσω στην ηχογράφηση
@@ -451,6 +464,7 @@ export function ReviewForm({ slots, notesPerPatient, signer, today, clinicId }: 
           Μετά την έγκριση δεν αλλάζει τίποτα. Για αλλαγές στο πρόγραμμα: «Νέα συνεδρία» → «Αλλαγή προγράμματος».
         </p>
         <FormAlert>{state.message}</FormAlert>
+        {stale && <p className="font-semibold text-error">Πρώτα διαλέξτε πιο πάνω: νέο από το νέο κείμενο, ή κρατήστε αυτό.</p>}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
           <SubmitButton pending="Έγκριση…">
             {draft.where === "home" ? "Έγκριση · μόνο για το σπίτι" : chosen ? `Έγκριση · ${chosen.room} · ${chosen.label}` : "Έγκριση"} <span aria-hidden="true">→</span>

@@ -13,6 +13,8 @@ import { loadBoard } from "@/app/lib/board/board";
 import { requireMember } from "@/app/lib/onboarding/session";
 import { workAlone } from "@/app/lib/settings/actions";
 import { cx } from "@/app/lib/cx";
+import { TabName } from "@/app/components/paper/TabLink";
+import { BOARD_TAB, WORK_TAB } from "@/app/lib/tabs";
 
 export const metadata: Metadata = { title: "Η αίθουσα" };
 
@@ -75,7 +77,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
   const newSession =
     profile.role !== "assistant" ? (
-      <PaperLink href="/notes/new">
+      <PaperLink href="/notes/new" tab={WORK_TAB}>
         <span aria-hidden="true">+</span> Νέα συνεδρία
       </PaperLink>
     ) : null;
@@ -131,6 +133,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
   return (
     <StaffSheet profile={profile} current="board" width="wide">
+      <TabName name={BOARD_TAB} />
       {board.rooms.length === 0 ? (
         <div className="flex flex-col gap-6">
           <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
