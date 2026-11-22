@@ -93,12 +93,11 @@ export async function loadDraft(supabase: Supabase): Promise<Draft> {
   return parsed.success ? parsed.data : {};
 }
 
-// Saves one sheet's answers into the draft, keeping the other sheets' answers.
-export async function saveDraft(supabase: Supabase, userId: string, patch: Partial<Draft>): Promise<void> {
+// Saves one sheet's answers into the signed-in person's draft, keeping the other sheets' answers.
+// Through save_onboarding_draft: users can't write to the tables themselves (20261122150000).
+export async function saveDraft(supabase: Supabase, patch: Partial<Draft>): Promise<void> {
   const current = await loadDraft(supabase);
-  const { error } = await supabase
-    .from("onboarding_drafts")
-    .upsert({ user_id: userId, data: { ...current, ...patch }, updated_at: new Date().toISOString() });
+  const { error } = await supabase.rpc("save_onboarding_draft", { p_data: { ...current, ...patch } });
   if (error) throw new Error(`Saving the draft failed: ${error.message}`);
 }
 

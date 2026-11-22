@@ -6,6 +6,7 @@ import type { Route } from "next";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { AutoRefresh } from "@/app/components/paper/AutoRefresh";
 import { PaperLink, QuietSubmit } from "@/app/components/paper/Buttons";
 import { RoomBoard } from "@/app/components/board/RoomBoard";
 import { StaffSheet } from "@/app/components/paper/StaffSheet";
@@ -138,6 +139,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   return (
     <StaffSheet profile={profile} current="board" width="wide">
       <TabName name={BOARD_TAB} />
+      <AutoRefresh />
       {board.rooms.length === 0 ? (
         <div className="flex flex-col gap-6">
           <div className="flex flex-wrap items-end gap-x-6 gap-y-3">

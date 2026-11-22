@@ -1,14 +1,15 @@
 "use server";
 // The owner's settings after sign-up: the rooms, and inviting the team (one person at a time).
 // Reached from the home page («Επόμενα βήματα») and from «Χώροι» / «Ομάδα» there.
-// Every action checks again that the owner is signed in; the database checks it a third time
-// (save_rooms, add_invites: supabase/migrations/20261116120000_settings_rooms_team.sql).
+// Every action checks again that the owner is signed in; the database checks it a third time, in the
+// functions that do the writing (save_rooms, add_invites, cancel_invite, mark_team_checked): users can't
+// write to the tables themselves (20261122150000).
 import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import type { FormState } from "@/app/lib/onboarding/actions";
-import { sendInvites } from "@/app/lib/onboarding/invites";
+import { inviteTokens, sendInvites } from "@/app/lib/onboarding/invites";
 import { MemberSchema, SettingsRoomsSchema, fieldErrors } from "@/app/lib/onboarding/schema";
 import { requireOwner, requireSameClinic } from "@/app/lib/onboarding/session";
 
@@ -66,9 +67,10 @@ export async function inviteMember(_: FormState, form: FormData): Promise<FormSt
     return { message: "Η πρόσκληση δεν στάλθηκε. Δοκιμάστε ξανά σε λίγο.", values };
   }
 
-  await supabase.from("clinics").update({ team_checked_at: new Date().toISOString() }).eq("id", profile.clinic_id);
+  // add_invites also ticks «Καλέστε την ομάδα σας», and returns only the new invite's id (never its token).
   const { data: clinic } = await supabase.from("clinics").select("name").eq("id", profile.clinic_id).maybeSingle();
-  const invites = (data ?? []) as { email: string; role: string; token: string }[];
+  const added = (data ?? []) as { id: string }[];
+  const invites = await inviteTokens(added.map((i) => i.id), profile.clinic_id);
   const { sent } = await sendInvites(invites, { clinicName: clinic?.name ?? "", ownerName: profile.full_name ?? "" });
   const q = new URLSearchParams({ invite: sent ? "new" : "not-sent", to: parsed.data.email, at: now() });
   redirect(`/settings/team?${q}` as Route);
@@ -80,9 +82,9 @@ export async function cancelInvite(form: FormData): Promise<void> {
   requireSameClinic(form, profile);
   const id = z.uuid().safeParse(form.get("inviteId"));
   if (!id.success) redirect("/settings/team");
-  // RLS: only the owner, only their clinic, only invites not accepted yet.
-  const { data } = await supabase.from("invites").delete().eq("id", id.data).select("email");
-  const email = data?.[0]?.email;
+  // The database checks again: only the owner, only the clinic open now, only invites not accepted yet.
+  const { data } = await supabase.rpc("cancel_invite", { p_clinic_id: profile.clinic_id, p_invite_id: id.data });
+  const email = typeof data === "string" ? data : null;
   redirect((email ? `/settings/team?invite=cancelled&to=${encodeURIComponent(email)}` : "/settings/team") as Route);
 }
 
@@ -90,7 +92,7 @@ export async function cancelInvite(form: FormData): Promise<void> {
 export async function workAlone(form: FormData): Promise<void> {
   const { supabase, profile } = await requireOwner();
   requireSameClinic(form, profile);
-  await supabase.from("clinics").update({ team_checked_at: new Date().toISOString() }).eq("id", profile.clinic_id);
+  await supabase.rpc("mark_team_checked", { p_clinic_id: profile.clinic_id });
   redirect("/?saved=alone");
 }
 

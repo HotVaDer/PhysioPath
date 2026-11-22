@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import * as z from "zod";
 
+import { AutoRefresh } from "@/app/components/paper/AutoRefresh";
 import { PaperLink } from "@/app/components/paper/Buttons";
 import { Panel, PanelTitle, StaffSheet } from "@/app/components/paper/StaffSheet";
 import { slotLabel } from "@/app/lib/notes/approval";
@@ -88,6 +89,7 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
   return (
     <StaffSheet profile={profile}>
       {justApproved && <ClearDraft />}
+      <AutoRefresh />
       <div className="flex flex-col gap-7">
         <p className="self-start rounded-md bg-note-green px-4 py-3 text-[19px]">
           <span className="font-bold text-action">✓ Εγκρίθηκε</span> στις {day.format(approvedAt)}, {time.format(approvedAt)}

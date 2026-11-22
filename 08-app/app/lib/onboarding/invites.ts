@@ -12,6 +12,22 @@ import { createAdminClient } from "@/app/lib/supabase/admin";
 // Both land on /invite/<token>. "data" fills the invite email's text: clinic, who invites, the role.
 const ROLE_IN_EMAIL: Record<string, string> = { physio: "φυσιοθεραπευτή", assistant: "βοηθό" };
 
+// The owner never gets invite tokens (the secret in the link): add_invites returns ids only. The server
+// reads the tokens here with the secret key, only for open invites of the owner's own clinic, just to
+// write the emails. No secret key: nothing can be sent anyway.
+export async function inviteTokens(ids: string[], clinicId: string): Promise<{ email: string; role: string; token: string }[]> {
+  const admin = createAdminClient();
+  if (!admin || ids.length === 0) return [];
+  const { data, error } = await admin
+    .from("invites")
+    .select("email, role, token")
+    .in("id", ids)
+    .eq("clinic_id", clinicId)
+    .is("accepted_at", null);
+  if (error) console.error("Reading the invite tokens failed:", error.message);
+  return (data ?? []) as { email: string; role: string; token: string }[];
+}
+
 export async function sendInvites(
   invites: { email: string; role: string; token: string }[],
   from: { clinicName: string; ownerName: string },

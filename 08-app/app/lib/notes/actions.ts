@@ -2,7 +2,9 @@
 // «Έγκριση» on the review sheet. Anyone can send a POST, so this checks who is signed in (owner or
 // physio) and every field again, then calls approve_program() (new program + GeSY note + the card on
 // the board) or, for «Ίδιο πρόγραμμα», continue_program() (today's note + the card, with the stored
-// program). Each is one transaction. Nothing reaches the patient before this.
+// program). Each is one transaction, and checks everything again in the database: role, the clinic the
+// note was written in (still the open one?), patient, program and room (20261122140000). Nothing
+// reaches the patient before this.
 import { redirect } from "next/navigation";
 
 import { Approval, approvalErrors, cleanProgram, OTHER_CLINIC_NOTE, parseWhere, type ApprovalErrors } from "@/app/lib/notes/approval";
@@ -43,6 +45,7 @@ export async function approveNote(_: ApproveState, form: FormData): Promise<Appr
   }
   const { data, error } = same
     ? await supabase.rpc("continue_program", {
+        p_clinic_id: a.clinicId,
         p_draft_id: a.draftId,
         p_program_id: a.baseProgramId,
         p_note: a.note,
@@ -52,6 +55,7 @@ export async function approveNote(_: ApproveState, form: FormData): Promise<Appr
         p_slot: place?.slot ?? null,
       })
     : await supabase.rpc("approve_program", {
+        p_clinic_id: a.clinicId,
         p_draft_id: a.draftId,
         p_patient_id: a.patient.id,
         p_patient_label: a.patient.id ? null : a.patient.label.trim(),
@@ -64,8 +68,8 @@ export async function approveNote(_: ApproveState, form: FormData): Promise<Appr
       });
 
   if (error) {
-    // 23505 = the bed already has an open session (sessions_open_slot); the others = the room changed.
-    if (error.code === "23505" || /no such slot|room not in this clinic/.test(error.message)) {
+    // The bed already has an open card (sessions_open_slot), or the room changed meanwhile.
+    if (/sessions_open_slot|no such slot|room not in this clinic/.test(error.message)) {
       return { slotTaken: true, at: Date.now(), errors: { where: "Αυτή η θέση πιάστηκε μόλις τώρα. Διαλέξτε άλλη." } };
     }
     if (/program not found/.test(error.message)) {
@@ -74,6 +78,8 @@ export async function approveNote(_: ApproveState, form: FormData): Promise<Appr
     if (/patient not found/.test(error.message)) {
       return { errors: { patient: "Ο ασθενής δεν βρέθηκε (ίσως αρχειοθετήθηκε). Διαλέξτε άλλον ή γράψτε νέο." } };
     }
+    // Another clinic was opened (another tab) between the check above and the database: nothing saved.
+    if (/other clinic/.test(error.message)) return { message: OTHER_CLINIC_NOTE };
     if (/not allowed/.test(error.message)) redirect("/");
     console.error(same ? "continue_program failed:" : "approve_program failed:", error.code, error.message);
     return { message: "Η έγκριση δεν αποθηκεύτηκε. Δοκιμάστε ξανά σε λίγο." };

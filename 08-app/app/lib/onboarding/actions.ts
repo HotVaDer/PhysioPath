@@ -156,7 +156,7 @@ export async function finishRegistration(_: FormState, form: FormData): Promise<
   }
 
   const { ownerName, clinicName, city, phone, beds } = parsed.data;
-  await saveDraft(supabase, user.id, { ownerName, clinicName, city, phone, rooms: firstRoom(beds), team: [] });
+  await saveDraft(supabase, { ownerName, clinicName, city, phone, rooms: firstRoom(beds), team: [] });
   const { error } = await supabase.rpc("finish_onboarding");
   if (error) {
     console.error("finish_onboarding failed:", error);

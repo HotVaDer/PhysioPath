@@ -4,6 +4,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { AutoRefresh } from "@/app/components/paper/AutoRefresh";
 import { PaperLink, QuietSubmit } from "@/app/components/paper/Buttons";
 import { ConfirmSubmit } from "@/app/components/paper/ConfirmSubmit";
 import { FormAlert } from "@/app/components/paper/Notes";
@@ -27,6 +28,7 @@ export default async function ClinicsPage({ searchParams }: PageProps<"/clinics"
 
   return (
     <StaffSheet profile={profile}>
+      <AutoRefresh />
       <div className="flex max-w-[720px] flex-col gap-6">
         <Link href="/" className="min-h-11 content-center self-start">
           <span aria-hidden="true">←</span> Πίσω στην αρχική
