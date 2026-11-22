@@ -1,14 +1,18 @@
 "use client";
 // The patient's screen during the session, on their own phone (from the QR code). No login.
-// «One thing at a time» (user's choice 2026-11-18): no boxes, the exercise and the set number big,
-// one green button fixed at the bottom under the thumb, «Αναίρεση» a small link under it.
-// The top bar keeps «Αα» (text size) and «Φυσιοθεραπευτής» (the call) always in reach; «Όλες» opens
-// the list of exercises (tapping one tells the board: 'show'). Calling only passes the message on.
+// Layout from the canvas boards «Patient · session» and «Patient · hold countdown» (page «Αίθουσα»),
+// drawn in the app's paper look (user's choice 2026-11-22), top to bottom:
+//   the clinic and «Για: <name>» · «Άσκηση 2 από 3» and one box per exercise (tap one to go there; the
+//   board hears it: 'show') · the exercise centred: name, dose, notes, «Σετ 2 από 3» with a circle per
+//   set, the big hold ring · «Τελείωσα το σετ 2» · «Αναίρεση» · «Μετά: …» · «Χρειάζομαι τον
+//   φυσιοθεραπευτή» (the choices and the "called" message open right there).
+// The board's video box («Δείτε πώς γίνεται») is left out until exercises have videos.
 // Built for old phones and older eyes: a plain request every 3 s (no websockets), sizes in rem so the
 // text-size choice makes everything bigger.
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { LogoMark } from "@/app/components/paper/Logo";
+import { PatientSheet } from "@/app/components/patient/PatientSheet";
 import { TextSizeControl, useTextSize } from "@/app/components/patient/TextSize";
 import { allDone, exercisesDone, isDone, readPatientView, undoExercise, type PatientAction, type PatientView } from "@/app/lib/board/session";
 import { cx } from "@/app/lib/cx";
@@ -18,10 +22,10 @@ import { HoldTimer } from "@/app/s/[token]/HoldTimer";
 
 const POLL_MS = 3000; // picks up the staff side: a call they saw, «Τέλος»
 
-// Today's dose without the sets (the big counter shows those), without "how often" (that's for home)
-// and without a hold the countdown already shows.
+// Today's dose in full words («3 σετ × 10 επαναλήψεις»), without "how often" (that's for home) and
+// without a hold the ring already shows. One set is just «10 επαναλήψεις», not «1 σετ × …».
 const todayDose = (exercise: Exercise) =>
-  doseLines({ ...exercise, sets: null, frequency: null, hold: holdSeconds(exercise.hold) ? null : exercise.hold });
+  doseLines({ ...exercise, sets: (exercise.sets ?? 0) > 1 ? exercise.sets : null, frequency: null, hold: holdSeconds(exercise.hold) ? null : exercise.hold });
 
 async function request(token: string, action?: PatientAction): Promise<PatientView> {
   const response = await fetch(`/api/s/${token}`, {
@@ -35,9 +39,14 @@ async function request(token: string, action?: PatientAction): Promise<PatientVi
   return view;
 }
 
-const link = "min-h-11 cursor-pointer text-action underline underline-offset-[3px] hover:text-ink disabled:cursor-default disabled:text-muted disabled:no-underline";
-const barButton = "min-h-11 cursor-pointer border-2 px-2.5 text-[0.9rem] font-bold";
-type Panel = "none" | "size" | "call" | "list";
+// The paper look's buttons: square, full width, at least 48 px (here 4 rem, growing with «Αα»).
+const big = "flex min-h-[3.5rem] w-full cursor-pointer items-center justify-center gap-2.5 px-4 py-2 text-center text-[1.1rem] leading-snug font-bold";
+const primary = cx(big, "bg-action text-white hover:bg-action-hover disabled:cursor-wait disabled:opacity-80");
+const outlined = cx(big, "min-h-[3rem] border-[3px] border-action bg-white px-3 text-[1rem] text-action hover:text-action-hover");
+const switchedOff = cx(big, "cursor-default border-2 border-dashed border-line bg-transparent text-muted");
+const quietLink = "min-h-12 cursor-pointer text-ink underline underline-offset-[3px] hover:decoration-2 disabled:cursor-default";
+
+type Panel = "none" | "size" | "call";
 
 export function SessionScreen({ token, initial }: { token: string; initial: PatientView }) {
   const [view, setView] = useState(initial);
@@ -45,7 +54,7 @@ export function SessionScreen({ token, initial }: { token: string; initial: Pati
   const [offline, setOffline] = useState(false);
   const [panel, setPanel] = useState<Panel>("none");
   const [justFinished, setJustFinished] = useState<string | null>(null);
-  const [looking, setLooking] = useState(false); // the patient opened an exercise from the list
+  const [looking, setLooking] = useState(false); // the patient opened an exercise from the boxes
   const [textSize, changeTextSize] = useTextSize();
   const pendingRef = useRef(false);
   const tapsRef = useRef(0); // counts taps, so a refresh that started before a tap can't undo it
@@ -120,6 +129,7 @@ export function SessionScreen({ token, initial }: { token: string; initial: Pati
 
   async function finishSet() {
     if (!exercise || allSetsDone) return;
+    setJustFinished(null);
     const name = exercise.name;
     const lastSet = setsDone + 1 >= sets;
     if ((await send({ type: "setDone", exercise: shown, set: setsDone + 1 })) && lastSet) {
@@ -137,7 +147,6 @@ export function SessionScreen({ token, initial }: { token: string; initial: Pati
   function goTo(i: number) {
     setJustFinished(null);
     setLooking(true);
-    setPanel("none");
     setView((v) => ({ ...v, current: i })); // at once on screen; the database hears it next
     void send({ type: "show", exercise: i });
   }
@@ -148,247 +157,286 @@ export function SessionScreen({ token, initial }: { token: string; initial: Pati
 
   const toggle = (p: Panel) => setPanel((open) => (open === p ? "none" : p));
 
-  // ---------- top bar: always the same ----------
-  const topBar = (
-    <header className="sticky top-0 z-10 border-b-2 border-hairline bg-sheet">
-      <div className="mx-auto flex max-w-xl flex-wrap items-center justify-end gap-2 px-4 py-2">
-        <LogoMark className="mr-auto h-8 w-8" />
-        <span className="sr-only">{view.clinicName}</span>
-        <button
-          type="button"
-          aria-expanded={panel === "size"}
-          aria-label="Μέγεθος γραμμάτων"
-          onClick={() => toggle("size")}
-          className={cx(barButton, panel === "size" ? "border-ink bg-white" : "border-line bg-sheet")}
-        >
-          Αα
-        </button>
-        {!finished && (
-          <button
-            type="button"
-            aria-expanded={panel === "call"}
-            aria-label="Χρειάζομαι τον φυσιοθεραπευτή"
-            onClick={() => toggle("call")}
-            disabled={Boolean(view.call)}
-            className={cx(barButton, "border-action text-action disabled:border-line disabled:text-muted", panel === "call" ? "bg-note-green" : "bg-sheet")}
-          >
-            Φυσιοθεραπευτής
-          </button>
-        )}
-      </div>
-
+  // The bar above the sheet: the «Φ» and «Αα» (the three text sizes, shared with the home program).
+  const bar = (
+    <>
+      <LogoMark className="size-[2rem]" />
+      <button
+        type="button"
+        aria-expanded={panel === "size"}
+        aria-label="Αα, μέγεθος γραμμάτων"
+        onClick={() => toggle("size")}
+        className={cx("ml-auto flex min-h-12 cursor-pointer items-center border-2 px-3 text-[0.95rem] font-bold text-ink", panel === "size" ? "border-ink bg-white" : "border-line bg-sheet")}
+      >
+        Αα
+      </button>
       {panel === "size" && (
-        <div className="mx-auto max-w-xl px-4 pb-4">
+        <div className="basis-full pt-1 pb-2">
           <TextSizeControl value={textSize} onChange={changeTextSize} />
         </div>
       )}
+    </>
+  );
 
-      {panel === "call" && !view.call && (
-        <fieldset className="mx-auto flex max-w-xl flex-col gap-3 px-4 pb-4">
-          <legend className="mb-3 pt-1 font-bold">Γιατί χρειάζεστε τον φυσιοθεραπευτή;</legend>
-          <button type="button" disabled={pending} onClick={() => void call("question")} className="min-h-[3.25rem] cursor-pointer border-[3px] border-action bg-white font-bold text-action">
-            Έχω απορία
-          </button>
-          <button type="button" disabled={pending} onClick={() => void call("pain")} className="min-h-[3.25rem] cursor-pointer bg-error font-bold text-white">
-            Πονάω
-          </button>
-          <button type="button" onClick={() => setPanel("none")} className={cx(link, "self-center")}>
-            Πίσω
-          </button>
-        </fieldset>
+  // Who the session is with: the clinic, and «Για: <name>» as on the home program.
+  const patient = isBlank(view.program.patient_first_name) ? null : view.program.patient_first_name!.trim();
+  const letterhead = (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
+      <p className="font-display text-[1.2rem] leading-tight">{view.clinicName.trim()}</p>
+      {patient && (
+        <p>
+          <span className="text-muted">Για:</span> <span className="font-typed text-[1.05rem] font-bold">{patient}</span>
+        </p>
       )}
-
-      {view.call && (
-        <div role="status" className={cx(view.call.reason === "pain" ? "bg-tab-pink" : "bg-tab-yellow")}>
-          <div className="mx-auto flex max-w-xl flex-wrap items-center justify-between gap-x-4 px-4 py-2">
-            <p className="font-bold">
-              Ο φυσιοθεραπευτής ειδοποιήθηκε. {view.call.reason === "pain" ? "Είπατε ότι πονάτε." : "Είπατε ότι έχετε απορία."}
-            </p>
-            <button type="button" disabled={pending} onClick={() => void send({ type: "cancelCall" })} className={link}>
-              Ακύρωση κλήσης
-            </button>
-          </div>
-        </div>
-      )}
-
-      {offline && (
-        <div role="alert" className="bg-tab-pink">
-          <div className="mx-auto flex max-w-xl flex-wrap items-center justify-between gap-x-4 px-4 py-2">
-            <p className="font-bold">Δεν υπάρχει σύνδεση. Δοκιμάζουμε ξανά μόνο του.</p>
-            <button type="button" onClick={() => void refresh()} className={link}>
-              Δοκιμάστε ξανά
-            </button>
-          </div>
-        </div>
-      )}
-    </header>
+    </div>
   );
 
   // ---------- after «Τέλος» from the staff ----------
   if (finished) {
     return (
-      <div className="desk-pattern min-h-dvh text-[1rem] leading-normal">
-        {topBar}
-        <main id="main" className="mx-auto flex min-h-dvh max-w-xl flex-col gap-4 bg-sheet px-4 pt-10 pb-16">
-          <p aria-hidden="true" className="font-display text-[3rem] leading-none text-action">
-            ✓
-          </p>
-          <h1 className="font-display text-[1.8rem] leading-tight">Η συνεδρία ολοκληρώθηκε</h1>
-          <p>Ευχαριστούμε! Το πρόγραμμα για το σπίτι είναι έτοιμο.</p>
+      <PatientSheet bar={bar} letterhead={letterhead}>
+        <section aria-labelledby="finished" className="flex flex-col items-center gap-4 pt-2 text-center">
+          <DoneMark />
+          <h1 id="finished" className="font-display text-[min(2rem,10vw)] leading-[1.15] text-balance">
+            Η συνεδρία ολοκληρώθηκε
+          </h1>
+          <p className="text-[1.15rem]">Ευχαριστούμε! Το πρόγραμμα για το σπίτι είναι έτοιμο.</p>
           {view.homeToken && (
-            <a
-              href={`/p/${view.homeToken}`}
-              className="mt-4 flex min-h-[3.5rem] items-center justify-center bg-action px-4 text-[1.1rem] font-bold text-white no-underline hover:bg-action-hover hover:text-white"
-            >
-              Το πρόγραμμα για το σπίτι
+            <a href={`/p/${view.homeToken}`} className={cx(primary, "mt-3 no-underline hover:text-white")}>
+              Το πρόγραμμα για το σπίτι <span aria-hidden="true">→</span>
             </a>
           )}
-        </main>
-      </div>
+        </section>
+      </PatientSheet>
     );
   }
 
-  return (
-    <div className="desk-pattern min-h-dvh text-[1rem] leading-normal">
-      {topBar}
-
-      <main id="main" className="mx-auto flex min-h-dvh max-w-xl flex-col gap-6 bg-sheet px-4 pt-4 pb-[11rem]">
-        {/* Where we are: «Άσκηση 1 από 3», a thin line in parts, «Όλες» opens the list. */}
-        <nav aria-label="Οι ασκήσεις της συνεδρίας" className="flex flex-col gap-2">
-          <div className="flex items-baseline justify-between gap-4">
-            <p className="text-muted" aria-live="polite">
-              {exercise ? `Άσκηση ${shown + 1} από ${total}` : `${exercisesDone(view)} από ${total} ασκήσεις έγιναν`}
-            </p>
-            {total > 1 && (
-              <button type="button" aria-expanded={panel === "list"} onClick={() => toggle("list")} className={link}>
-                {panel === "list" ? "Κλείσιμο" : "Όλες οι ασκήσεις"}
+  // ---------- the exercises as boxes: where we are, and tap one to go there ----------
+  const boxes = (
+    <nav aria-label="Οι ασκήσεις της συνεδρίας" className="flex flex-col gap-2">
+      <p aria-live="polite" className="font-bold text-muted">
+        {exercise ? `Άσκηση ${shown + 1} από ${total}` : `${exercisesDone(view)} από ${total} ασκήσεις έγιναν`}
+      </p>
+      <ol className="flex flex-wrap gap-2">
+        {view.program.exercises.map((e, i) => {
+          const complete = isDone(view, i);
+          const current = i === shown;
+          return (
+            <li key={i} className="min-w-[3.25rem] flex-1">
+              <button
+                type="button"
+                onClick={() => goTo(i)}
+                aria-current={current ? "step" : undefined}
+                aria-label={`Άσκηση ${i + 1}: ${e.name}${complete ? ", έγινε" : ""}${current ? ", τώρα" : ""}`}
+                className={cx(
+                  "flex min-h-[3rem] w-full cursor-pointer items-center justify-center gap-1.5 font-display text-[1.2rem] leading-none",
+                  current
+                    ? "border-[3px] border-ink bg-white text-ink"
+                    : complete
+                      ? "border-2 border-action bg-action text-white"
+                      : "border-2 border-line bg-sheet text-muted hover:border-ink",
+                )}
+              >
+                {complete && <span aria-hidden="true">✓</span>}
+                <span aria-hidden="true">{i + 1}</span>
               </button>
-            )}
-          </div>
-          <div className="flex gap-1.5" aria-hidden="true">
-            {view.setsTarget.map((_, i) => (
-              <span key={i} className={cx("h-2 flex-1", isDone(view, i) ? "bg-action" : i === shown ? "bg-ink" : "bg-hairline")} />
-            ))}
-          </div>
+            </li>
+          );
+        })}
+      </ol>
+      {total > 1 && <p className="text-[0.9rem] text-muted">Πατήστε ένα κουτί για να πάτε σε άλλη άσκηση.</p>}
+    </nav>
+  );
 
-          {panel === "list" && (
-            <ol className="mt-2 border-t-2 border-hairline">
-              {view.program.exercises.map((e, i) => (
-                <li key={i} className="border-b border-hairline">
-                  <button
-                    type="button"
-                    onClick={() => goTo(i)}
-                    aria-current={i === shown ? "step" : undefined}
-                    className="flex min-h-[3.25rem] w-full cursor-pointer items-center gap-3 py-2 text-left hover:bg-note-green"
-                  >
-                    <span className="w-6 shrink-0 font-bold text-muted">{i + 1}</span>
-                    <span className={cx("flex-1", i === shown && "font-bold")}>{e.name}</span>
-                    <span className="shrink-0 text-muted">{isDone(view, i) ? "✓ έγινε" : i === shown ? "τώρα" : ""}</span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-          )}
-        </nav>
+  // ---------- at the bottom: calling the physio (the choices and the message open right here) ----------
+  const callArea = view.call ? (
+    <section role="status" className={cx("flex flex-col gap-2 px-4 py-4", view.call.reason === "pain" ? "border-[3px] border-error bg-tab-pink" : "border-2 border-ink bg-tab-yellow")}>
+      <p className="font-display text-[1.3rem] leading-tight">Ο φυσιοθεραπευτής ειδοποιήθηκε</p>
+      <p className="font-bold">{view.call.reason === "pain" ? "Είπατε ότι πονάτε." : "Είπατε ότι έχετε απορία."}</p>
+      <button type="button" disabled={pending} onClick={() => void send({ type: "cancelCall" })} className={cx(quietLink, "self-start")}>
+        Ακύρωση κλήσης
+      </button>
+    </section>
+  ) : panel === "call" ? (
+    <fieldset className="flex flex-col gap-3">
+      <legend className="pb-3 font-display text-[1.3rem] leading-tight">Τι συμβαίνει;</legend>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => void call("question")}
+        className="flex min-h-[4.25rem] cursor-pointer items-center gap-3 border-2 border-ink bg-tab-yellow px-4 text-left text-[1.15rem] font-bold text-ink"
+      >
+        <span aria-hidden="true" className="grid size-[1.9rem] flex-none place-items-center rounded-full bg-ink font-typed text-tab-yellow">
+          ?
+        </span>
+        Έχω απορία
+      </button>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => void call("pain")}
+        className="flex min-h-[4.25rem] cursor-pointer items-center gap-3 border-[3px] border-error bg-tab-pink px-4 text-left text-[1.15rem] font-bold text-ink"
+      >
+        <span aria-hidden="true" className="grid size-[1.9rem] flex-none place-items-center rounded-full bg-error font-typed text-white">
+          !
+        </span>
+        Πονάω
+      </button>
+      <button type="button" onClick={() => setPanel("none")} className={cx(quietLink, "self-start text-action")}>
+        Πίσω
+      </button>
+    </fieldset>
+  ) : (
+    <button type="button" onClick={() => toggle("call")} className={cx(big, "min-h-[3rem] border-2 border-ink bg-sheet px-3 text-[1rem] text-ink hover:bg-white")}>
+      <BubbleIcon />
+      Χρειάζομαι τον φυσιοθεραπευτή
+    </button>
+  );
 
-        {justFinished && exercise && (
-          <p role="status" className="font-bold text-action">
-            ✓ «{justFinished}» έγινε. Τώρα:
+  const undoButton = (
+    <button type="button" disabled={pending || undoTarget < 0} onClick={() => void undo()} className={undoTarget < 0 ? switchedOff : outlined}>
+      <UndoIcon />
+      {undoTarget >= 0 && view.setsTarget[undoTarget] > 1 ? "Αναίρεση τελευταίου σετ" : "Αναίρεση"}
+    </button>
+  );
+
+  const offlineNote = offline && (
+    <div role="alert" className="flex flex-wrap items-center justify-between gap-x-4 bg-tab-pink px-4 py-2">
+      <p className="font-bold">Δεν υπάρχει σύνδεση. Δοκιμάζουμε ξανά μόνο του.</p>
+      <button type="button" onClick={() => void refresh()} className={quietLink}>
+        Δοκιμάστε ξανά
+      </button>
+    </div>
+  );
+
+  // ---------- everything done ----------
+  if (!exercise) {
+    return (
+      <PatientSheet bar={bar} letterhead={letterhead}>
+        <div className="flex flex-col gap-6">
+          {boxes}
+          <section aria-labelledby="all-done" className="flex flex-col items-center gap-3 border-t-2 border-hairline pt-6 text-center">
+            <DoneMark />
+            <h1 id="all-done" className="font-display text-[min(2rem,10vw)] leading-[1.15] text-balance">
+              Τελειώσατε τις ασκήσεις
+            </h1>
+            <p className="text-[1.15rem]">Μπράβο! Ο φυσιοθεραπευτής το βλέπει στην οθόνη του.</p>
+          </section>
+          {offlineNote}
+          {undoButton}
+          <div className="pt-2">{callArea}</div>
+        </div>
+      </PatientSheet>
+    );
+  }
+
+  // ---------- one exercise ----------
+  return (
+    <PatientSheet bar={bar} letterhead={letterhead}>
+      <div className="flex flex-col gap-4">
+        {boxes}
+
+        {justFinished && (
+          <p role="status" className="flex items-center gap-3 bg-note-green px-4 py-3 font-bold">
+            <span aria-hidden="true" className="grid size-[2rem] flex-none place-items-center rounded-full bg-action text-white">
+              ✓
+            </span>
+            <span>{`«${justFinished}» έγινε. Τώρα:`}</span>
           </p>
         )}
 
-        {exercise ? (
-          <section aria-labelledby="exercise-name" className="flex flex-col gap-5">
-            <div className="flex flex-col gap-1">
-              <h1 id="exercise-name" className="font-display text-[1.6rem] leading-tight">
-                {exercise.name}
-              </h1>
-              {todayDose(exercise).map((line) => (
-                <p key={line} className="text-[1.1rem]">
-                  {line}
-                </p>
-              ))}
-              {!isBlank(exercise.notes) && <p className="text-muted">{exercise.notes}</p>}
-            </div>
-
-            {/* The set counter: the biggest thing on the screen. */}
-            <div>
-              <p className="text-muted">Σετ</p>
-              {allSetsDone ? (
-                <p className="font-display text-[2.4rem] leading-tight text-action">✓ Έγινε</p>
-              ) : (
-                <p className="font-display leading-none">
-                  <span className="text-[4.5rem]">{setNumber}</span>
-                  <span className="text-[1.5rem] text-muted"> από {sets}</span>
-                </p>
-              )}
-              {sets > 1 && (
-                <ol className="mt-3 flex gap-2.5">
-                  {Array.from({ length: sets }, (_, i) => (
-                    <li
-                      key={i}
-                      className={cx(
-                        "size-[1.1rem] rounded-full border-2",
-                        i < setsDone ? "border-action bg-action" : i === setsDone ? "border-ink" : "border-line",
-                      )}
-                    >
-                      <span className="sr-only">{`Σετ ${i + 1}${i < setsDone ? ", έγινε" : ""}`}</span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </div>
-
-            {hold && !allSetsDone && <HoldTimer key={`${shown}-${setNumber}`} seconds={hold} />}
-
-            {next && (
-              <p className="border-t border-hairline pt-3 text-muted">
-                Μετά: <span className="text-ink">{next.name}</span>
-              </p>
-            )}
-            {!next && !allSetsDone && <p className="border-t border-hairline pt-3 text-muted">Αυτή είναι η τελευταία άσκηση.</p>}
-          </section>
-        ) : (
-          <section aria-labelledby="all-done" className="flex flex-col gap-3 pt-6">
-            <p aria-hidden="true" className="font-display text-[3rem] leading-none text-action">
-              ✓
+        {/* The exercise, centred: name, dose, notes, the sets, the hold. */}
+        <section aria-labelledby="exercise-name" className="flex flex-col items-center gap-2 border-t-2 border-hairline pt-4 text-center">
+          <h1 id="exercise-name" className="font-display text-[min(1.75rem,8.5vw)] leading-[1.1] text-balance">
+            {exercise.name}
+          </h1>
+          {todayDose(exercise).map((line, i) => (
+            <p key={i} className={cx("text-[1.3rem]", i === 0 && "font-bold")}>
+              {line}
             </p>
-            <h1 id="all-done" className="font-display text-[1.8rem] leading-tight">
-              Τελειώσατε τις ασκήσεις
-            </h1>
-            <p>Μπράβο! Ο φυσιοθεραπευτής το βλέπει στην οθόνη του.</p>
-          </section>
-        )}
-      </main>
+          ))}
+          {!isBlank(exercise.notes) && <p className="text-[1.05rem] text-muted">{exercise.notes}</p>}
 
-      {/* Under the thumb: the one thing to press, and a small «Αναίρεση». */}
-      <div className="fixed inset-x-0 bottom-0 border-t-2 border-hairline bg-sheet pb-[env(safe-area-inset-bottom)]">
-        <div className="mx-auto flex max-w-xl flex-col items-center gap-1 px-4 pt-3 pb-2">
-          {exercise && !allSetsDone && (
-            <button
-              type="button"
-              disabled={pending}
-              aria-busy={pending}
-              onClick={() => void finishSet()}
-              className="flex min-h-[3.75rem] w-full cursor-pointer items-center justify-center bg-action px-4 text-[1.15rem] font-bold text-white hover:bg-action-hover disabled:cursor-wait disabled:opacity-80"
-            >
+          {sets > 1 && (
+            <div className="flex flex-col items-center gap-2 pt-1">
+              <p className="text-[1.1rem] font-bold text-muted">{allSetsDone ? "Όλα τα σετ έγιναν" : `Σετ ${setNumber} από ${sets}`}</p>
+              <ol aria-label="Τα σετ" className="flex flex-wrap justify-center gap-3">
+                {Array.from({ length: sets }, (_, i) => (
+                  <li
+                    key={i}
+                    className={cx(
+                      "grid size-[3rem] place-items-center rounded-full font-display text-[1.3rem] leading-none",
+                      i < setsDone ? "bg-action text-white" : i === setsDone ? "border-[3px] border-action text-ink" : "border-[3px] border-line text-muted",
+                    )}
+                  >
+                    <span aria-hidden="true">{i < setsDone ? "✓" : i + 1}</span>
+                    <span className="sr-only">{`Σετ ${i + 1}${i < setsDone ? ", έγινε" : ""}`}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {hold && !allSetsDone && (
+            <div className="w-full pt-2">
+              <HoldTimer key={`${shown}-${setNumber}`} seconds={hold} />
+            </div>
+          )}
+        </section>
+
+        {offlineNote}
+
+        <div className="flex flex-col gap-2.5">
+          {allSetsDone ? (
+            <button type="button" disabled className={switchedOff}>
+              Η άσκηση ολοκληρώθηκε
+            </button>
+          ) : (
+            <button type="button" disabled={pending} aria-busy={pending} onClick={() => void finishSet()} className={primary}>
+              <span aria-hidden="true">✓</span>
               {sets > 1 ? `Τελείωσα το σετ ${setNumber}` : "Τελείωσα την άσκηση"}
             </button>
           )}
-          {exercise && allSetsDone && next && (
-            <button
-              type="button"
-              onClick={() => goTo(nextIndex)}
-              className="flex min-h-[3.75rem] w-full cursor-pointer items-center justify-center bg-action px-4 text-[1.15rem] font-bold text-white hover:bg-action-hover"
-            >
-              Στην επόμενη άσκηση
-            </button>
-          )}
-          <button type="button" disabled={pending || undoTarget < 0} onClick={() => void undo()} className={link}>
-            {undoTarget >= 0 && view.setsTarget[undoTarget] > 1 ? "Αναίρεση τελευταίου σετ" : "Αναίρεση"}
-          </button>
+          {undoButton}
         </div>
+
+        {/* What comes after this one. */}
+        <div className="flex flex-col gap-0.5 bg-note-green px-4 py-3">
+          <p className="font-bold text-muted">{next ? "Μετά" : "Αυτή είναι η τελευταία άσκηση"}</p>
+          <p className="font-display text-[1.2rem] leading-snug">{next ? next.name : "Μετά τελειώνει η συνεδρία"}</p>
+          <p className="text-muted">{next ? todayDose(next).join(" · ") : "Ο φυσιοθεραπευτής το βλέπει στην οθόνη του."}</p>
+        </div>
+
+        <div className="pt-2">{callArea}</div>
       </div>
-    </div>
+    </PatientSheet>
+  );
+}
+
+// A big green ✓, for «Τελειώσατε» and «Η συνεδρία ολοκληρώθηκε».
+function DoneMark() {
+  return (
+    <span aria-hidden="true" className="grid size-[3.5rem] place-items-center rounded-full bg-action font-display text-[1.9rem] leading-none text-white">
+      ✓
+    </span>
+  );
+}
+
+// A curved arrow back, as on the board's «Αναίρεση». Decoration: the words say it.
+function UndoIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[1.4rem] flex-none" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 14L4 9l5-5" />
+      <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+    </svg>
+  );
+}
+
+// A speech bubble, as on the board's call button. Decoration: the words say it.
+function BubbleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[1.4rem] flex-none" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.5 11.5a8.5 8.5 0 0 1-12.3 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5z" />
+    </svg>
   );
 }

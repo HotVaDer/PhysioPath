@@ -84,19 +84,20 @@ describe("SessionScreen", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Ισομετρική έξω στροφή" })).toBeInTheDocument();
     expect(screen.getByText(/«Ολίσθηση στον τοίχο» έγινε/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Ξεκίνα το κράτημα" })).toBeInTheDocument();
-    expect(screen.getByText("Κράτημα 10 δευτερόλεπτα")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Ξεκίνα · 10″\s*το κράτημα$/ })).toBeInTheDocument();
+    expect(screen.getByText("Πατήστε όταν είστε έτοιμοι")).toBeInTheDocument();
+    expect(screen.queryByText(/1 σετ/)).not.toBeInTheDocument(); // one set is just the reps
     expect(sent).toEqual([
       { type: "setDone", exercise: 0, set: 1 },
       { type: "setDone", exercise: 0, set: 2 },
     ]);
   });
 
-  it("«Όλες οι ασκήσεις» → another exercise; the board hears it ('show')", async () => {
+  it("a box per exercise: tapping one goes there; the board hears it ('show')", async () => {
     const sent = fakeServer(start());
     render(<SessionScreen token={TOKEN} initial={start()} />);
-    await userEvent.click(screen.getByRole("button", { name: "Όλες οι ασκήσεις" }));
-    await userEvent.click(screen.getByRole("button", { name: /Εκκρεμές/ }));
+    expect(screen.getByRole("button", { name: /^Άσκηση 1: Ολίσθηση στον τοίχο, τώρα$/ })).toHaveAttribute("aria-current", "step");
+    await userEvent.click(screen.getByRole("button", { name: /^Άσκηση 3: Εκκρεμές/ }));
     expect(screen.getByRole("heading", { level: 1, name: "Εκκρεμές" })).toBeInTheDocument();
     expect(screen.getByText("Άσκηση 3 από 3")).toBeInTheDocument();
     expect(sent).toEqual([{ type: "show", exercise: 2 }]);
@@ -110,13 +111,14 @@ describe("SessionScreen", () => {
     expect(sent).toEqual([{ type: "undoSet", exercise: 0, set: 2 }]);
   });
 
-  it("«Φυσιοθεραπευτής» in the top bar: the reason, then «ειδοποιήθηκε» and cancel", async () => {
+  it("«Χρειάζομαι τον φυσιοθεραπευτή» at the bottom: the reason, then «ειδοποιήθηκε» and cancel", async () => {
     const sent = fakeServer(start());
     render(<SessionScreen token={TOKEN} initial={start()} />);
     await userEvent.click(screen.getByRole("button", { name: "Χρειάζομαι τον φυσιοθεραπευτή" }));
     await userEvent.click(screen.getByRole("button", { name: "Πονάω" }));
-    expect(await screen.findByText(/Ο φυσιοθεραπευτής ειδοποιήθηκε\. Είπατε ότι πονάτε\./)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Χρειάζομαι τον φυσιοθεραπευτή" })).toBeDisabled();
+    expect(await screen.findByText("Ο φυσιοθεραπευτής ειδοποιήθηκε")).toBeInTheDocument();
+    expect(screen.getByText("Είπατε ότι πονάτε.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Χρειάζομαι τον φυσιοθεραπευτή" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Ακύρωση κλήσης" }));
     expect(await screen.findByRole("button", { name: "Χρειάζομαι τον φυσιοθεραπευτή" })).toBeEnabled();
     expect(sent).toEqual([{ type: "call", reason: "pain" }, { type: "cancelCall" }]);
@@ -135,9 +137,14 @@ describe("SessionScreen", () => {
     expect(screen.queryByRole("button", { name: /Τελείωσα/ })).not.toBeInTheDocument();
   });
 
-  it("has no accessibility problems", async () => {
+  it("has no accessibility problems: the exercise, the call choices, and everything done", async () => {
     fakeServer(start());
-    const { container } = render(<SessionScreen token={TOKEN} initial={start()} />);
+    const { container, unmount } = render(<SessionScreen token={TOKEN} initial={start()} />);
     await expectNoA11yViolations(container);
+    await userEvent.click(screen.getByRole("button", { name: "Χρειάζομαι τον φυσιοθεραπευτή" }));
+    await expectNoA11yViolations(container);
+    unmount();
+    const done = render(<SessionScreen token={TOKEN} initial={start({ setsDone: [2, 1, 1], current: 2 })} />);
+    await expectNoA11yViolations(done.container);
   });
 });

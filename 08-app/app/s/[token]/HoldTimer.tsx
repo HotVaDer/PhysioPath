@@ -1,10 +1,12 @@
 "use client";
-// Countdown for a hold the physio said («κρατήστε 10 δευτερόλεπτα»). The patient starts it when ready;
-// a small ring empties around the seconds, a short vibration at the end where the phone supports it,
-// and the state in words for screen readers. One row, so the set number stays the biggest thing.
+// Countdown for a hold the physio said («κρατήστε 10 δευτερόλεπτα»), laid out as on the canvas board
+// «Patient · hold countdown»: a big ring with the seconds in the middle; beside it (so a whole exercise
+// fits one phone screen) the state in words and the button to start (or start again). The patient starts it when ready. A short
+// vibration at the end where the phone supports it. Paper look: green ring on a hairline track, ink
+// numbers, square button.
 import { useEffect, useState } from "react";
 
-const R = 42;
+const R = 86;
 const CIRCUMFERENCE = 2 * Math.PI * R;
 
 export function HoldTimer({ seconds }: { seconds: number }) {
@@ -21,32 +23,68 @@ export function HoldTimer({ seconds }: { seconds: number }) {
   }, [left]);
 
   const shown = left ?? seconds;
-  const status = left === null ? `Κράτημα ${seconds} δευτερόλεπτα` : left > 0 ? "Κρατήστε…" : "Τέλος κρατήματος";
+  const status =
+    left === null
+      ? "Πατήστε όταν είστε έτοιμοι"
+      : left > 0
+        ? "Κρατήστε…"
+        : "Τέλος κρατήματος";
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="relative size-[4.5rem] shrink-0" aria-hidden="true">
-        <svg viewBox="0 0 100 100" className="size-full -rotate-90">
-          <circle cx="50" cy="50" r={R} fill="none" strokeWidth="8" className="stroke-hairline" />
+    <div className="flex w-full items-center gap-4">
+      {/* The ring: as big as the screen allows (capped on a small phone), the seconds very large. */}
+      <div
+        className="relative size-[min(8.5rem,38vw)] flex-none"
+        aria-hidden="true"
+      >
+        <svg viewBox="0 0 200 200" className="size-full -rotate-90">
           <circle
-            cx="50"
-            cy="50"
+            cx="100"
+            cy="100"
             r={R}
             fill="none"
-            strokeWidth="8"
+            strokeWidth="14"
+            className="stroke-hairline"
+          />
+          <circle
+            cx="100"
+            cy="100"
+            r={R}
+            fill="none"
+            strokeWidth="14"
             strokeDasharray={CIRCUMFERENCE}
             strokeDashoffset={CIRCUMFERENCE * (1 - shown / seconds)}
             className="stroke-action transition-[stroke-dashoffset] duration-1000 ease-linear"
           />
         </svg>
-        <span className="absolute inset-0 flex items-center justify-center font-display text-[1.6rem]">{shown}</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="font-display text-[min(3.6rem,16vw)] leading-[0.9]">
+            {shown}
+          </span>
+          <span className="text-[min(0.68rem,3vw)] font-bold text-muted">
+            δευτερόλεπτα
+          </span>
+        </div>
       </div>
-      <div className="flex flex-col items-start gap-1">
-        <p role="status" className="font-bold">
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-2 text-left">
+        <p
+          role="status"
+          className="min-h-[1.5rem] text-[1.05rem] leading-snug font-bold"
+        >
           {status}
         </p>
-        <button type="button" onClick={() => setLeft(seconds)} className="min-h-11 cursor-pointer text-action underline underline-offset-[3px] hover:text-ink">
-          {left === null ? "Ξεκίνα το κράτημα" : "Ξανά από την αρχή"}
+        <button
+          type="button"
+          onClick={() => setLeft(seconds)}
+          className="flex min-h-[3rem] w-full cursor-pointer items-center justify-center gap-2.5 border-[3px] border-action bg-white px-4 text-[1.05rem] font-bold text-action hover:text-action-hover"
+        >
+          <span aria-hidden="true" className="text-[0.85em]">
+            {left === null ? "▶" : "↺"}
+          </span>
+          {left === null ? `Ξεκίνα · ${seconds}″` : "Ξανά"}
+          <span className="sr-only">
+            {left === null ? "το κράτημα" : "από την αρχή"}
+          </span>
         </button>
       </div>
     </div>

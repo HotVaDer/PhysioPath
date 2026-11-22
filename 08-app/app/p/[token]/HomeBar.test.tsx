@@ -27,7 +27,7 @@ describe("HomeBar", () => {
     await user.click(aa);
     expect(aa).toHaveAttribute("aria-expanded", "true");
     await user.click(screen.getByRole("radio", { name: "Μεγάλα" }));
-    expect(document.documentElement.style.fontSize).toBe("175%");
+    expect(document.documentElement.style.fontSize).toBe("130%");
     expect(window.localStorage.getItem("physiopath:text-size")).toBe("xlarge"); // the same choice as on the session screen
     await expectNoA11yViolations(container);
   });

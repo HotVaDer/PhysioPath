@@ -1,7 +1,7 @@
 "use client";
 // Text size for the patient's pages (the session on their phone now, the home program in phase 5).
-// They start bigger than the staff pages (20px) and can go bigger still; the choice is remembered on
-// this phone. It works by changing the page's root size, so the patient pages size everything in rem.
+// Three sizes (16, 18.4, 20.8 px; made smaller on 2026-11-22 so a whole exercise fits an iPhone screen at
+// the first size); the choice is remembered on this phone. It works by changing the page's root size, so the patient pages size everything in rem.
 // (Ported from 03-prototype/app/features/patient/TextSize.tsx; the segmented control became 3 boxes.)
 import { useEffect, useState } from "react";
 
@@ -9,7 +9,7 @@ import { cx } from "@/app/lib/cx";
 
 export type TextSize = "normal" | "large" | "xlarge";
 
-const TEXT_SIZES: Record<TextSize, string> = { normal: "125%", large: "150%", xlarge: "175%" }; // 20, 24, 28px
+const TEXT_SIZES: Record<TextSize, string> = { normal: "100%", large: "115%", xlarge: "130%" }; // 16, 18.4, 20.8px
 const TEXT_SIZE_KEY = "physiopath:text-size";
 
 // Runs before React (the page puts it in an inline <script>), so the first paint is already the right size.
