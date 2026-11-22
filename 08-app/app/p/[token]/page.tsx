@@ -1,10 +1,13 @@
 // The patient's home program: what they open at home after a session. No login: the secret token in
-// the link is the key. Design «Γράμμα από την κλινική» (2026-11-18, replaces the PRHome board); what
+// the link is the key. The link works until the clinic approves a newer program for the same patient
+// (then a short card with the clinic's phone, never the new link: whoever has an old link may not be the
+// patient) or makes a new link for this one («Νέος σύνδεσμος»: then this token is simply gone). Design «Γράμμα από την κλινική» (2026-11-18, replaces the PRHome board); what
 // the patient sees is in HomeProgramLetter, which gets the data as props.
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
+import { Card } from "@/app/components/paper/Card";
 import { TEXT_SIZE_SCRIPT } from "@/app/components/patient/TextSize";
 import { createAnonClient } from "@/app/lib/supabase/admin";
 import { HomeProgramLetter } from "@/app/p/[token]/HomeProgramLetter";
@@ -45,6 +48,30 @@ const HomeProgram = z.object({
   clinicCity: z.string().nullable(),
   clinicPhone: z.string().nullable(),
 });
+// A newer program exists for this patient (home_program's status "newer", 20261122160000): only the clinic.
+const Newer = z.object({
+  status: z.literal("newer"),
+  clinicName: z.string(),
+  clinicPhone: z.string().nullable(),
+});
+
+export function NewerProgram({ clinicName, clinicPhone }: { clinicName: string; clinicPhone: string | null }) {
+  return (
+    <Card>
+      <h1 className="font-display text-[30px] leading-tight sm:text-[34px]">Υπάρχει νεότερο πρόγραμμα</h1>
+      <p>Η κλινική σας ενέκρινε νέο πρόγραμμα ασκήσεων. Αυτός ο σύνδεσμος ήταν για το προηγούμενο, γι&apos; αυτό δεν ανοίγει πια.</p>
+      <p>
+        Ζητήστε τον νέο σύνδεσμο από την κλινική «{clinicName}»
+        {clinicPhone ? (
+          <>
+            {", "}στο <a href={`tel:${clinicPhone.replace(/\s/g, "")}`}>{clinicPhone}</a>
+          </>
+        ) : null}
+        .
+      </p>
+    </Card>
+  );
+}
 
 export default async function HomeProgramPage({ params }: PageProps<"/p/[token]">) {
   const { token } = await params;
@@ -54,6 +81,8 @@ export default async function HomeProgramPage({ params }: PageProps<"/p/[token]"
   // No cookies, no login: the function only answers for this one token.
   const { data, error } = await createAnonClient().rpc("home_program", { p_token: valid.data });
   if (error) throw new Error("home_program failed"); // shows the error page; details stay in the server log
+  const newer = Newer.safeParse(data);
+  if (newer.success) return <NewerProgram clinicName={newer.data.clinicName} clinicPhone={newer.data.clinicPhone} />;
   const home = HomeProgram.safeParse(data);
   if (!home.success) notFound(); // wrong or old link
   return (

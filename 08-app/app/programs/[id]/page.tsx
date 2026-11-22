@@ -1,5 +1,8 @@
 // After «Έγκριση»: a green «Εγκρίθηκε» line, the QR code for the patient's phone (the session in the room,
 // or the home program), the link, and the GeSY note to copy into the GeSY portal.
+// «Νέος σύνδεσμος» (owner, physio): the old links stop at once and the page shows the new QR, e.g. after
+// a link went to the wrong number. The home link also stops once a newer program is approved for the
+// patient (20261122160000); the page says so.
 // Plain look (2026-11-17): no rubber stamp, tilted slips or capital labels. Assistants see the QR (they help patients scan it) but never the note:
 // the database gives them no rows from `notes`.
 import type { Metadata } from "next";
@@ -10,12 +13,15 @@ import * as z from "zod";
 
 import { AutoRefresh } from "@/app/components/paper/AutoRefresh";
 import { PaperLink } from "@/app/components/paper/Buttons";
+import { ConfirmSubmit } from "@/app/components/paper/ConfirmSubmit";
+import { FormAlert } from "@/app/components/paper/Notes";
 import { Panel, PanelTitle, StaffSheet } from "@/app/components/paper/StaffSheet";
 import { slotLabel } from "@/app/lib/notes/approval";
 import { GESY_LABELS, isBlank, noteAsText } from "@/app/lib/notes/format";
 import type { NoteLanguage } from "@/app/lib/notes/prompt";
 import { ClinicalNote, GESY_PARTS, readProgram, type ActivityCode } from "@/app/lib/notes/schema";
 import { requireMember } from "@/app/lib/onboarding/session";
+import { newProgramLink } from "@/app/lib/programs/actions";
 import { siteUrl } from "@/app/lib/site";
 
 import { ClearDraft } from "./ClearDraft";
@@ -35,6 +41,7 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
   const query = await searchParams;
   const noteId = z.uuid().safeParse(query.note);
   const justApproved = query.approved === "1";
+  const linkResult = query.link === "new" || query.link === "failed" ? query.link : null;
   const { supabase, user, profile } = await requireMember();
 
   const { data: program } = await supabase
@@ -46,7 +53,7 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
 
   const isPhysio = profile.role !== "assistant";
   const noteQuery = supabase.from("notes").select("activity_code, session_no, note_lang, note, session_id, created_at").eq("program_id", id);
-  const [{ data: patient }, { data: note }] = await Promise.all([
+  const [{ data: patient }, { data: note }, { count: newerCount }] = await Promise.all([
     program.patient_id
       ? supabase.from("patients").select("label").eq("id", program.patient_id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -56,7 +63,16 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
         ? noteQuery.eq("id", noteId.data).maybeSingle()
         : noteQuery.order("created_at", { ascending: false }).limit(1).maybeSingle()
       : Promise.resolve({ data: null }),
+    // A newer program for the same patient: this program's home link no longer opens.
+    program.patient_id
+      ? supabase
+          .from("programs")
+          .select("id", { count: "exact", head: true })
+          .eq("patient_id", program.patient_id)
+          .gt("approved_at", program.approved_at)
+      : Promise.resolve({ count: 0 }),
   ]);
+  const newer = (newerCount ?? 0) > 0;
   // The visit's own card on the board (none if it was home only); for assistants, the latest card.
   const sessionQuery = supabase.from("sessions").select("token, room_id, slot, finished_at");
   const { data: session } = note
@@ -122,12 +138,33 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
               </a>
             </div>
             <CopyButton text={link} label="Αντιγραφή συνδέσμου" done="Ο σύνδεσμος αντιγράφηκε." />
+            {linkResult === "new" && (
+              <p role="status" className="bg-note-green px-4 py-3">
+                <span className="font-semibold">Ο παλιός σύνδεσμος έκλεισε.</span> Δώστε στον ασθενή τον νέο κωδικό QR ή τον νέο σύνδεσμο.
+              </p>
+            )}
+            {linkResult === "failed" && <FormAlert>Ο σύνδεσμος δεν άλλαξε. Δοκιμάστε ξανά σε λίγο.</FormAlert>}
+            {newer && !inRoom && (
+              <p className="bg-tab-yellow px-4 py-3">
+                Υπάρχει νεότερο πρόγραμμα για {name}. Αυτός ο σύνδεσμος δεν ανοίγει πια: γράφει στον ασθενή να ζητήσει τον νέο.
+              </p>
+            )}
             <p className="max-w-[52ch]">
               {inRoom
                 ? "Όταν τελειώσει, πατήστε «Τέλος» στην κάρτα του στην αίθουσα. Τότε το κινητό του δείχνει το πρόγραμμα για το σπίτι."
                 : "Το πρόγραμμα δεν αλλάζει πια. Για αλλαγές: «Νέα συνεδρία» → «Αλλαγή προγράμματος», και ο ασθενής παίρνει νέο σύνδεσμο."}
             </p>
-            <p className="text-muted">Η οθόνη του ασθενή και ο πίνακας της αίθουσας έρχονται στο επόμενο βήμα της εφαρμογής.</p>
+            {isPhysio && (inRoom || !newer) && (
+              <form action={newProgramLink} className="flex flex-col gap-1">
+                <input type="hidden" name="clinicId" value={profile.clinic_id ?? ""} />
+                <input type="hidden" name="programId" value={program.id} />
+                {noteId.success && <input type="hidden" name="note" value={noteId.data} />}
+                <ConfirmSubmit question="Ο τωρινός σύνδεσμος θα σταματήσει να ανοίγει. Να φτιαχτεί νέος;" pending="Αλλαγή…">
+                  Νέος σύνδεσμος
+                </ConfirmSubmit>
+                <span className="text-base text-muted">Αν ο σύνδεσμος στάλθηκε σε λάθος αριθμό ή έμεινε σε ξένο κινητό.</span>
+              </form>
+            )}
           </div>
         </div>
 

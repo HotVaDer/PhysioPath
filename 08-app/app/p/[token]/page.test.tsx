@@ -6,7 +6,7 @@ const rpc = vi.hoisted(() => vi.fn());
 vi.mock("@/app/lib/supabase/admin", () => ({ createAnonClient: () => ({ rpc }) }));
 
 import { HomeProgramLetter } from "@/app/p/[token]/HomeProgramLetter";
-import HomeProgramPage, { metadata } from "@/app/p/[token]/page";
+import HomeProgramPage, { metadata, NewerProgram } from "@/app/p/[token]/page";
 
 const TOKEN = "3f0c2b9e-6a1d-4c8e-9b7a-1d2e3f4a5b6c";
 const NOT_FOUND = { digest: "NEXT_HTTP_ERROR_FALLBACK;404" }; // what notFound() throws: Next shows app/not-found.tsx
@@ -14,6 +14,7 @@ const open = (token: string) => HomeProgramPage({ params: Promise.resolve({ toke
 
 // A fictional clinic and patient, as home_program() returns them.
 const home = {
+  status: "ok",
   program: { title: "Αριστερό γόνατο", patient_first_name: "Ελένη", exercises: [{ name: "Γέφυρα γλουτών", sets: 3, reps: "10" }] },
   approvedAt: "2026-11-18T15:42:00Z",
   approvedBy: "Μαρία Κωνσταντίνου",
@@ -49,6 +50,20 @@ describe("/p/[token]", () => {
   it("a database error goes to the error page, without its details", async () => {
     rpc.mockResolvedValue({ data: null, error: { message: "connection refused" } });
     await expect(open(TOKEN)).rejects.toThrow("home_program failed");
+  });
+
+  it("a newer program for the same patient: a card with the clinic's phone, no program", async () => {
+    rpc.mockResolvedValue({ data: { status: "newer", clinicName: "Φυσιοθεραπεία Ελιά", clinicCity: "Λεμεσός", clinicPhone: "25 000000" }, error: null });
+    const page = (await open(TOKEN)) as ReactElement<Record<string, unknown>>;
+    expect(page.type).toBe(NewerProgram);
+    expect(page.props).toEqual({ clinicName: "Φυσιοθεραπεία Ελιά", clinicPhone: "25 000000" });
+  });
+
+  it("the card says why and gives the clinic's phone as a link", async () => {
+    const { render, screen } = await import("@testing-library/react");
+    render(<NewerProgram clinicName="Φυσιοθεραπεία Ελιά" clinicPhone="25 000000" />);
+    expect(screen.getByRole("heading", { name: "Υπάρχει νεότερο πρόγραμμα" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "25 000000" })).toHaveAttribute("href", "tel:25000000");
   });
 
   it("a good token shows the letter with the program and the clinic", async () => {
