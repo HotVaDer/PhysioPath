@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { addDays, localDay } from "@/app/lib/home/log";
 import { HomeProgramLetter, type HomeProgramLetterProps } from "@/app/p/[token]/HomeProgramLetter";
 import { expectNoA11yViolations } from "@/app/test/axe";
 import { useMemoryStorage } from "@/app/test/storage";
@@ -27,6 +28,9 @@ const full: HomeProgramLetterProps = {
   clinicName: "Φυσιοθεραπεία Ελιά",
   clinicCity: "Λεμεσός",
   clinicPhone: "25 000000",
+  log: [],
+  today: localDay(),
+  firstDay: addDays(localDay(), -10),
 };
 
 const sparse: HomeProgramLetterProps = {
@@ -80,7 +84,7 @@ describe("HomeProgramLetter", () => {
 
     // The sections, in reading order, and the call button.
     const sections = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-    expect(sections).toEqual(["Επόμενο ραντεβού", "Σήμερα", "Μετά τις ασκήσεις", "Αποφύγετε", "Πάρτε μας τηλέφωνο αν", "Άλλες οδηγίες"]);
+    expect(sections).toEqual(["Επόμενο ραντεβού", "Οι τελευταίες 7 μέρες", "Σήμερα", "Μετά τις ασκήσεις", "Αποφύγετε", "Πάρτε μας τηλέφωνο αν", "Άλλες οδηγίες"]);
     expect(within(screen.getByRole("region", { name: "Αποφύγετε" })).getAllByRole("listitem")).toHaveLength(1); // the blank item is dropped
     expect(screen.getByRole("link", { name: "Καλέστε μας, 25 000000" })).toHaveAttribute("href", "tel:25000000");
 
@@ -101,7 +105,7 @@ describe("HomeProgramLetter", () => {
     expect(main).not.toHaveTextContent("Για:");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Δεξιός ώμος");
     expect(screen.queryAllByRole("link")).toHaveLength(0); // no phone, so nothing to call
-    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Σήμερα"]);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Οι τελευταίες 7 μέρες", "Σήμερα"]);
     const closing = container.querySelector("main > footer") as HTMLElement;
     expect(closing).toHaveTextContent("Το ενέκρινε");
     expect(closing).not.toHaveTextContent("ετοίμασε");
@@ -119,6 +123,16 @@ describe("HomeProgramLetter", () => {
     const { container } = render(<HomeProgramLetter {...full} clinicCity={blank} program={{ ...full.program, patient_first_name: blank }} />);
     expect(letterhead(container)).not.toHaveTextContent("Λεμεσός");
     expect(screen.getByRole("main")).not.toHaveTextContent("Για:");
+  });
+
+  it("shows what the diary saved, matched by the program's own number (a hidden blank row doesn't shift it)", () => {
+    // full's third row is blank; here a blank row comes first, so «Διάταση γάμπας» is number 2 in the program.
+    const program = { ...full.program, exercises: [{ name: " " }, ...full.program.exercises.slice(0, 2)] };
+    const log = [{ day: localDay(), exercise: 2, status: "done" as const, pain: 2, note: null }];
+    render(<HomeProgramLetter {...full} program={program} log={log} />);
+    expect(screen.getByRole("button", { name: "Το έκανα σήμερα: Διάταση γάμπας" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Το έκανα σήμερα: Γέφυρα γλουτών" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("Πόνος 2 από 10")).toBeInTheDocument();
   });
 
   it("says so when a program has no exercises, without a today counter", async () => {

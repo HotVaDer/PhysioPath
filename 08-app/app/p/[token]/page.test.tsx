@@ -74,5 +74,18 @@ describe("/p/[token]", () => {
     >;
     expect(letter.props).toMatchObject({ token: TOKEN, clinicName: "Φυσιοθεραπεία Ελιά", approvedBy: "Μαρία Κωνσταντίνου" });
     expect(letter.props.program).toMatchObject({ title: "Αριστερό γόνατο", patient_first_name: "Ελένη" });
+    expect(letter.props.log).toEqual([]); // an answer without a diary: nothing ticked yet
+    expect(letter.props.firstDay).toBe("2026-11-18"); // the day it was approved, in Cyprus
+    expect(letter.props.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("passes the diary on to the letter", async () => {
+    const log = [{ day: "2026-11-19", exercise: 0, status: "skipped", pain: 7, note: "πόνος" }];
+    rpc.mockResolvedValue({ data: { ...home, log }, error: null });
+    const page = (await open(TOKEN)) as ReactElement<{ children: ReactElement[] }>;
+    const letter = page.props.children.find((child) => isValidElement(child) && child.type === HomeProgramLetter) as ReactElement<
+      Record<string, unknown>
+    >;
+    expect(letter.props.log).toEqual(log);
   });
 });

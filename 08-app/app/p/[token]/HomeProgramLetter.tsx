@@ -3,7 +3,8 @@
 // The idea: a letter from the clinic. Its letterhead (name, city, a phone to tap) says who it's from; the
 // letter line says who it's for and the day it was written; the title is what the program is about
 // («Αριστερό γόνατο · εβδομάδα 3»), with one opening sentence in the clinic's own voice, and the next
-// appointment right there, as a card to keep. Then the day's work as a path («Σήμερα: 2 από 5»), the
+// appointment right there, as a card to keep. Then the day's work as a path («Σήμερα: 2 από 5»), where
+// the patient tells the clinic how each exercise went (saved in the home diary), then the
 // physio's instructions in the app's flat boxes (yellow «Αποφύγετε», pink «Πάρτε μας τηλέφωνο αν» with a
 // call button), a closing line and the physio's name like a signature.
 // On a laptop and on paper the instructions sit in a column beside the exercises. Printed, it is a sheet
@@ -14,6 +15,7 @@ import type { ReactNode } from "react";
 
 import { PatientSheet } from "@/app/components/patient/PatientSheet";
 import { cx } from "@/app/lib/cx";
+import type { LogEntry } from "@/app/lib/home/log";
 import { doseLines, isBlank } from "@/app/lib/notes/format";
 import { ExerciseChecklist, type ChecklistExercise } from "@/app/p/[token]/ExerciseChecklist";
 import { HomeBar } from "@/app/p/[token]/HomeBar";
@@ -39,6 +41,9 @@ export type HomeProgramLetterProps = {
   clinicName: string;
   clinicCity: string | null;
   clinicPhone: string | null;
+  log: LogEntry[]; // the home diary of the last 7 days
+  today: string; // the clinic's day now (YYYY-MM-DD); the checklist moves to the device's own day
+  firstDay: string; // the day the program was given
 };
 
 const clean = (text: Text) => (isBlank(text) ? null : text!.trim());
@@ -59,7 +64,18 @@ const formatDay = (iso: string) => {
 const columns =
   "@min-[42rem]:grid @min-[42rem]:grid-cols-[minmax(0,1fr)_17rem] @min-[42rem]:gap-x-12 print:grid print:grid-cols-[minmax(0,1fr)_17rem] print:gap-x-12";
 
-export function HomeProgramLetter({ token, program, approvedAt, approvedBy, clinicName, clinicCity, clinicPhone }: HomeProgramLetterProps) {
+export function HomeProgramLetter({
+  token,
+  program,
+  approvedAt,
+  approvedBy,
+  clinicName,
+  clinicCity,
+  clinicPhone,
+  log,
+  today,
+  firstDay,
+}: HomeProgramLetterProps) {
   const clinic = clinicName.trim();
   const name = clean(program.patient_first_name);
   const title = clean(program.title);
@@ -72,9 +88,12 @@ export function HomeProgramLetter({ token, program, approvedAt, approvedBy, clin
   const contactIf = lines(program.contact_if);
   const other = lines(program.other);
   const hasInstructions = after.length + avoid.length + contactIf.length + other.length > 0;
+  // Each keeps its place in the program (what the diary saves), even when a blank row before it is hidden.
   const exercises: ChecklistExercise[] = program.exercises
-    .filter((exercise) => !isBlank(exercise.name))
-    .map((exercise) => ({
+    .map((exercise, index) => ({ exercise, index }))
+    .filter(({ exercise }) => !isBlank(exercise.name))
+    .map(({ exercise, index }) => ({
+      index,
       name: exercise.name.trim(),
       dose: doseLines({
         name: exercise.name,
@@ -129,7 +148,15 @@ export function HomeProgramLetter({ token, program, approvedAt, approvedBy, clin
       {/* The day's work, and the physio's instructions beside it (under it on a phone). */}
       <div className={cx("flex flex-col gap-10", hasInstructions && cx(columns, "@min-[42rem]:items-start print:items-start"))}>
         {exercises.length > 0 ? (
-          <ExerciseChecklist token={token} exercises={exercises} printColumns={!hasInstructions} />
+          <ExerciseChecklist
+            token={token}
+            exercises={exercises}
+            log={log}
+            today={today}
+            firstDay={firstDay}
+            clinicPhone={phone}
+            printColumns={!hasInstructions}
+          />
         ) : (
           <p className="text-[1.1rem]">Αυτό το πρόγραμμα δεν έχει ασκήσεις.</p>
         )}

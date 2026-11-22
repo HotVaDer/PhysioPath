@@ -11,11 +11,12 @@ import { PaperLink, QuietSubmit } from "@/app/components/paper/Buttons";
 import { RoomBoard } from "@/app/components/board/RoomBoard";
 import { StaffSheet } from "@/app/components/paper/StaffSheet";
 import { loadBoard } from "@/app/lib/board/board";
+import { countPainAlerts } from "@/app/lib/home/load";
 import { loadMyInvites, requireMember } from "@/app/lib/onboarding/session";
 import { InviteNotice } from "@/app/components/paper/InviteNotice";
 import { workAlone } from "@/app/lib/settings/actions";
 import { cx } from "@/app/lib/cx";
-import { TabName } from "@/app/components/paper/TabLink";
+import { TabLink, TabName } from "@/app/components/paper/TabLink";
 import { BOARD_TAB, WORK_TAB } from "@/app/lib/tabs";
 
 export const metadata: Metadata = { title: "Η αίθουσα" };
@@ -60,13 +61,15 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { supabase, profile } = await requireMember();
   const { welcome, saved, stale } = await searchParams;
   const isOwner = profile.role === "owner";
-  const [{ data: clinic }, board, { count: invited }, myInvites] = await Promise.all([
+  const isPhysio = profile.role !== "assistant";
+  const [{ data: clinic }, board, { count: invited }, myInvites, painAlerts] = await Promise.all([
     supabase.from("clinics").select("name, rooms_checked_at, team_checked_at").eq("id", profile.clinic_id).maybeSingle(),
     loadBoard(supabase),
     isOwner
       ? supabase.from("invites").select("id", { count: "exact", head: true })
       : Promise.resolve({ count: 0 }),
     loadMyInvites(supabase), // invites from other clinics, waiting for this person
+    isPhysio ? countPainAlerts(supabase) : Promise.resolve(0), // pain reports from home, waiting for «Το είδα»
   ]);
   const roomsDone = Boolean(clinic?.rooms_checked_at);
   const teamDone = Boolean(clinic?.team_checked_at) || (invited ?? 0) > 0;
@@ -101,6 +104,16 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <p role="alert" className="bg-tab-yellow px-4 py-3">
           <span className="font-semibold">Δεν αποθηκεύτηκε τίποτα.</span> Στο μεταξύ ανοίξατε άλλη κλινική, ίσως σε άλλη
           καρτέλα. Τώρα είναι ανοιχτή η «{clinic?.name}». Για την άλλη, πατήστε «Αλλαγή» πάνω, δίπλα στο όνομα της κλινικής.
+        </p>
+      )}
+      {painAlerts > 0 && (
+        <p role="status" className="bg-tab-pink px-4 py-3">
+          <span className="font-semibold">
+            {painAlerts === 1 ? "1 ασθενής ανέφερε δυνατό πόνο στο σπίτι." : `${painAlerts} ασθενείς ανέφεραν δυνατό πόνο στο σπίτι.`}
+          </span>{" "}
+          <TabLink href="/patients" tab={WORK_TAB}>
+            Δείτε τους στους Ασθενείς <span aria-hidden="true">→</span>
+          </TabLink>
         </p>
       )}
       {savedNote && (

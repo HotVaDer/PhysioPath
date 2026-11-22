@@ -192,6 +192,11 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
           <PaperLink href="/">
             Στην αίθουσα <span aria-hidden="true">→</span>
           </PaperLink>
+          {isPhysio && program.patient_id && (
+            <Link href={`/patients/${program.patient_id}`}>
+              Πρόοδος στο σπίτι <span aria-hidden="true">→</span>
+            </Link>
+          )}
           {isPhysio && <Link href="/notes/new">Νέα συνεδρία</Link>}
         </div>
       </div>

@@ -1,5 +1,5 @@
 // The frame of every page for the clinic's staff (home, voice note, review, approved, settings):
-// a plain top bar (logo, «Αίθουσα», «Νέα συνεδρία», «Κλινική», the open clinic with «Αλλαγή», who is signed in,
+// a plain top bar (logo, «Αίθουσα», «Νέα συνεδρία», «Ασθενείς», «Κλινική», the open clinic with «Αλλαγή», who is signed in,
 // «Αποσύνδεση») and one sheet
 // of paper under it, with «Βήμα n από m» where a page is a step of something.
 // Same plain look as sign-up (2026-11-17): no folder tabs, red margin, double rules, «Σελ.», capital
@@ -16,12 +16,13 @@ import { cx } from "@/app/lib/cx";
 import type { Profile } from "@/app/lib/onboarding/session";
 import { BOARD_TAB, CLINIC_TAB, WORK_TAB } from "@/app/lib/tabs";
 
-export type StaffTab = "board" | "new" | "clinic";
+export type StaffTab = "board" | "new" | "patients" | "clinic";
 
 // tab: which browser tab the link belongs in (two-tab way of working, app/lib/tabs.ts).
 const LINKS: { id: StaffTab; href: Route; label: string; physioOnly?: boolean; tab?: string }[] = [
   { id: "board", href: "/", label: "Αίθουσα", tab: BOARD_TAB },
   { id: "new", href: "/notes/new", label: "Νέα συνεδρία", physioOnly: true, tab: WORK_TAB },
+  { id: "patients", href: "/patients", label: "Ασθενείς", physioOnly: true, tab: WORK_TAB },
   { id: "clinic", href: "/settings", label: "Κλινική", tab: CLINIC_TAB },
 ];
 
@@ -47,7 +48,8 @@ export function StaffSheet({ children, profile, current, step, width = "narrow" 
             <Logo />
           </TabLink>
           <nav aria-label="Κύρια πλοήγηση" className="order-last w-full sm:order-none sm:w-auto">
-            <ul className="flex gap-1">
+            {/* Four links: a little smaller on a phone, and onto a second line if they still don't fit. */}
+            <ul className="flex flex-wrap gap-x-1">
               {links.map((link) => (
                 <li key={link.id}>
                   <TabLink
@@ -55,7 +57,7 @@ export function StaffSheet({ children, profile, current, step, width = "narrow" 
                     tab={link.tab}
                     aria-current={link.id === current ? "page" : undefined}
                     className={cx(
-                      "flex min-h-[52px] items-center border-b-4 px-3.5 text-[19px] no-underline",
+                      "flex min-h-[52px] items-center border-b-4 px-2.5 text-[17px] whitespace-nowrap no-underline sm:px-3.5 sm:text-[19px]",
                       link.id === current
                         ? "border-action font-bold text-ink hover:text-ink"
                         : "border-transparent text-action hover:border-hairline hover:text-ink",

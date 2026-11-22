@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { Card } from "@/app/components/paper/Card";
 import { TEXT_SIZE_SCRIPT } from "@/app/components/patient/TextSize";
+import { clinicDay, HomeLog } from "@/app/lib/home/log";
 import { createAnonClient } from "@/app/lib/supabase/admin";
 import { HomeProgramLetter } from "@/app/p/[token]/HomeProgramLetter";
 
@@ -47,6 +48,7 @@ const HomeProgram = z.object({
   clinicName: z.string(),
   clinicCity: z.string().nullable(),
   clinicPhone: z.string().nullable(),
+  log: HomeLog.default([]), // the home diary of the last 7 days (20261123120000)
 });
 // A newer program exists for this patient (home_program's status "newer", 20261122160000): only the clinic.
 const Newer = z.object({
@@ -89,7 +91,12 @@ export default async function HomeProgramPage({ params }: PageProps<"/p/[token]"
     <>
       {/* The text size chosen on this device (or 20px), set before the first paint: the sheet sizes in rem. */}
       <script dangerouslySetInnerHTML={{ __html: TEXT_SIZE_SCRIPT }} />
-      <HomeProgramLetter token={valid.data} {...home.data} />
+      <HomeProgramLetter
+        token={valid.data}
+        {...home.data}
+        today={clinicDay(new Date())}
+        firstDay={clinicDay(home.data.approvedAt)}
+      />
     </>
   );
 }
