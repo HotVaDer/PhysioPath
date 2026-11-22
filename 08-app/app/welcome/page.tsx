@@ -37,7 +37,7 @@ export default async function WelcomePage() {
   const { supabase, user } = await currentUser();
   if (user) {
     const profile = await loadProfile(supabase, user.id);
-    redirect(profile?.onboarded_at ? "/" : "/register/clinic");
+    redirect(profile?.onboarded_at ? "/" : "/start");
   }
 
   return (

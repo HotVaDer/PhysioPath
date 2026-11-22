@@ -20,6 +20,20 @@ export const EMAIL_SUBJECTS = {
   login: "Ο κωδικός σας για είσοδο στο PhysioPath",
 } as const;
 
+// The kinds of one-time link our emails carry (…&type=… in supabase/templates).
+export const EMAIL_LINK_TYPES = ["email", "magiclink", "signup", "invite"] as const;
+export type EmailLinkType = (typeof EMAIL_LINK_TYPES)[number];
+export const isEmailLinkType = (value: unknown): value is EmailLinkType =>
+  typeof value === "string" && (EMAIL_LINK_TYPES as readonly string[]).includes(value);
+
+// Where a used, expired or other-browser email link lands: the sign-in page, which still knows where the
+// person was going (an invite stays an invite: after signing in with a code they land on it).
+export function loginAfterLink(reason: "expired" | "other-browser", next: string): string {
+  const query = new URLSearchParams({ link: reason });
+  if (next !== "/") query.set("next", next);
+  return `/login?${query}`;
+}
+
 // After a login link we send people to "next". Only the few addresses the app really uses are
 // allowed, so there's nothing to trick: home, the start of registration, and an invite page.
 // Anything else (another site, "//evil.example", "/.//evil.example", a typo) gets the fallback.

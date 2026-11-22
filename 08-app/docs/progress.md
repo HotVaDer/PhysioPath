@@ -418,3 +418,36 @@ No database changes. Each step was tested by the user in Firefox, Safari and Chr
 - Checks: `tsc` clean, **158 tests**, build OK.
 - Later: an offline page (service worker) for page loads; a failed sign-in check should show an error page, not
   /welcome (seen once with a 43 s call to Supabase).
+
+## 2026-11-21 · Code-review fixes, Phase C: invites that work
+- **Email links (1.5):** `/auth/confirm` no longer uses a token_hash link itself. It goes on to `/auth/continue`,
+  a «Συνέχεια» page, and only that press signs in (`followEmailLink`). Email scanners (Outlook Safe Links) used up
+  the link before the person clicked, and the page also stops a stranger's link from signing someone in silently.
+  A failed link keeps `next` (`loginAfterLink`), so an invite stays an invite: the sign-in page says the invite is
+  still valid, and after the code the person lands on it. `invite.html` says the button lasts 1 hour and gives the
+  invite page (`.Data.invite_url`) for the 7 days.
+- **Existing accounts (1.6):** before the sign-in email, the server puts `invite_clinic` / `invite_by` /
+  `invite_url` in the person's metadata (`user_id_for_email`, service role only), so `magic_link.html` reads as an
+  invite. It is cleared once they sign in. `confirmation.html` speaks about the invite for invitees too.
+- **Waiting invites in the app** (`20261121120000_my_invites.sql`, pushed live after a rolled-back trial):
+  `my_invites()` returns the caller's own open invites (confirmed email only). They are shown by `InviteNotice` on
+  home, «Οι κλινικές σας» and the sign-up clinic step (so an invitee doesn't create an empty clinic).
+  RLS checks **192/192** (+10).
+- The 3 templates were pasted into the Supabase dashboard by the user (`config push` would also send the local
+  captcha setting, which is off).
+- Checks: `tsc` clean, **170 tests**, build OK.
+
+## 2026-11-22 · The owner manages the team (code review 2.1, 2.5; brought forward from Phase E)
+- **Database** (`20261122120000_team_members.sql`, pushed live after a rolled-back trial): `clinic_members`,
+  `remove_member`, `change_role` (owner of the open clinic only), `leave_clinic` (anyone), and the trigger
+  `keep_an_owner`. A living clinic always keeps an owner, even when a login is deleted from the dashboard.
+  Removing someone deletes the membership; the existing FK + `reset_membership` move them to their next clinic or
+  back to no clinic, and RLS cuts access at once. They can be invited again. RLS checks **212/212** (+20).
+- The same push also applied `20261121130000_no_passwords.sql` (the user's own fix for security to-do 1: every
+  password is wiped, since the app only uses email codes). It wasn't in the trial; checks pass and code sign-in was
+  tested by the user afterwards. From now on: list the pending migrations before every push.
+- **App:** «Η ομάδα σας» lists members (name, email, role selector + «Αλλαγή», «Αφαίρεση» with a confirm step) and,
+  separately, the invites still waiting. «Οι κλινικές σας» has «Αποχώρηση». `ConfirmSubmit` asks before a form is sent.
+- **No clinic → `/start`:** a welcome with the waiting invites and «Εγγραφή της κλινικής μου», instead of being
+  thrown into new-clinic registration (`requireMember`, `/welcome`).
+- Checks: `tsc` clean, **171 tests**.

@@ -5,10 +5,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PaperLink, QuietSubmit } from "@/app/components/paper/Buttons";
+import { ConfirmSubmit } from "@/app/components/paper/ConfirmSubmit";
 import { FormAlert } from "@/app/components/paper/Notes";
 import { StaffSheet } from "@/app/components/paper/StaffSheet";
-import { switchClinic } from "@/app/lib/clinics/actions";
-import { loadMyClinics, requireMember, type MyClinic } from "@/app/lib/onboarding/session";
+import { leaveClinic, switchClinic } from "@/app/lib/clinics/actions";
+import { InviteNotice } from "@/app/components/paper/InviteNotice";
+import { loadMyClinics, loadMyInvites, requireMember, type MyClinic } from "@/app/lib/onboarding/session";
 
 export const metadata: Metadata = { title: "Οι κλινικές σας" };
 
@@ -20,8 +22,8 @@ const ROLE_THERE: Record<MyClinic["role"], string> = {
 
 export default async function ClinicsPage({ searchParams }: PageProps<"/clinics">) {
   const { supabase, profile } = await requireMember();
-  const { switch: result } = await searchParams;
-  const clinics = await loadMyClinics(supabase);
+  const { switch: result, leave } = await searchParams;
+  const [clinics, invites] = await Promise.all([loadMyClinics(supabase), loadMyInvites(supabase)]);
 
   return (
     <StaffSheet profile={profile}>
@@ -36,7 +38,16 @@ export default async function ClinicsPage({ searchParams }: PageProps<"/clinics"
           </p>
         </div>
 
+        <InviteNotice invites={invites} lead="Σας περιμένουν προσκλήσεις" />
+
         {result === "failed" && <FormAlert>Δεν άνοιξε αυτή η κλινική. Δοκιμάστε ξανά σε λίγο.</FormAlert>}
+        {leave === "last-owner" && (
+          <FormAlert>
+            Είστε η/ο μόνη/ος υπεύθυνη/ος αυτής της κλινικής. Ορίστε πρώτα κάποιον άλλον ως υπεύθυνο («Κλινική» → «Ομάδα»), και
+            μετά αποχωρήστε.
+          </FormAlert>
+        )}
+        {leave === "failed" && <FormAlert>Η αποχώρηση δεν έγινε. Δοκιμάστε ξανά σε λίγο.</FormAlert>}
 
         <ul className="flex flex-col gap-3">
           {clinics.map((clinic) => (
@@ -61,6 +72,12 @@ export default async function ClinicsPage({ searchParams }: PageProps<"/clinics"
                   </QuietSubmit>
                 </form>
               )}
+              <form action={leaveClinic} className="basis-full">
+                <input type="hidden" name="clinicId" value={clinic.id} />
+                <ConfirmSubmit question={`Να αποχωρήσετε από ${clinic.name};`} pending="Αποχώρηση…">
+                  Αποχώρηση<span className="sr-only"> από την κλινική {clinic.name}</span>
+                </ConfirmSubmit>
+              </form>
             </li>
           ))}
         </ul>

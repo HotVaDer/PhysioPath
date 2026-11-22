@@ -16,8 +16,8 @@ import {
   type FieldErrors,
 } from "@/app/lib/onboarding/schema";
 import { currentUser, requireFormUser, requireMember, requireSameClinic, saveDraft } from "@/app/lib/onboarding/session";
-import { sendInvites } from "@/app/lib/onboarding/invites";
-import { confirmLink, safeNext } from "@/app/lib/site";
+import { forgetInviteEmail, sendInvites } from "@/app/lib/onboarding/invites";
+import { confirmLink, isEmailLinkType, loginAfterLink, safeNext } from "@/app/lib/site";
 import { createAdminClient } from "@/app/lib/supabase/admin";
 
 // What a form gets back when something is wrong. React clears a form after it's sent, so the
@@ -99,7 +99,7 @@ export async function verifyCode(_: FormState, form: FormData): Promise<FormStat
   if (!code.success) return { errors: { code: code.error.issues[0].message }, values };
 
   const { supabase } = await currentUser();
-  const { error } = await supabase.auth.verifyOtp({ email: email.data.email, token: code.data, type: "email" });
+  const { data: verified, error } = await supabase.auth.verifyOtp({ email: email.data.email, token: code.data, type: "email" });
   if (error) {
     if (error.status === 429 || error.code?.includes("rate_limit")) {
       return { errors: { code: "Πολλές προσπάθειες. Περιμένετε λίγα λεπτά και ξαναδοκιμάστε." }, values };
@@ -110,7 +110,26 @@ export async function verifyCode(_: FormState, form: FormData): Promise<FormStat
       values,
     };
   }
+  await forgetInviteEmail(verified.user);
   redirect(login ? (safeNext(String(form.get("next") ?? "")) as Route) : "/register/clinic"); // safeNext: only our own paths
+}
+
+// ---------- The button in an email, after «Συνέχεια» on /auth/continue ----------
+// The email's one-time link is used only here, on a press: not when an email scanner opens the link
+// (app/auth/confirm/route.ts). Used or expired → the sign-in page, which still knows where they were going.
+export async function followEmailLink(form: FormData): Promise<void> {
+  const next = safeNext(String(form.get("next") ?? ""));
+  const tokenHash = String(form.get("token_hash") ?? "");
+  const type = form.get("type");
+  if (!tokenHash || tokenHash.length > 512 || !isEmailLinkType(type)) redirect(loginAfterLink("expired", next) as Route);
+  const { supabase } = await currentUser();
+  const { data, error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+  if (error) {
+    if (error.code !== "otp_expired") console.error("verifyOtp (link) failed:", error.message);
+    redirect(loginAfterLink("expired", next) as Route);
+  }
+  await forgetInviteEmail(data.user);
+  redirect(next as Route); // safeNext: only our own paths
 }
 
 // ---------- «Στείλτε μου νέο κωδικό» ----------

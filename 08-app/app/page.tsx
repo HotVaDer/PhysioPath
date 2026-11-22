@@ -10,7 +10,8 @@ import { PaperLink, QuietSubmit } from "@/app/components/paper/Buttons";
 import { RoomBoard } from "@/app/components/board/RoomBoard";
 import { StaffSheet } from "@/app/components/paper/StaffSheet";
 import { loadBoard } from "@/app/lib/board/board";
-import { requireMember } from "@/app/lib/onboarding/session";
+import { loadMyInvites, requireMember } from "@/app/lib/onboarding/session";
+import { InviteNotice } from "@/app/components/paper/InviteNotice";
 import { workAlone } from "@/app/lib/settings/actions";
 import { cx } from "@/app/lib/cx";
 import { TabName } from "@/app/components/paper/TabLink";
@@ -21,6 +22,7 @@ export const metadata: Metadata = { title: "Η αίθουσα" };
 const SAVED: Record<string, string> = {
   rooms: "Οι χώροι σας αποθηκεύτηκαν.",
   alone: "Εντάξει, δουλεύετε μόνη/ος. Αν χρειαστεί, καλείτε κάποιον από «Κλινική» → «Ομάδα».",
+  left: "Αποχωρήσατε από την κλινική. Τώρα βλέπετε την επόμενη κλινική σας.",
 };
 
 // One of the «Επόμενα βήματα»: a big card that is the link, with a number (or ✓ when done).
@@ -57,12 +59,13 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { supabase, profile } = await requireMember();
   const { welcome, saved, stale } = await searchParams;
   const isOwner = profile.role === "owner";
-  const [{ data: clinic }, board, { count: invited }] = await Promise.all([
+  const [{ data: clinic }, board, { count: invited }, myInvites] = await Promise.all([
     supabase.from("clinics").select("name, rooms_checked_at, team_checked_at").eq("id", profile.clinic_id).maybeSingle(),
     loadBoard(supabase),
     isOwner
       ? supabase.from("invites").select("id", { count: "exact", head: true })
       : Promise.resolve({ count: 0 }),
+    loadMyInvites(supabase), // invites from other clinics, waiting for this person
   ]);
   const roomsDone = Boolean(clinic?.rooms_checked_at);
   const teamDone = Boolean(clinic?.team_checked_at) || (invited ?? 0) > 0;
@@ -85,6 +88,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   // Messages after sign-up or a save, and the owner's «Επόμενα βήματα»: under the title, above the board.
   const notices = (
     <>
+      <InviteNotice invites={myInvites} />
       {welcome === "1" && (
         <p role="status" className="bg-note-green px-4 py-3">
           <span className="font-semibold">Η εγγραφή ολοκληρώθηκε. Η κλινική σας είναι έτοιμη.</span> Από εδώ ξεκινάτε κάθε

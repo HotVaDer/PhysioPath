@@ -93,3 +93,37 @@ export async function workAlone(form: FormData): Promise<void> {
   await supabase.from("clinics").update({ team_checked_at: new Date().toISOString() }).eq("id", profile.clinic_id);
   redirect("/?saved=alone");
 }
+
+// ---------- Ομάδα: «Αφαίρεση» and the role (owner only, the clinic open now) ----------
+// The database takes them out (remove_member / change_role, 20261122120000): they lose access at once,
+// and a clinic always keeps at least one owner.
+const LAST_OWNER = "last owner";
+const Member = z.object({ userId: z.uuid(), role: z.enum(["owner", "physio", "assistant"]).optional() });
+
+export async function removeMember(form: FormData): Promise<void> {
+  const { supabase, profile } = await requireOwner();
+  requireSameClinic(form, profile);
+  const parsed = Member.safeParse({ userId: form.get("userId") });
+  if (!parsed.success) redirect("/settings/team?member=failed");
+  const { error } = await supabase.rpc("remove_member", { p_user: parsed.data.userId, p_clinic: profile.clinic_id });
+  if (error) {
+    if (!/not a member/.test(error.message)) console.error("remove_member failed:", error.message);
+    redirect(/not a member/.test(error.message) ? "/settings/team?member=gone" : "/settings/team?member=failed");
+  }
+  redirect("/settings/team?member=removed");
+}
+
+export async function changeRole(form: FormData): Promise<void> {
+  const { supabase, user, profile } = await requireOwner();
+  requireSameClinic(form, profile);
+  const parsed = Member.safeParse({ userId: form.get("userId"), role: form.get("role") });
+  if (!parsed.success || !parsed.data.role) redirect("/settings/team?member=failed");
+  const { error } = await supabase.rpc("change_role", { p_user: parsed.data.userId, p_clinic: profile.clinic_id, p_role: parsed.data.role });
+  if (error) {
+    if (error.message.includes(LAST_OWNER)) redirect("/settings/team?member=last-owner");
+    if (!/not a member/.test(error.message)) console.error("change_role failed:", error.message);
+    redirect("/settings/team?member=failed");
+  }
+  // Their own role, changed by themselves: no longer the owner, so the team page isn't theirs any more.
+  redirect(parsed.data.userId === user.id && parsed.data.role !== "owner" ? "/" : "/settings/team?member=role");
+}

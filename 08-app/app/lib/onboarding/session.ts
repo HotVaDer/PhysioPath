@@ -5,6 +5,7 @@ import "server-only";
 
 import type { User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 import { DraftSchema, type Draft } from "@/app/lib/onboarding/schema";
 import { createClient, type Supabase } from "@/app/lib/supabase/server";
@@ -48,6 +49,44 @@ export async function loadMyClinics(supabase: Supabase): Promise<MyClinic[]> {
   return (data as MyClinic[] | null) ?? [];
 }
 
+// Someone in the clinic, for the owner's «Η ομάδα σας» (public.clinic_members()).
+const MemberSchema = z.object({
+  userId: z.uuid(),
+  name: z.string().nullable(),
+  email: z.string().nullable(),
+  role: z.enum(["owner", "physio", "assistant"]),
+  me: z.boolean(),
+});
+export type ClinicMember = z.infer<typeof MemberSchema>;
+
+export async function loadClinicMembers(supabase: Supabase, clinicId: string): Promise<ClinicMember[]> {
+  const { data, error } = await supabase.rpc("clinic_members", { p_clinic: clinicId });
+  if (error) throw new Error(`Loading the team failed: ${error.message}`);
+  return z.array(MemberSchema).parse(data);
+}
+
+// An invite waiting for the signed-in person (public.my_invites(): their own confirmed email only).
+const MyInviteSchema = z.object({
+  token: z.uuid(),
+  role: z.enum(["physio", "assistant"]),
+  clinicName: z.string(),
+  clinicCity: z.string().nullable(),
+  invitedBy: z.string().nullable(),
+});
+export type MyInvite = z.infer<typeof MyInviteSchema>;
+
+// The person's waiting invites, newest first. A note on top of a page, never a reason for the page to
+// fail: on any problem, none.
+export async function loadMyInvites(supabase: Supabase): Promise<MyInvite[]> {
+  const { data, error } = await supabase.rpc("my_invites");
+  if (error) {
+    console.error("my_invites failed:", error.message);
+    return [];
+  }
+  const parsed = z.array(MyInviteSchema).safeParse(data);
+  return parsed.success ? parsed.data : [];
+}
+
 export async function loadDraft(supabase: Supabase): Promise<Draft> {
   const { data } = await supabase.from("onboarding_drafts").select("data").maybeSingle();
   const parsed = DraftSchema.safeParse(data?.data ?? {});
@@ -75,12 +114,13 @@ export async function requireFormUser() {
   return { supabase, user, draft };
 }
 
-// For pages that need a clinic member.
+// For pages that need a clinic member. Signed in but in no clinic (taken out of a team, left, or
+// stopped before the clinic step) → /start: a welcome, their invites, and registering a clinic if they want.
 export async function requireMember() {
   const { supabase, user } = await currentUser();
   if (!user) redirect("/welcome");
   const profile = await loadProfile(supabase, user.id);
-  if (!profile?.onboarded_at || !profile.clinic_id) redirect("/register/clinic");
+  if (!profile?.onboarded_at || !profile.clinic_id) redirect("/start");
   return { supabase, user, profile };
 }
 

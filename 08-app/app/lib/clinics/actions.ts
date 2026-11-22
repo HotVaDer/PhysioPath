@@ -51,3 +51,19 @@ export async function switchClinic(form: FormData): Promise<void> {
   }
   redirect("/?saved=clinic");
 }
+
+// «Αποχώρηση»: leave one of your clinics (leave_clinic, 20261122120000). Leaving the open one opens the
+// next; leaving the last one goes back to sign-up. A clinic's last owner can't leave (make someone else
+// owner first, in «Ομάδα»).
+export async function leaveClinic(form: FormData): Promise<void> {
+  const { supabase } = await requireMember();
+  const id = z.uuid().safeParse(form.get("clinicId"));
+  if (!id.success) redirect("/clinics?leave=failed");
+  const { error } = await supabase.rpc("leave_clinic", { p_clinic: id.data });
+  if (error) {
+    if (error.message.includes("last owner")) redirect("/clinics?leave=last-owner");
+    if (!error.message.includes("not a member")) console.error("leave_clinic failed:", error.message);
+    redirect("/clinics?leave=failed");
+  }
+  redirect("/?saved=left");
+}

@@ -74,7 +74,10 @@ export function CodeForm(props: Props) {
         <p>
           Στείλαμε κωδικό 6 ψηφίων στο <span className="break-words font-semibold">{email}</span>.{" "}
           <span className="text-muted">
-            Ψάξτε για email από PhysioPath με θέμα «{EMAIL_SUBJECTS[mode]}».
+            {/* An invited person may get the sign-up email or the sign-in one, depending on their account. */}
+            {props.next?.startsWith("/invite/")
+              ? "Ψάξτε για email από PhysioPath με τον κωδικό."
+              : `Ψάξτε για email από PhysioPath με θέμα «${EMAIL_SUBJECTS[mode]}».`}
           </span>
         </p>
 
