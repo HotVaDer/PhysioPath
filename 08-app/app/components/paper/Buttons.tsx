@@ -11,10 +11,11 @@ import { cx } from "@/app/lib/cx";
 const green =
   "inline-flex min-h-14 items-center gap-2.5 bg-action px-6 text-[19px] font-bold text-white no-underline hover:bg-action-hover hover:text-white disabled:cursor-wait disabled:opacity-80";
 
-export function SubmitButton({ children, pending: pendingLabel }: { children: ReactNode; pending: string }) {
+// className: extra classes where one place needs it smaller (e.g. the demo strip on a phone).
+export function SubmitButton({ children, pending: pendingLabel, className }: { children: ReactNode; pending: string; className?: string }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className={cx(green, "cursor-pointer self-start")}>
+    <button type="submit" disabled={pending} className={cx(green, "cursor-pointer self-start", className)}>
       {pending ? pendingLabel : children}
     </button>
   );

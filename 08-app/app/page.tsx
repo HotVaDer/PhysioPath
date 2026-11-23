@@ -70,7 +70,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       ? supabase.from("invites").select("id", { count: "exact", head: true })
       : Promise.resolve({ count: 0 }),
     loadMyInvites(supabase), // invites from other clinics, waiting for this person
-    isPhysio ? countPainAlerts(supabase) : Promise.resolve(0), // pain reports from home, waiting for «Το είδα»
+    // Pain reports from home, waiting for «Το είδα». Not in a demo: next to the red «pain in the room» card,
+    // a second «pain» bar confused visitors (the demo patients' home diary is on «Ασθενείς»).
+    isPhysio && !profile.demo ? countPainAlerts(supabase) : Promise.resolve(0),
   ]);
   const roomsDone = Boolean(clinic?.rooms_checked_at);
   const teamDone = Boolean(clinic?.team_checked_at) || (invited ?? 0) > 0;

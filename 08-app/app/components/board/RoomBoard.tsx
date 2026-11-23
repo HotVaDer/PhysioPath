@@ -192,8 +192,10 @@ export function RoomBoard({ initial, action, children }: { initial: BoardData; a
         </p>
       )}
 
-      {/* 2. Summary: four numbers, and who needs you in the order they called */}
-      <section aria-labelledby="summary" className="flex flex-wrap gap-x-8 gap-y-5 border-2 border-hairline bg-white px-5 py-5">
+      {/* 2. Summary: four numbers, and who needs you in the order they called. On a phone it moves under
+          the cards (max-sm:order-1): there the first screen should show patients, and the cards are coloured
+          for whoever needs you anyway. */}
+      <section aria-labelledby="summary" className="flex flex-wrap gap-x-8 gap-y-5 border-2 border-hairline bg-white px-5 py-5 max-sm:order-1">
         <h2 id="summary" className="sr-only">
           Σύνοψη αίθουσας
         </h2>
@@ -227,7 +229,7 @@ export function RoomBoard({ initial, action, children }: { initial: BoardData; a
       </section>
 
       {/* 3. What the signs mean */}
-      <ul aria-label="Τι σημαίνουν τα σήματα" className="flex flex-wrap gap-x-6 gap-y-2 text-base text-muted">
+      <ul aria-label="Τι σημαίνουν τα σήματα" className="flex flex-wrap gap-x-6 gap-y-2 text-base text-muted max-sm:hidden">
         <li className="flex items-center gap-2">
           <Sign status="working" /> Ασκείται
         </li>
@@ -255,7 +257,7 @@ export function RoomBoard({ initial, action, children }: { initial: BoardData; a
         </div>
       )}
 
-      <p className="text-base text-muted">
+      <p className="text-base text-muted max-sm:order-2">
         Οι κάρτες μένουν στη θέση τους. Χρώμα παίρνουν μόνο όσοι σας χρειάζονται.
         {board.rooms.length > 0 && ` Ελεύθερες θέσεις: ${Math.max(0, freePlaces)}.`}
       </p>
@@ -284,7 +286,7 @@ function FullScreenButton() {
     <button
       type="button"
       onClick={toggle}
-      className="inline-flex min-h-12 cursor-pointer items-center gap-2 border-2 border-line bg-white px-4 font-bold text-ink hover:border-action"
+      className="inline-flex min-h-12 cursor-pointer items-center gap-2 border-2 border-line bg-white px-4 font-bold text-ink hover:border-action max-sm:hidden"
     >
       <span aria-hidden="true">{on ? "⤡" : "⤢"}</span> {on ? "Έξοδος από πλήρη οθόνη" : "Πλήρης οθόνη"}
     </button>
