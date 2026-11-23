@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AutoRefresh } from "@/app/components/paper/AutoRefresh";
-import { DemoTips } from "@/app/components/demo/DemoTips";
+import { DemoGuide } from "@/app/components/demo/DemoGuide";
 import { PaperLink, QuietSubmit } from "@/app/components/paper/Buttons";
 import { RoomBoard } from "@/app/components/board/RoomBoard";
 import { StaffSheet } from "@/app/components/paper/StaffSheet";
@@ -58,6 +58,20 @@ function NextStep({ n, href, title, text, done }: { n: number; href: Route; titl
   );
 }
 
+// What the demo's tour needs (only for a demo clinic). The patient's screen is the /s link of the newest card
+// that isn't calling (after step 1, the visitor's own patient), so step 2 makes a new call.
+async function loadTour(supabase: Awaited<ReturnType<typeof requireMember>>["supabase"]) {
+  const [{ data: open }, { count: programs }] = await Promise.all([
+    supabase.from("sessions").select("id, token").is("finished_at", null).is("call_reason", null).order("created_at", { ascending: false }).limit(1),
+    supabase.from("programs").select("id", { count: "exact", head: true }),
+  ]);
+  const card = open?.[0] as { id: string; token: string } | undefined;
+  return {
+    patientCard: card ? { id: card.id, href: `/s/${card.token}` } : null,
+    madeProgram: (programs ?? 0) > 4,
+  };
+}
+
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { supabase, profile } = await requireMember();
   const { welcome, saved, stale } = await searchParams;
@@ -74,6 +88,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
     // a second «pain» bar confused visitors (the demo patients' home diary is on «Ασθενείς»).
     isPhysio && !profile.demo ? countPainAlerts(supabase) : Promise.resolve(0),
   ]);
+  // The demo's guided tour: a patient's phone screen for step 2, and whether the visitor approved a program
+  // of their own yet (the demo starts with 4).
+  const tour = profile.demo ? await loadTour(supabase) : null;
   const roomsDone = Boolean(clinic?.rooms_checked_at);
   const teamDone = Boolean(clinic?.team_checked_at) || (invited ?? 0) > 0;
   const savedNote =
@@ -95,6 +112,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   // Messages after sign-up or a save, and the owner's «Επόμενα βήματα»: under the title, above the board.
   const notices = (
     <>
+      {profile.demo && tour && (
+        <DemoGuide lang={profile.demo.lang} clinicId={profile.clinic_id!} initialCards={board.cards} patientCard={tour.patientCard} madeProgram={tour.madeProgram} />
+      )}
       <InviteNotice invites={myInvites} />
       {welcome === "1" && (
         <p role="status" className="bg-note-green px-4 py-3">
@@ -172,13 +192,6 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <RoomBoard initial={board} action={newSession}>
           {notices}
         </RoomBoard>
-      )}
-      {/* A demo clinic («Δοκιμάστε το»): what to try, under the board, so on a phone the patients come first.
-          (A demo has no «Επόμενα βήματα»: those are for a real clinic's owner.) */}
-      {profile.demo && (
-        <div className="pt-6">
-          <DemoTips lang={profile.demo.lang} empty={board.cards.length === 0} />
-        </div>
       )}
     </StaffSheet>
   );

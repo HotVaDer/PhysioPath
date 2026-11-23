@@ -43,8 +43,8 @@ describe("demoText", () => {
     const el = demoText("el");
     const en = demoText("en");
     expect(Object.keys(en).sort()).toEqual(Object.keys(el).sort());
-    expect(el.tips).toHaveLength(3);
-    expect(en.tips).toHaveLength(3);
+    expect(el.steps).toHaveLength(3);
+    expect(en.steps).toHaveLength(3);
     expect(el.points).toHaveLength(en.points.length);
   });
 

@@ -58,8 +58,15 @@ async function fetchBoard(): Promise<BoardData> {
 type Tone = "plain" | "pain" | "question";
 const toneOf = (card: BoardCard): Tone => (card.call ? card.call.reason : "plain");
 
+// Sent on the window with the cards each time the board changes, for anything on the page that follows
+// the room live (the demo's guided tour, components/demo/DemoGuide.tsx).
+export const BOARD_EVENT = "physiopath:board";
+
 export function RoomBoard({ initial, action, children }: { initial: BoardData; action?: ReactNode; children?: ReactNode }) {
   const [board, setBoard] = useState(initial);
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent<BoardCard[]>(BOARD_EVENT, { detail: board.cards }));
+  }, [board]);
   const [offline, setOffline] = useState(false);
   const [signedOut, setSignedOut] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -402,7 +409,8 @@ function PatientCard({ card, place, now, onAct }: { card: BoardCard; place: stri
   const button = "inline-flex min-h-12 cursor-pointer items-center gap-1.5 px-3.5 font-bold no-underline disabled:cursor-wait disabled:opacity-70";
 
   return (
-    <article aria-labelledby={headingId} className={cx("flex flex-col gap-3 p-[22px]", look.card)}>
+    // id: the demo's tour links straight to a card (#patient-…); scroll-mt keeps it clear of the top edge.
+    <article id={`patient-${card.id}`} aria-labelledby={headingId} className={cx("flex scroll-mt-4 flex-col gap-3 p-[22px]", look.card)}>
       <div>
         <p className={cx("text-base", look.muted)}>{place}</p>
         <h2 id={headingId} className="font-display text-[34px] leading-[1.05]">

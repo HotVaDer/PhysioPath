@@ -52,17 +52,53 @@ const TEXT = {
     own: "Θέλω τη δική μου κλινική",
     ownNote: "Η δοκιμή κλείνει και η δική σας κλινική ξεκινά καθαρή, χωρίς τους φανταστικούς ασθενείς.",
     leaving: "Μία στιγμή…",
-    // the tips under the board
-    tipsTitle: "Δοκιμάστε",
-    tips: [
-      "Μια κόκκινη κάρτα σημαίνει ότι κάποιος πονάει: πατήστε «Το είδα».",
-      "«Νέα συνεδρία»: πείτε τις ασκήσεις φωναχτά, ή διαλέξτε ένα έτοιμο δείγμα, και δείτε τη σημείωση να γράφεται.",
-      "Μετά την έγκριση, ανοίξτε τον σύνδεσμο του ασθενή (ή σκανάρετε το QR με άλλο κινητό): αυτό βλέπει ο ασθενής.",
+    // the guided tour: on the board (DemoGuide) and a line on every other page (DemoCoach)
+    tourLabel: "Ξενάγηση",
+    stepOf: (n: number, of: number) => `Βήμα ${n} από ${of}`,
+    introTitle: "Καλώς ήρθατε στο PhysioPath",
+    introText:
+      "Το PhysioPath είναι ένα εργαλείο για φυσιοθεραπευτές. Στο τέλος της συνεδρίας λέτε τις ασκήσεις φωναχτά, και γράφει τη σημείωση για τον ΓεΣΥ και το πρόγραμμα του ασθενή για το σπίτι. Εσείς ελέγχετε και εγκρίνετε. Στην αίθουσα βλέπετε σε μία οθόνη ποιος ασκείται, ποιος έχει απορία και ποιος πονάει.",
+    introSmall: "Η ξενάγηση έχει 3 βήματα και παίρνει περίπου 2 λεπτά.",
+    introStart: "Ξεκινάμε",
+    steps: [
+      {
+        title: "Μιλάτε. Το PhysioPath γράφει.",
+        text: "Κάντε μια συνεδρία με τη φωνή σας: διαλέξτε ασθενή και πείτε τις ασκήσεις φωναχτά, όπως τις λέτε στον ασθενή. Σε περίπου 15 δευτερόλεπτα έχετε τη σημείωση για τον ΓεΣΥ και το πρόγραμμα για το σπίτι.",
+        action: "Νέα συνεδρία με φωνή",
+      },
+      {
+        title: "Γίνετε ο ασθενής",
+        text: "Ανοίξτε την οθόνη που βλέπει ο ασθενής στο κινητό του. Πατήστε «Χρειάζομαι τον φυσιοθεραπευτή» και μετά «Πονάω». Γυρίστε στην αίθουσα: η κάρτα του γίνεται κόκκινη μέσα σε 3 δευτερόλεπτα.",
+        action: "Άνοιξε την οθόνη του ασθενή",
+      },
+      {
+        title: "Η αίθουσα σάς ειδοποιεί",
+        text: "Η κάρτα του ασθενή έγινε κόκκινη, και η σειρά του είναι στο «Σας χρειάζονται». Πατήστε «Το είδα» στην κάρτα του: το κινητό του δείχνει αμέσως ότι το είδατε.",
+        action: "Δείξε μου την κάρτα",
+      },
     ],
+    // one line on the other pages, while step 1 or 2 is on
+    coach: {
+      new: "Διαλέξτε έναν ασθενή, π.χ. τον Γιώργο Π., ή γράψτε ένα όνομα για νέο ασθενή, και πατήστε «Συνέχεια».",
+      program: "Πατήστε «Αλλαγή προγράμματος» για να πείτε νέες ασκήσεις.",
+      record:
+        "Πατήστε «Έναρξη ηχογράφησης» και πείτε τις ασκήσεις φωναχτά, ή πατήστε ένα έτοιμο δείγμα πιο κάτω. Μετά «Δημιουργία προγράμματος».",
+      review:
+        "Το πρόγραμμα και η σημείωση γράφτηκαν από τη φωνή σας. Ρίξτε μια ματιά, διαλέξτε κρεβάτι στην αίθουσα και πατήστε «Έγκριση» στο τέλος.",
+      programPage:
+        "Εγκρίθηκε! Αυτό παίρνει ο ασθενής. Ανοίξτε τον σύνδεσμο για το κινητό πιο κάτω (ή σκανάρετε το QR με το κινητό σας), πατήστε «Χρειάζομαι τον φυσιοθεραπευτή» → «Πονάω», και μετά γυρίστε στην «Αίθουσα».",
+      other: "Συνεχίστε την ξενάγηση από την αίθουσα.",
+      back: "Στην ξενάγηση",
+    },
+    doneTitle: "Αυτό είναι το PhysioPath",
+    doneText: "Η σημείωση από τη φωνή σας, το κινητό του ασθενή και η αίθουσα σε μία οθόνη. Θέλετε το ίδιο για τη δική σας κλινική;",
+    stepDone: "Έγινε",
+    skip: "Παράλειψη",
+    again: "Ξανά από την αρχή",
     emptyBoard: "Η αίθουσα άδειασε.",
     refill: "Ξαναγέμισε την αίθουσα",
     refilling: "Μία στιγμή…",
-    signOut: "Έξοδος από τη δοκιμή",
+    signOut: "Έξοδος",
   },
   en: {
     pageTitle: "Try PhysioPath",
@@ -92,16 +128,51 @@ const TEXT = {
     own: "I want my own clinic",
     ownNote: "The demo closes and your own clinic starts clean, without the fictional patients.",
     leaving: "One moment…",
-    tipsTitle: "Try this",
-    tips: [
-      "A red card means someone is in pain: press «Το είδα» (“Seen”).",
-      "«Νέα συνεδρία» (“New session”): say the exercises out loud, or pick a ready sample, and watch the note being written.",
-      "After approving, open the patient's link (or scan the QR code with another phone): that is what the patient sees.",
+    tourLabel: "Guided tour",
+    stepOf: (n: number, of: number) => `Step ${n} of ${of}`,
+    introTitle: "Welcome to PhysioPath",
+    introText:
+      "PhysioPath is a tool for physiotherapists. At the end of a session you say the exercises out loud, and it writes the GeSY clinical note and the patient's home program. You check and approve. In the room, one screen shows who is exercising, who has a question and who is in pain.",
+    introSmall: "The tour has 3 steps and takes about 2 minutes.",
+    introStart: "Let's start",
+    steps: [
+      {
+        title: "You speak. PhysioPath writes.",
+        text: "Do a session by voice: pick a patient and say the exercises out loud, the way you tell the patient. In about 15 seconds you have the GeSY note and the home program.",
+        action: "New session by voice",
+      },
+      {
+        title: "Be the patient",
+        text: "Open the screen the patient sees on their phone. Press «Χρειάζομαι τον φυσιοθεραπευτή» (“I need the physio”), then «Πονάω» (“I'm in pain”). Come back to the room: their card turns red within 3 seconds.",
+        action: "Open the patient's screen",
+      },
+      {
+        title: "The room tells you",
+        text: "The patient's card turned red and they are listed under «Σας χρειάζονται» (“Need you”). Press «Το είδα» (“Seen”) on their card: their phone shows at once that you saw it.",
+        action: "Show me the card",
+      },
     ],
+    coach: {
+      new: "Pick a patient, e.g. Γιώργος Π., or type a name for a new patient, and press «Συνέχεια» (“Continue”).",
+      program: "Press «Αλλαγή προγράμματος» (“Change program”) to say new exercises.",
+      record:
+        "Press «Έναρξη ηχογράφησης» (“Start recording”) and say the exercises out loud, or tap a ready sample below. Then «Δημιουργία προγράμματος» (“Create program”).",
+      review:
+        "The program and the note were written from your voice. Have a look, pick a bed in the room and press «Έγκριση» (“Approve”) at the end.",
+      programPage:
+        "Approved! This is what the patient gets. Open the phone link below (or scan the QR with your phone), press «Χρειάζομαι τον φυσιοθεραπευτή» → «Πονάω», then come back to «Αίθουσα» (“Room”).",
+      other: "Continue the tour from the room.",
+      back: "Back to the tour",
+    },
+    doneTitle: "That's PhysioPath",
+    doneText: "The note from your voice, the patient's phone and the room on one screen. Want the same for your own clinic?",
+    stepDone: "Done",
+    skip: "Skip",
+    again: "Start the tour again",
     emptyBoard: "The room is empty.",
     refill: "Fill the room again",
     refilling: "One moment…",
-    signOut: "Leave the demo",
+    signOut: "Exit",
   },
 } as const;
 

@@ -6,8 +6,9 @@
 // titles, stapled or tilted slips. Section titles are plain words; boxes are flat and coloured.
 import type { Route } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
+import { DemoCoach } from "@/app/components/demo/DemoCoach";
 import { DemoStrip } from "@/app/components/demo/DemoStrip";
 import { Logo } from "@/app/components/paper/Logo";
 import { demoText } from "@/app/lib/demo/text";
@@ -33,7 +34,7 @@ const ROLE_LABELS: Record<Profile["role"], string> = { owner: "Υπεύθυνη/
 type Props = {
   children: ReactNode;
   // demo: a demo clinic («Δοκιμάστε το») shows the yellow strip on top of every page.
-  profile: Pick<Profile, "role" | "full_name"> & Partial<Pick<Profile, "clinic_name" | "demo">>;
+  profile: Pick<Profile, "role" | "full_name"> & Partial<Pick<Profile, "clinic_name" | "demo" | "clinic_id">>;
   current?: StaffTab; // which link in the top bar is this page
   step?: { n: number; of: number }; // «Βήμα 1 από 2» (the voice note)
   width?: "narrow" | "wide";
@@ -53,7 +54,8 @@ export function StaffSheet({ children, profile, current, step, width = "narrow" 
           </TabLink>
           <nav aria-label="Κύρια πλοήγηση" className="order-last w-full sm:order-none sm:w-auto">
             {/* Four links: a little smaller on a phone, and onto a second line if they still don't fit. */}
-            <ul className="flex flex-wrap gap-x-1">
+            {/* On a phone the four links stay on one line (smaller), scrolling sideways if a screen is narrower still. */}
+            <ul className="flex gap-x-0.5 overflow-x-auto sm:flex-wrap sm:gap-x-1 sm:overflow-visible">
               {links.map((link) => (
                 <li key={link.id}>
                   <TabLink
@@ -61,7 +63,7 @@ export function StaffSheet({ children, profile, current, step, width = "narrow" 
                     tab={link.tab}
                     aria-current={link.id === current ? "page" : undefined}
                     className={cx(
-                      "flex min-h-[52px] items-center border-b-4 px-2.5 text-[17px] whitespace-nowrap no-underline sm:px-3.5 sm:text-[19px]",
+                      "flex min-h-[52px] items-center border-b-4 px-1.5 text-[16px] whitespace-nowrap no-underline sm:px-3.5 sm:text-[19px]",
                       link.id === current
                         ? "border-action font-bold text-ink hover:text-ink"
                         : "border-transparent text-action hover:border-hairline hover:text-ink",
@@ -74,8 +76,9 @@ export function StaffSheet({ children, profile, current, step, width = "narrow" 
             </ul>
           </nav>
           <div className="ml-auto flex flex-wrap items-center gap-x-4 text-base">
-            {/* The clinic open right now; «Αλλαγή» lists the person's clinics (/clinics). */}
-            {profile.clinic_name && (
+            {/* The clinic open right now; «Αλλαγή» lists the person's clinics (/clinics). Not in a demo: the
+                yellow strip says what this is, and a visitor has nothing to switch to. */}
+            {profile.clinic_name && !profile.demo && (
               <span className="flex flex-wrap items-center gap-x-2">
                 <span className="font-semibold">{profile.clinic_name}</span>
                 <Link href="/clinics" aria-label="Αλλαγή κλινικής" className="min-h-11 content-center">
@@ -83,9 +86,11 @@ export function StaffSheet({ children, profile, current, step, width = "narrow" 
                 </Link>
               </span>
             )}
-            <span>
-              {profile.full_name} <span className="text-muted">· {ROLE_LABELS[profile.role]}</span>
-            </span>
+            {!profile.demo && (
+              <span>
+                {profile.full_name} <span className="text-muted">· {ROLE_LABELS[profile.role]}</span>
+              </span>
+            )}
             <SignOut className="" label={profile.demo ? demoText(profile.demo.lang).signOut : undefined} />
           </div>
         </div>
@@ -99,6 +104,12 @@ export function StaffSheet({ children, profile, current, step, width = "narrow" 
             width === "wide" ? "max-w-[1360px]" : "max-w-[1060px]",
           )}
         >
+          {/* The demo's guided tour: what to do on this page (not on the board, which has the full tour). */}
+          {profile.demo && profile.clinic_id && (
+            <Suspense fallback={null}>
+              <DemoCoach lang={profile.demo.lang} clinicId={profile.clinic_id} />
+            </Suspense>
+          )}
           {step && (
             <div className="pb-4">
               <StepBar n={step.n} of={step.of} />
