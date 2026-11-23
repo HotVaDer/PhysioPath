@@ -113,6 +113,16 @@ describe("RoomBoard", () => {
       expect(qr).toHaveAttribute("target", "_blank");
     });
 
+    it("on a phone-sized screen «QR / οθόνη ασθενή» opens in the same tab", async () => {
+      Object.defineProperty(window, "matchMedia", { value: () => ({ matches: true }), configurable: true, writable: true });
+      render(<RoomBoard initial={board([card({})])} />);
+      const qr = screen.getByRole("link", { name: /QR \/ οθόνη ασθενή για Γιώργος Δ\./ });
+      qr.addEventListener("click", (event) => event.preventDefault()); // jsdom can't navigate
+      await userEvent.click(qr);
+      expect(qr).not.toHaveAttribute("target");
+      Reflect.deleteProperty(window, "matchMedia");
+    });
+
     it("«Πλήρης οθόνη» puts the board alone on the screen, and the same button leaves", async () => {
       const request = vi.fn(async () => {
         Object.defineProperty(document, "fullscreenElement", { configurable: true, value: document.documentElement });

@@ -21,6 +21,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { finishCard, seeCall } from "@/app/lib/board/actions";
 import type { BoardCard, BoardData } from "@/app/lib/board/board";
 import { boardStatus, exercisesDone, isDone, minutesAgo, nowExercise, type BoardStatus, type CallReason } from "@/app/lib/board/session";
+import { onePhoneTab } from "@/app/components/paper/TabLink";
 import { cx } from "@/app/lib/cx";
 import { slotLabel } from "@/app/lib/notes/approval";
 
@@ -487,6 +488,10 @@ function PatientCard({ card, place, now, onAct }: { card: BoardCard; place: stri
           <Link
             href={`/programs/${card.programId}` as Route}
             target="_blank"
+            // On a phone one tab is everything: a new tab there looks like the button did nothing.
+            onClick={(event) => {
+              if (onePhoneTab()) event.currentTarget.removeAttribute("target");
+            }}
             aria-label={`QR / οθόνη ασθενή για ${card.label} (ανοίγει σε νέα καρτέλα)`}
             className={cx(button, secondary)}
           >
