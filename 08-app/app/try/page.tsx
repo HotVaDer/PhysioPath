@@ -92,10 +92,7 @@ export default async function TryPage({ searchParams }: PageProps<"/try">) {
         ) : (
           <TryForm lang={lang} refCode={refCode} />
         )}
-        <p className="text-base text-muted">
-          {t.fine}
-          {refCode && <> {t.refNote}</>}
-        </p>
+        <p className="text-base text-muted">{t.fine}</p>
       </Card>
     </div>
   );

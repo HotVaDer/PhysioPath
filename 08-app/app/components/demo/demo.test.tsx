@@ -19,6 +19,8 @@ describe("DemoStrip", () => {
     const strip = screen.getByRole("complementary", { name: "Κλινική δοκιμής" });
     expect(strip).toHaveTextContent("Φανταστικοί ασθενείς · διαγράφεται σε 7 μέρες");
     expect(within(strip).getByRole("button", { name: /Θέλω τη δική μου κλινική/ })).toBeInTheDocument();
+    // Leaving ends the demo: it says so next to the button.
+    expect(strip).toHaveTextContent("Η δοκιμή κλείνει");
     await expectNoA11yViolations(container);
   });
 
@@ -49,7 +51,7 @@ describe("DemoTips", () => {
 
   it("in English", () => {
     render(<DemoTips lang="en" empty />);
-    expect(screen.getByRole("region", { name: "Try this" })).toHaveTextContent("George is in pain");
+    expect(screen.getByRole("region", { name: "Try this" })).toHaveTextContent("A red card means someone is in pain");
     expect(screen.getByRole("button", { name: "Fill the room again" })).toBeInTheDocument();
   });
 });

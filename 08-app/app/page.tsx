@@ -123,9 +123,6 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </p>
       )}
 
-      {/* A demo clinic («Δοκιμάστε το»): what to try, instead of the owner's setup steps. */}
-      {profile.demo && <DemoTips lang={profile.demo.lang} empty={board.cards.length === 0} />}
-
       {isOwner && !profile.demo && !(roomsDone && teamDone) && (
         <section aria-labelledby="next" className="flex max-w-[640px] flex-col gap-3">
           <div className="flex flex-col gap-0.5">
@@ -173,6 +170,13 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <RoomBoard initial={board} action={newSession}>
           {notices}
         </RoomBoard>
+      )}
+      {/* A demo clinic («Δοκιμάστε το»): what to try, under the board, so on a phone the patients come first.
+          (A demo has no «Επόμενα βήματα»: those are for a real clinic's owner.) */}
+      {profile.demo && (
+        <div className="pt-6">
+          <DemoTips lang={profile.demo.lang} empty={board.cards.length === 0} />
+        </div>
       )}
     </StaffSheet>
   );

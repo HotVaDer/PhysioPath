@@ -46,8 +46,8 @@ function loadTurnstile(): Promise<Turnstile> {
 export const captchaSiteKey = () => process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || null;
 
 const PROBLEMS = {
-  el: "Ο έλεγχος ασφαλείας δεν φόρτωσε. Ανανεώστε τη σελίδα. Αν συνεχίζει, δοκιμάστε άλλον browser ή κλείστε το ad blocker.",
-  en: "The security check didn't load. Reload the page. If it keeps happening, try another browser or turn off the ad blocker.",
+  el: "Ο έλεγχος ασφαλείας δεν ολοκληρώθηκε. Πατήστε ξανά το κουτάκι ή ανανεώστε τη σελίδα. Αν συνεχίζει, δοκιμάστε άλλον browser ή κλείστε το ad blocker.",
+  en: "The security check didn't finish. Tap the box again or reload the page. If it keeps happening, try another browser or turn off the ad blocker.",
 };
 
 // lang: English only on the demo's /try page; everywhere else Greek.

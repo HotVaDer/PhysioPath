@@ -43,6 +43,18 @@ describe("TabLink", () => {
     expect(open).not.toHaveBeenCalled();
   });
 
+  it("on a phone-sized screen: a normal link in the same tab (a switch there looks like nothing happened)", async () => {
+    window.name = WORK_TAB;
+    const matchMedia = vi.fn().mockReturnValue({ matches: true });
+    Object.defineProperty(window, "matchMedia", { value: matchMedia, configurable: true, writable: true });
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    render(<TabLink href="/" tab={BOARD_TAB}>Αίθουσα</TabLink>);
+    await userEvent.click(screen.getByRole("link", { name: "Αίθουσα" }));
+    expect(matchMedia).toHaveBeenCalledWith("(max-width: 639px)");
+    expect(open).not.toHaveBeenCalled();
+    Reflect.deleteProperty(window, "matchMedia");
+  });
+
   it("Cmd-click still does what the person asked for (the browser's own new tab)", async () => {
     window.name = WORK_TAB;
     const open = vi.spyOn(window, "open").mockReturnValue(null);

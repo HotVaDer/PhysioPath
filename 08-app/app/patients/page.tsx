@@ -36,7 +36,7 @@ export default async function PatientsPage() {
 
         {alerts > 0 && (
           <p role="status" className="bg-tab-pink px-4 py-3 font-semibold">
-            {alerts === 1 ? "1 ασθενής ανέφερε δυνατό πόνο." : `${alerts} ασθενείς ανέφεραν δυνατό πόνο.`} Είναι πρώτοι στη λίστα.
+            {alerts === 1 ? "1 ασθενής ανέφερε δυνατό πόνο. Είναι πρώτος στη λίστα." : `${alerts} ασθενείς ανέφεραν δυνατό πόνο. Είναι πρώτοι στη λίστα.`}
           </p>
         )}
 

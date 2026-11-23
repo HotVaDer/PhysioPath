@@ -18,6 +18,11 @@ export function TabName({ name }: { name: string }) {
 // (Firefox on an iPhone is Safari inside, "FxiOS", and switches fine.)
 export const switchesTabs = (userAgent: string) => !/Firefox\//.test(userAgent);
 
+// A phone-sized screen: one tab is the whole way of working there. Switching tabs on a phone opens a new
+// tab the person doesn't see happen, so the link seems to do nothing (found testing «Δοκιμάστε το»).
+export const onePhoneTab = () =>
+  typeof window.matchMedia === "function" && window.matchMedia("(max-width: 639px)").matches;
+
 // A link that belongs in a given tab. In that tab already: a normal link. In another tab: it goes to
 // the tab with that name (the browser switches to it), so the page here stays as it is; in Firefox,
 // to a new tab. Cmd/Ctrl/Shift-click and middle-click keep doing what the person asked for.
@@ -28,7 +33,7 @@ export function TabLink({ href, tab, onClick, ...rest }: ComponentProps<typeof L
       {...rest}
       onClick={(event) => {
         onClick?.(event);
-        if (event.defaultPrevented || !tab || window.name === tab) return;
+        if (event.defaultPrevented || !tab || window.name === tab || onePhoneTab()) return;
         if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         if (!switchesTabs(navigator.userAgent)) {
           // Firefox: an ordinary "open in a new tab" link, followed by the browser itself (Next leaves

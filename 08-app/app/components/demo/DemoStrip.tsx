@@ -13,10 +13,12 @@ export function DemoStrip({ demo }: { demo: { expiresAt: string; lang: DemoLang 
           <span className="font-semibold">{t.stripTitle}</span> · {t.stripText(daysLeft(demo.expiresAt))}
           {t.stripAppInGreek && <span className="block text-base text-muted">{t.stripAppInGreek}</span>}
         </p>
-        <form action={leaveDemo}>
+        {/* Leaving ends the demo (the visitor's login is signed out): say so before they press. */}
+        <form action={leaveDemo} className="flex max-w-[360px] flex-col gap-1">
           <SubmitButton pending={t.leaving}>
             {t.own} <span aria-hidden="true">→</span>
           </SubmitButton>
+          <span className="text-base text-muted">{t.ownNote}</span>
         </form>
       </div>
     </aside>

@@ -82,7 +82,7 @@ export function useRecorder(onRecorded: (audio: Blob, seconds: number) => void) 
 
     return () => {
       cancelAnimationFrame(frame);
-      void context.close();
+      if (context.state !== "closed") void context.close(); // closing twice throws
       setLevel(0);
       setTooQuiet(false);
     };
