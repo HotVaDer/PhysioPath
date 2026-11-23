@@ -2,6 +2,7 @@
 // sign-up's clinic step; afterwards the new clinic is open, with its own «Επόμενα βήματα» (rooms, team).
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { StaffSheet } from "@/app/components/paper/StaffSheet";
 import { requireMember } from "@/app/lib/onboarding/session";
@@ -11,6 +12,7 @@ export const metadata: Metadata = { title: "Νέα κλινική" };
 
 export default async function NewClinicPage() {
   const { profile } = await requireMember();
+  if (profile.demo) redirect("/clinics"); // no real clinic from inside a demo
 
   return (
     <StaffSheet profile={profile}>

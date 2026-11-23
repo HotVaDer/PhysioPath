@@ -92,6 +92,13 @@ export default async function WelcomePage() {
                   </p>
                 </div>
               </div>
+              {/* «Δοκιμάστε το»: a demo clinic with fictional patients, no account (/try). */}
+              <p className="text-lg">
+                Θέλετε πρώτα να το δείτε;{" "}
+                <Link href="/try" className="font-semibold">
+                  Δοκιμάστε το χωρίς λογαριασμό <span aria-hidden="true">→</span>
+                </Link>
+              </p>
             </div>
 
             <div className="hidden justify-center lg:flex">

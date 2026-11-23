@@ -15,12 +15,13 @@ function forgetDraft() {
 }
 
 // className: where it sits (default: a little space above, at the end of a card).
-export function SignOut({ lead, className = "mt-6" }: { lead?: string; className?: string }) {
+// label: the button's words, «Αποσύνδεση» unless a demo clinic says «Έξοδος από τη δοκιμή».
+export function SignOut({ lead, className = "mt-6", label = "Αποσύνδεση" }: { lead?: string; className?: string; label?: string }) {
   return (
     <form action={signOut} onSubmit={forgetDraft} className={cx("text-base text-muted", className)}>
       {lead && <span>{lead} </span>}
       <button type="submit" className="min-h-11 cursor-pointer text-action underline underline-offset-[3px] hover:text-ink">
-        Αποσύνδεση
+        {label}
       </button>
     </form>
   );

@@ -18,6 +18,9 @@ export type Profile = {
   full_name: string | null;
   onboarded_at: string | null;
   clinic_name: string | null;
+  // Set when the open clinic is a demo clinic («Δοκιμάστε το», /try): when it is deleted, and the
+  // language the visitor picked. Optional so the many test profiles stay as they are.
+  demo?: { expiresAt: string; lang: "el" | "en" } | null;
 };
 
 // One of the clinics someone belongs to (public.my_clinics()).
@@ -33,13 +36,21 @@ export async function loadProfile(supabase: Supabase, userId: string): Promise<P
   // The clinic through the profile's own clinic_id (RLS shows only the open clinic anyway).
   const { data } = await supabase
     .from("profiles")
-    .select("clinic_id, role, full_name, onboarded_at, clinic:clinics!profiles_clinic_id_fkey(name)")
+    .select(
+      "clinic_id, role, full_name, onboarded_at, clinic:clinics!profiles_clinic_id_fkey(name, is_demo, demo_expires_at, demo_lang)",
+    )
     .eq("id", userId)
     .maybeSingle();
   if (!data) return null;
   // Without generated database types the client guesses a list here; one clinic per profile comes back.
-  const { clinic, ...profile } = data as unknown as Omit<Profile, "clinic_name"> & { clinic: { name: string } | null };
-  return { ...profile, clinic_name: clinic?.name ?? null };
+  const { clinic, ...profile } = data as unknown as Omit<Profile, "clinic_name" | "demo"> & {
+    clinic: { name: string; is_demo?: boolean; demo_expires_at?: string | null; demo_lang?: string | null } | null;
+  };
+  const demo =
+    clinic?.is_demo && clinic.demo_expires_at
+      ? { expiresAt: clinic.demo_expires_at, lang: clinic.demo_lang === "en" ? ("en" as const) : ("el" as const) }
+      : null;
+  return { ...profile, clinic_name: clinic?.name ?? null, demo };
 }
 
 // Every clinic the person belongs to, by name, with the one open now marked.
@@ -105,6 +116,7 @@ export async function saveDraft(supabase: Supabase, patch: Partial<Draft>): Prom
 export async function requireFormUser() {
   const { supabase, user } = await currentUser();
   if (!user) redirect("/welcome");
+  if (user.is_anonymous) redirect("/try"); // a demo visitor makes only demo clinics (the database refuses others)
   const profile = await loadProfile(supabase, user.id);
   if (profile?.onboarded_at) redirect("/");
   const draft = await loadDraft(supabase);

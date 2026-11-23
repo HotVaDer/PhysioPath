@@ -84,12 +84,15 @@ export default async function ClinicsPage({ searchParams }: PageProps<"/clinics"
           ))}
         </ul>
 
-        <div className="flex flex-col gap-1.5">
-          <PaperLink href="/clinics/new" variant="outline">
-            <span aria-hidden="true">+</span> Νέα κλινική
-          </PaperLink>
-          <p className="text-muted">Για δεύτερο χώρο με δικούς του ασθενείς και δική του ομάδα. Θα είστε η/ο υπεύθυνη/ος.</p>
-        </div>
+        {/* A demo visitor can't make a real clinic from inside the demo (the database refuses it too). */}
+        {!profile.demo && (
+          <div className="flex flex-col gap-1.5">
+            <PaperLink href="/clinics/new" variant="outline">
+              <span aria-hidden="true">+</span> Νέα κλινική
+            </PaperLink>
+            <p className="text-muted">Για δεύτερο χώρο με δικούς του ασθενείς και δική του ομάδα. Θα είστε η/ο υπεύθυνη/ος.</p>
+          </div>
+        )}
       </div>
     </StaffSheet>
   );

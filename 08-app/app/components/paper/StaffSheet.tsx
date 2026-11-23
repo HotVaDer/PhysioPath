@@ -8,7 +8,9 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { DemoStrip } from "@/app/components/demo/DemoStrip";
 import { Logo } from "@/app/components/paper/Logo";
+import { demoText } from "@/app/lib/demo/text";
 import { StepBar } from "@/app/components/paper/Sheet";
 import { TabLink } from "@/app/components/paper/TabLink";
 import { SignOut } from "@/app/components/paper/SignOut";
@@ -30,7 +32,8 @@ const ROLE_LABELS: Record<Profile["role"], string> = { owner: "Υπεύθυνη/
 
 type Props = {
   children: ReactNode;
-  profile: Pick<Profile, "role" | "full_name"> & Partial<Pick<Profile, "clinic_name">>;
+  // demo: a demo clinic («Δοκιμάστε το») shows the yellow strip on top of every page.
+  profile: Pick<Profile, "role" | "full_name"> & Partial<Pick<Profile, "clinic_name" | "demo">>;
   current?: StaffTab; // which link in the top bar is this page
   step?: { n: number; of: number }; // «Βήμα 1 από 2» (the voice note)
   width?: "narrow" | "wide";
@@ -41,6 +44,7 @@ export function StaffSheet({ children, profile, current, step, width = "narrow" 
   return (
     // The desk with the faint «Φ» marks, as on welcome, sign-up and sign-in (globals.css .desk-pattern).
     <div className="desk-pattern flex min-h-dvh flex-col">
+      {profile.demo && <DemoStrip demo={profile.demo} />}
       <header className="border-b-2 border-hairline bg-sheet">
         {/* The same width on every page (not the sheet's), so the bar never jumps between one and two lines. */}
         <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-x-6 gap-y-1 px-4 py-2 sm:px-6">
@@ -82,7 +86,7 @@ export function StaffSheet({ children, profile, current, step, width = "narrow" 
             <span>
               {profile.full_name} <span className="text-muted">· {ROLE_LABELS[profile.role]}</span>
             </span>
-            <SignOut className="" />
+            <SignOut className="" label={profile.demo ? demoText(profile.demo.lang).signOut : undefined} />
           </div>
         </div>
       </header>

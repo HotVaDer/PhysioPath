@@ -16,6 +16,7 @@ export const metadata: Metadata = { title: "Καλώς ήρθατε" };
 export default async function StartPage() {
   const { supabase, user } = await currentUser();
   if (!user) redirect("/welcome");
+  if (user.is_anonymous) redirect("/try"); // a visitor without a demo clinic yet: the demo, not a sign-up
   const profile = await loadProfile(supabase, user.id);
   if (profile?.onboarded_at && profile.clinic_id) redirect("/"); // in a clinic: nothing to do here
   const invites = await loadMyInvites(supabase);
@@ -33,7 +34,8 @@ export default async function StartPage() {
         <InviteNotice invites={invites} lead="Σας περιμένει πρόσκληση:" />
       ) : (
         <p className="text-muted">
-          Αν σας καλέσει μια κλινική, η πρόσκληση θα έρθει στο email σας ({user.email}) και θα εμφανιστεί και εδώ.
+          Αν σας καλέσει μια κλινική, η πρόσκληση θα έρθει στο email σας{user.email ? ` (${user.email})` : ""} και θα
+          εμφανιστεί και εδώ.
         </p>
       )}
 
