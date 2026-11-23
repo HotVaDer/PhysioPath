@@ -43,13 +43,6 @@ docs/progress.md       what's done, what's next, dashboard settings
 docs/setup.md          setting up on a new computer, which keys and how to get your own
 ```
 
-## Try it without an account («Δοκιμάστε το»)
-
-`/try` opens a private demo clinic with fictional patients in one press (Supabase anonymous sign-in, then
-`start_demo`). Send `/try?r=<code>` in emails and messages: the code is saved on the demo clinic
-(`clinics.demo_ref`), so you can see who tried it. `&lang=en` gives the English entry. Demos are deleted after 7 days
-by a nightly job, and have their own AI limits. See `supabase/migrations/20261124120000_demo_clinics.sql`.
-
 ## Rules this app keeps
 
 - Nothing reaches a patient before a physio approves it. Assistants never see clinical notes (RLS).

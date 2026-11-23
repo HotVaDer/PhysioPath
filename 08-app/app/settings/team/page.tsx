@@ -100,15 +100,8 @@ export default async function TeamSettingsPage({ searchParams }: PageProps<"/set
           <h2 id="invite" className="font-display text-[24px]">
             Καλέστε κάποιον
           </h2>
-          {/* A demo clinic sends no invites (each one is a real email); the database refuses them too. */}
-          {profile.demo ? (
-            <p className="bg-tab-yellow px-4 py-3">
-              Στην κλινική δοκιμής δεν στέλνονται προσκλήσεις. Στη δική σας κλινική καλείτε την ομάδα σας με το email τους.
-            </p>
-          ) : (
-            // A new key after each send: the form starts empty, without the last error.
-            <InviteForm key={`${result}${sentTo}${sentAt}`} clinicId={profile.clinic_id} />
-          )}
+          {/* A new key after each send: the form starts empty, without the last error. */}
+          <InviteForm key={`${result}${sentTo}${sentAt}`} clinicId={profile.clinic_id} />
         </section>
 
         <section aria-labelledby="list" className="flex flex-col gap-2">

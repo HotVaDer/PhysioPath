@@ -7,7 +7,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AutoRefresh } from "@/app/components/paper/AutoRefresh";
-import { DemoTips } from "@/app/components/demo/DemoTips";
 import { PaperLink, QuietSubmit } from "@/app/components/paper/Buttons";
 import { RoomBoard } from "@/app/components/board/RoomBoard";
 import { StaffSheet } from "@/app/components/paper/StaffSheet";
@@ -123,10 +122,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </p>
       )}
 
-      {/* A demo clinic («Δοκιμάστε το»): what to try, instead of the owner's setup steps. */}
-      {profile.demo && <DemoTips lang={profile.demo.lang} empty={board.cards.length === 0} />}
-
-      {isOwner && !profile.demo && !(roomsDone && teamDone) && (
+      {isOwner && !(roomsDone && teamDone) && (
         <section aria-labelledby="next" className="flex max-w-[640px] flex-col gap-3">
           <div className="flex flex-col gap-0.5">
             <h2 id="next" className="font-display text-[26px]">

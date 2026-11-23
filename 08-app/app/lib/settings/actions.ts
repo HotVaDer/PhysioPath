@@ -61,9 +61,6 @@ export async function inviteMember(_: FormState, form: FormData): Promise<FormSt
       [/already in the team/, "Αυτό το άτομο είναι ήδη στην ομάδα σας."],
       [/already invited/, "Έχετε ήδη καλέσει αυτό το email. Αν δεν βρήκε την πρόσκληση, πατήστε «Ξανά αποστολή» στη λίστα πιο κάτω."],
     ];
-    if (/not in a demo/.test(error.message)) {
-      return { message: "Στην κλινική δοκιμής δεν στέλνονται προσκλήσεις.", values };
-    }
     const hit = known.find(([re]) => re.test(error.message));
     if (hit) return { errors: { email: hit[1] }, values };
     console.error("add_invites failed:", error);

@@ -45,15 +45,10 @@ function loadTurnstile(): Promise<Turnstile> {
 
 export const captchaSiteKey = () => process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || null;
 
-const PROBLEMS = {
-  el: "Ο έλεγχος ασφαλείας δεν φόρτωσε. Ανανεώστε τη σελίδα. Αν συνεχίζει, δοκιμάστε άλλον browser ή κλείστε το ad blocker.",
-  en: "The security check didn't load. Reload the page. If it keeps happening, try another browser or turn off the ad blocker.",
-};
+const PROBLEM = "Ο έλεγχος ασφαλείας δεν φόρτωσε. Ανανεώστε τη σελίδα. Αν συνεχίζει, δοκιμάστε άλλον browser ή κλείστε το ad blocker.";
 
-// lang: English only on the demo's /try page; everywhere else Greek.
-export function Captcha({ resetKey, lang = "el" }: { resetKey?: unknown; lang?: "el" | "en" }) {
+export function Captcha({ resetKey }: { resetKey?: unknown }) {
   const siteKey = captchaSiteKey();
-  const PROBLEM = PROBLEMS[lang];
   const box = useRef<HTMLDivElement>(null);
   const widget = useRef<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -67,7 +62,7 @@ export function Captcha({ resetKey, lang = "el" }: { resetKey?: unknown; lang?: 
         if (gone) return;
         widget.current = turnstile.render(el, {
           sitekey: siteKey,
-          language: lang,
+          language: "el",
           "response-field-name": "captchaToken",
           callback: () => setProblem(null),
           // Cloudflare's error code goes to the console (e.g. 110200 = this site's address is not
@@ -89,7 +84,7 @@ export function Captcha({ resetKey, lang = "el" }: { resetKey?: unknown; lang?: 
       if (widget.current) window.turnstile?.remove(widget.current);
       widget.current = null;
     };
-  }, [siteKey, lang, PROBLEM]);
+  }, [siteKey]);
 
   useEffect(() => {
     if (widget.current) window.turnstile?.reset(widget.current);
