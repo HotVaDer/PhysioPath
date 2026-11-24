@@ -21,6 +21,8 @@ describe("systemPrompt", () => {
     expect(templates).toContain("Never add a template the physio did not describe");
     expect(templates).toContain("patient_first_name and next_appointment are always null");
     expect(templates).toContain("At most 10 templates");
+    // a correction without its comma («τρία σετ όχι δύο σετ»): the number said last, and a question
+    expect(templates).toContain("use the number said last and add a question");
     expect(templates).not.toContain("GeSY");
     expect(systemPrompt("en", "templates")).toBe(templates); // templates are for patients: always Greek
   });
