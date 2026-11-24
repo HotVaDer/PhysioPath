@@ -19,7 +19,7 @@ export default async function ProgramStepPage({ searchParams }: PageProps<"/note
   if (!id.success) redirect("/notes/new");
 
   // RLS: only this clinic's patients and programs are visible.
-  const [{ data: patient }, { data: last }] = await Promise.all([
+  const [{ data: patient }, { data: last }, { data: lastNote }] = await Promise.all([
     supabase.from("patients").select("id, label").eq("id", id.data).is("archived_at", null).maybeSingle(),
     supabase
       .from("programs")
@@ -28,7 +28,10 @@ export default async function ProgramStepPage({ searchParams }: PageProps<"/note
       .order("approved_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // The area the physio wrote in the last note, for «Προτεινόμενα» templates (physios only: RLS).
+    supabase.from("notes").select("note").eq("patient_id", id.data).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
+  const lastArea = (lastNote?.note as { body_area?: unknown } | undefined)?.body_area;
   if (!patient) redirect("/notes/new");
   const program = last ? readProgram(last.program) : null;
   if (!last || !program) redirect("/notes/record"); // nothing stored (or unreadable): a new program
@@ -38,6 +41,7 @@ export default async function ProgramStepPage({ searchParams }: PageProps<"/note
       <ProgramChoice
         patient={{ id: patient.id as string, label: patient.label as string }}
         stored={{ programId: last.id as string, approvedAt: last.approved_at as string, program }}
+        area={typeof lastArea === "string" && lastArea.trim() ? lastArea.trim() : null}
       />
     </StaffSheet>
   );

@@ -24,7 +24,7 @@ const program: PatientProgram = {
   ],
   after_exercises: [], avoid: [], contact_if: [], other: [],
 };
-const knee: TemplateChoice = { id: "7b3c0d6e-8f41-4a2b-9c7d-1e2f3a4b5c6d", name: "Γόνατο μετά ACL", program };
+const knee: TemplateChoice = { id: "7b3c0d6e-8f41-4a2b-9c7d-1e2f3a4b5c6d", name: "Γόνατο μετά ACL", area: "Γόνατο", uses: 3, program };
 const note = { patient_ref: "Γιώργος", body_area: "Γόνατο", service_given: "Κινητοποίηση", assessment_findings: null, treatment_plan: null, progress: null };
 
 const open = (templates: TemplateChoice[] = [knee]) =>
@@ -49,7 +49,7 @@ afterEach(() => sessionStorage.clear());
 describe("RecordForm with templates", () => {
   it("«Όπως είναι» (the first choice): the template's exercises are shown, and only the note is written", async () => {
     open();
-    await userEvent.selectOptions(await screen.findByLabelText(/Πρότυπο/), knee.id);
+    await userEvent.click(await screen.findByRole("button", { name: /Γόνατο μετά ACL/ }));
     expect(screen.getByRole("radio", { name: /Όπως είναι/ })).toBeChecked();
     expect(screen.getByRole("region", { name: "Πρόγραμμα ασκήσεων – Γόνατο" })).toHaveTextContent("Γλίστρημα φτέρνας");
     await userEvent.click(screen.getByRole("button", { name: /Δημιουργία σημείωσης/ }));
@@ -62,7 +62,7 @@ describe("RecordForm with templates", () => {
 
   it("«Με αλλαγές»: the text and the template's id go to the AI", async () => {
     open();
-    await userEvent.selectOptions(await screen.findByLabelText(/Πρότυπο/), knee.id);
+    await userEvent.click(await screen.findByRole("button", { name: /Γόνατο μετά ACL/ }));
     await userEvent.click(screen.getByRole("radio", { name: /Με αλλαγές/ }));
     expect(screen.getByText(/Μόνο τι αλλάζει/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Δημιουργία προγράμματος/ }));
@@ -73,7 +73,7 @@ describe("RecordForm with templates", () => {
   it("no templates in the clinic: no picker", async () => {
     open([]);
     await screen.findByRole("heading", { name: "Ηχογράφηση" });
-    expect(screen.queryByLabelText(/Πρότυπο/)).toBeNull();
+    expect(screen.queryByRole("heading", { name: /Πρότυπο/ })).toBeNull();
     expect(within(document.body).getByRole("button", { name: /Δημιουργία προγράμματος/ })).toBeInTheDocument();
   });
 });

@@ -30,10 +30,11 @@ import { isStale, noteFor } from "@/app/lib/notes/draft";
 import { formatClock } from "@/app/lib/notes/format";
 import { AUDIO_TOO_LARGE, MAX_AUDIO_BYTES } from "@/app/lib/notes/limits";
 import type { Sample } from "@/app/lib/notes/samples";
-import type { PatientProgram } from "@/app/lib/notes/schema";
 import { MAX_RECORDING_SECONDS, useRecorder } from "@/app/lib/notes/useRecorder";
 import { ProgramSummary } from "@/app/notes/ProgramSummary";
 import { StaleNotice } from "@/app/notes/StaleNotice";
+
+import { TemplatePicker, type TemplateChoice } from "./TemplatePicker";
 
 type Busy = null | "transcribing" | "generating";
 
@@ -43,8 +44,7 @@ const radio = "size-[22px] flex-none cursor-pointer accent-action";
 const green =
   "inline-flex min-h-14 cursor-pointer items-center gap-2.5 bg-action px-6 text-[19px] font-bold text-white hover:bg-action-hover disabled:cursor-wait disabled:opacity-80";
 
-// One of the clinic's templates, for the picker.
-export type TemplateChoice = { id: string; name: string; program: PatientProgram };
+export type { TemplateChoice } from "./TemplatePicker";
 
 export function RecordForm({
   samples,
@@ -192,32 +192,17 @@ export function RecordForm({
       {/* 1. The template (optional). First, because it changes what the physio says. */}
       {!same && templates.length > 0 && (
         <div className="flex flex-col gap-1.5 border-t-2 border-hairline pt-5">
-          <label htmlFor="template" className="text-[21px] font-bold">
-            Πρότυπο <span className="text-[19px] font-normal text-muted">(προαιρετικό)</span>
-          </label>
-          <p id="template-hint" className="text-base text-muted">
-            Ένα από τα πρότυπα της κλινικής σας, όπως είναι ή με αλλαγές που λέτε.
-          </p>
-          <select
-            id="template"
-            aria-describedby="template-hint"
-            value={chosen?.id ?? ""}
+          <TemplatePicker
+            templates={templates}
+            chosenId={chosen?.id ?? null}
+            patientArea={draft.patientArea}
             disabled={busy !== null || recording}
-            onChange={(e) => {
-              const picked = templates.find((t) => t.id === e.target.value);
+            onPick={(picked) => {
               setError(null);
               // A new pick starts «Όπως είναι»: the usual case, and the AI doesn't touch the program.
               dispatch({ type: "setTemplate", template: picked ? { id: picked.id, name: picked.name, asIs: draft.template?.asIs ?? true } : null });
             }}
-            className={cx(fieldBox(), "max-w-[480px] cursor-pointer")}
-          >
-            <option value="">Χωρίς πρότυπο</option>
-            {templates.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name} ({t.program.exercises.length === 1 ? "1 άσκηση" : `${t.program.exercises.length} ασκήσεις`})
-              </option>
-            ))}
-          </select>
+          />
           {chosen && draft.template && (
             <>
               <fieldset className="flex flex-col gap-1 pt-2">

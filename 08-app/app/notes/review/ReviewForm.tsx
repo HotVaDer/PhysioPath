@@ -127,6 +127,7 @@ export function ReviewForm({ slots, notesPerPatient, signer, today, clinicId }: 
     where: draft.where,
     mode: same ? "same" : "new",
     baseProgramId: same ? draft.base!.programId : null,
+    templateId: same ? null : (draft.template?.id ?? null),
     clinicId: draft.clinicId ?? clinicId, // not stamped yet (the first moment): it was started here
   });
 

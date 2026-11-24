@@ -517,3 +517,17 @@ No database changes. Each step was tested by the user in Firefox, Safari and Chr
   πρόγραμμα») and puts the template's program in unchanged: the AI never sees it. The review can still edit it
   by hand. «Με αλλαγές» is the template mode above. **286 tests.**
 
+## 2026-11-24 · Templates, phase 2b: finding a template quickly
+- **Why:** with 30 templates a list is too long. The user asked for "suggestions"; agreed: by the area the physio
+  wrote in the patient's last note, plain matching, never an AI choice from the diagnosis (CLAUDE.md, MDR).
+- **Database** (`20261124220000_template_areas.sql`, pushed live after a rolled-back trial, 388/388):
+  `templates.area`, `uses`, `last_used_at`; `save_template(…, p_area)` (old 3-argument call dropped);
+  `set_template_area`; `mark_template_used` (after «Έγκριση», not on a second press); demo templates get
+  «Γόνατο», «Ώμος», «Μέση» (also the demos already made).
+- **App:** `app/lib/templates/area.ts` (side words dropped, no accents: «Αριστερό γόνατο» ↔ «Γόνατο»; search
+  by word starts; groups by area, «Χωρίς περιοχή» last; most used first). `TemplatePicker` on the recording
+  page: search (over 5 templates), «Προτεινόμενα · Γόνατο · από την τελευταία σας σημείωση», all templates by
+  area, folds to the chosen one with «Άλλο πρότυπο». Step 2 reads the last note's area into the draft
+  (`patientArea`). «Περιοχή» field when saving (prefilled from the note) and on «Πρότυπα» («Αποθήκευση αλλαγών»).
+- Checks: `tsc` clean, **301 tests**, `next build` OK.
+

@@ -1,6 +1,6 @@
 // «Πρότυπα» (owner and physio): the clinic's library of templates, programs a physio approved and saved
-// under a name («Αποθήκευση ως πρότυπο» on the approved-program page). Each one opens to show its exercises,
-// with «Μετονομασία» and «Αρχειοθέτηση». A template never holds a patient (the database clears the name
+// under a name («Αποθήκευση ως πρότυπο» on the approved-program page), with a body area. Each one opens to
+// show its exercises, its name and area to change, and «Αρχειοθέτηση». A template never holds a patient (the database clears the name
 // and the appointment). Starting a new program from a template comes in a later step.
 // Assistants go home, like «Ασθενείς».
 import type { Metadata } from "next";
@@ -16,15 +16,15 @@ import { TabName } from "@/app/components/paper/TabLink";
 import { doseLines, isBlank } from "@/app/lib/notes/format";
 import { requireMember } from "@/app/lib/onboarding/session";
 import { WORK_TAB } from "@/app/lib/tabs";
-import { archiveTemplate, renameTemplate } from "@/app/lib/templates/actions";
-import { loadTemplates, TEMPLATE_NAME_MAX, type Template, type TemplateResult } from "@/app/lib/templates/load";
+import { archiveTemplate, updateTemplate } from "@/app/lib/templates/actions";
+import { loadTemplates, TEMPLATE_AREA_MAX, TEMPLATE_NAME_MAX, type Template, type TemplateResult } from "@/app/lib/templates/load";
 
 export const metadata: Metadata = { title: "Πρότυπα" };
 
 const day = new Intl.DateTimeFormat("el-GR", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Nicosia" });
 
 const DONE: Partial<Record<TemplateResult, { text: string; ok: boolean }>> = {
-  renamed: { text: "Το όνομα άλλαξε.", ok: true },
+  renamed: { text: "Οι αλλαγές αποθηκεύτηκαν.", ok: true },
   archived: { text: "Το πρότυπο βγήκε από τη λίστα.", ok: true },
   failed: { text: "Δεν έγινε η αλλαγή. Δοκιμάστε ξανά σε λίγο.", ok: false },
 };
@@ -105,7 +105,10 @@ function TemplateCard({
         <span className="flex min-w-0 flex-[1_1_240px] flex-col">
           <span className="text-[20px] font-semibold">{template.name}</span>
           <span className="text-muted">
-            {exerciseCount(program.exercises.length)} · αποθηκεύτηκε στις {day.format(new Date(template.createdAt))}
+            {template.area ? `${template.area} · ` : ""}
+            {exerciseCount(program.exercises.length)}
+            {template.uses > 0 ? ` · χρησιμοποιήθηκε ${template.uses === 1 ? "1 φορά" : `${template.uses} φορές`}` : ""} · αποθηκεύτηκε
+            στις {day.format(new Date(template.createdAt))}
           </span>
         </span>
         <span aria-hidden="true" className="ml-auto text-2xl text-action group-open:rotate-90">
@@ -116,7 +119,7 @@ function TemplateCard({
       <div className="flex flex-col gap-5 border-t-2 border-hairline px-4 pb-5 pt-4">
         {result === "renamed" && (
           <p role="status" className="self-start bg-note-green px-4 py-3 font-semibold">
-            Το όνομα άλλαξε.
+            Οι αλλαγές αποθηκεύτηκαν.
           </p>
         )}
 
@@ -137,7 +140,7 @@ function TemplateCard({
           <Extra title="Άλλες οδηγίες" items={program.other} />
         </div>
 
-        <form action={renameTemplate} className="flex flex-col gap-3">
+        <form action={updateTemplate} className="flex flex-col gap-3">
           <input type="hidden" name="clinicId" value={clinicId} />
           <input type="hidden" name="templateId" value={template.id} />
           <LineField
@@ -155,8 +158,18 @@ function TemplateCard({
                   : undefined
             }
           />
+          <LineField
+            id={`area-${template.id}`}
+            name="area"
+            label="Περιοχή"
+            hint="Π.χ. «Γόνατο». Τα πρότυπα της ίδιας περιοχής εμφανίζονται μαζί στη νέα συνεδρία."
+            defaultValue={template.area ?? ""}
+            maxLength={TEMPLATE_AREA_MAX}
+            width="max-w-[320px]"
+            error={result === "badarea" ? `Έως ${TEMPLATE_AREA_MAX} χαρακτήρες.` : undefined}
+          />
           {result === "failed" && <FormAlert>Δεν έγινε η αλλαγή. Δοκιμάστε ξανά σε λίγο.</FormAlert>}
-          <SubmitButton pending="Αλλαγή…">Μετονομασία</SubmitButton>
+          <SubmitButton pending="Αποθήκευση…">Αποθήκευση αλλαγών</SubmitButton>
         </form>
 
         <form action={archiveTemplate} className="flex flex-col gap-1">

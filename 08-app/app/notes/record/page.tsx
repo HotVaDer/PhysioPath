@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Νέα συνεδρία · ηχογ�
 export default async function RecordPage() {
   const { supabase, profile } = await requireMember();
   // The clinic's templates for «Ξεκινήστε από πρότυπο» (owners and physios; an assistant gets none).
-  const templates = (await loadTemplates(supabase)).map((t) => ({ id: t.id, name: t.name, program: t.program }));
+  const templates = (await loadTemplates(supabase)).map((t) => ({ id: t.id, name: t.name, area: t.area, uses: t.uses, program: t.program }));
   return (
     <StaffSheet profile={profile} current="new" step={{ n: 3, of: 4 }}>
       {/* A demo clinic: what is left of its recordings (the yellow strip on top shows the numbers). */}

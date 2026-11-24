@@ -25,7 +25,8 @@ import { requireMember } from "@/app/lib/onboarding/session";
 import { newProgramLink } from "@/app/lib/programs/actions";
 import { siteUrl } from "@/app/lib/site";
 import { saveTemplate } from "@/app/lib/templates/actions";
-import { TEMPLATE_NAME_MAX, type TemplateResult } from "@/app/lib/templates/load";
+import { areaFromBodyArea } from "@/app/lib/templates/area";
+import { TEMPLATE_AREA_MAX, TEMPLATE_NAME_MAX, type TemplateResult } from "@/app/lib/templates/load";
 
 import { ClearDraft } from "./ClearDraft";
 import { CopyButton } from "./CopyButton";
@@ -46,7 +47,7 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
   const justApproved = query.approved === "1";
   const linkResult = query.link === "new" || query.link === "failed" ? query.link : null;
   // ?template: what happened to «Αποθήκευση ως πρότυπο».
-  const templateResult = (["saved", "taken", "badname", "failed"] as const).find((r) => r === query.template) ?? null;
+  const templateResult = (["saved", "taken", "badname", "badarea", "failed"] as const).find((r) => r === query.template) ?? null;
   const { supabase, user, profile } = await requireMember();
 
   const { data: program } = await supabase
@@ -200,6 +201,7 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
             programId={program.id}
             noteId={noteId.success ? noteId.data : null}
             title={stored.title}
+            area={parsedNote?.success ? areaFromBodyArea(parsedNote.data.body_area) : null}
             result={templateResult}
           />
         )}
@@ -227,12 +229,14 @@ function SaveAsTemplate({
   programId,
   noteId,
   title,
+  area,
   result,
 }: {
   clinicId: string;
   programId: string;
   noteId: string | null;
   title: string;
+  area: string | null; // from the note's «Περιοχή σώματος», without the side
   result: Exclude<TemplateResult, "renamed" | "archived"> | null;
 }) {
   return (
@@ -270,6 +274,16 @@ function SaveAsTemplate({
                   ? `Γράψτε ένα όνομα, έως ${TEMPLATE_NAME_MAX} χαρακτήρες.`
                   : undefined
             }
+          />
+          <LineField
+            id="template-area"
+            name="area"
+            label="Περιοχή (προαιρετικό)"
+            hint="Π.χ. «Γόνατο». Με αυτήν βρίσκετε το πρότυπο γρήγορα στη νέα συνεδρία."
+            defaultValue={area ?? ""}
+            maxLength={TEMPLATE_AREA_MAX}
+            width="max-w-[320px]"
+            error={result === "badarea" ? `Έως ${TEMPLATE_AREA_MAX} χαρακτήρες.` : undefined}
           />
           {result === "failed" && <FormAlert>Το πρότυπο δεν αποθηκεύτηκε. Δοκιμάστε ξανά σε λίγο.</FormAlert>}
           <SubmitButton pending="Αποθήκευση…">Αποθήκευση ως πρότυπο</SubmitButton>

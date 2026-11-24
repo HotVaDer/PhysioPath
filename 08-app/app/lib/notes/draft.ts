@@ -34,6 +34,8 @@ export const Draft = z.object({
   // starts from. asIs («Όπως είναι»): the program is the template unchanged and the AI writes only the note;
   // otherwise («Με αλλαγές») the server reads the template and the AI applies the changes the physio says.
   template: z.object({ id: z.uuid(), name: z.string(), asIs: z.boolean().default(false) }).nullable().default(null),
+  // The «Περιοχή σώματος» of this patient's last note (read in step 2), for «Προτεινόμενα» templates.
+  patientArea: z.string().nullable().default(null),
   // The clinic this note belongs to: stamped by DraftProvider with the open clinic when the note starts
   // and again whenever the patient is chosen (from that clinic's list). Someone in several clinics can
   // open another one meanwhile: the patient, program and beds are this clinic's, so «Έγκριση» refuses
@@ -50,7 +52,7 @@ export type Draft = z.infer<typeof Draft>;
 
 export const emptyDraft: Draft = {
   transcript: "", noteLang: "el", result: null, resultNoteLang: "el", timings: {}, removed: null,
-  patient: null, draftId: null, activityCode: null, where: null, mode: "new", base: null, template: null, clinicId: null,
+  patient: null, draftId: null, activityCode: null, where: null, mode: "new", base: null, template: null, patientArea: null, clinicId: null,
   resultTranscript: null, userId: null,
 };
 
@@ -70,6 +72,7 @@ export type DraftAction =
   | { type: "setPatient"; patient: { id: string | null; label: string } | null }
   | { type: "setMode"; mode: "new" | "same"; base: Draft["base"] }
   | { type: "setTemplate"; template: Draft["template"] }
+  | { type: "setPatientArea"; area: string | null }
   | { type: "setActivityCode"; code: ActivityCode | null }
   | { type: "setWhere"; where: string | null }
   | { type: "setProgramText"; field: ProgramTextField; value: string }
@@ -156,7 +159,7 @@ export function draftReducer(draft: Draft, action: DraftAction): Draft {
       // over from a note in another clinic, in the same tab, made «Έγκριση» refuse a note of this one.)
       const other = (action.patient?.id ?? null) !== (draft.patient?.id ?? null);
       return other
-        ? { ...draft, patient: action.patient, mode: "new", base: null, template: null, result: null, draftId: null, removed: null, clinicId: null }
+        ? { ...draft, patient: action.patient, mode: "new", base: null, template: null, patientArea: null, result: null, draftId: null, removed: null, clinicId: null }
         : { ...draft, patient: action.patient, clinicId: null };
     }
     case "setMode":
@@ -181,6 +184,8 @@ export function draftReducer(draft: Draft, action: DraftAction): Draft {
       )
         return draft;
       return { ...draft, template: action.template, result: null, draftId: null, removed: null };
+    case "setPatientArea":
+      return draft.patientArea === action.area ? draft : { ...draft, patientArea: action.area };
     case "setActivityCode":
       return { ...draft, activityCode: action.code };
     case "setWhere":

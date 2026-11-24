@@ -21,6 +21,8 @@ export const Approval = z.object({
   baseProgramId: z.uuid().nullable().default(null),
   // The clinic the note was started in (Draft.clinicId): approveNote refuses it while another is open.
   clinicId: z.uuid().nullable().default(null),
+  // The clinic template a new program started from (Draft.template): counted as one use after approval.
+  templateId: z.uuid().nullable().catch(null).default(null),
 });
 export type Approval = z.infer<typeof Approval>;
 

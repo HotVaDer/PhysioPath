@@ -85,8 +85,14 @@ export async function approveNote(_: ApproveState, form: FormData): Promise<Appr
     return { message: "Η έγκριση δεν αποθηκεύτηκε. Δοκιμάστε ξανά σε λίγο." };
   }
 
-  const saved = data as { programId?: string; noteId?: string } | null;
+  const saved = data as { programId?: string; noteId?: string; again?: boolean } | null;
   if (!saved?.programId) return { message: "Η έγκριση δεν αποθηκεύτηκε. Δοκιμάστε ξανά σε λίγο." };
+  // A new program from a template: one more use (only for ordering the templates). Never on a second
+  // press of the same approval, and a failure here doesn't touch the approval, which is saved.
+  if (!same && a.templateId && !saved.again) {
+    const { error: useError } = await supabase.rpc("mark_template_used", { p_clinic_id: a.clinicId, p_template_id: a.templateId });
+    if (useError) console.error("mark_template_used failed:", useError.code, useError.message);
+  }
   // ?note: this visit (one program can have many visits: «Ίδιο πρόγραμμα»). ?approved=1: just approved,
   // so the page clears the draft (opening the same page from the board must not).
   const query = new URLSearchParams({ approved: "1" });

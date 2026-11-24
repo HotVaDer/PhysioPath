@@ -17,7 +17,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-const { archiveTemplate, renameTemplate, saveTemplate } = await import("@/app/lib/templates/actions");
+const { archiveTemplate, updateTemplate, saveTemplate } = await import("@/app/lib/templates/actions");
 
 const PROGRAM = "5eed0000-0000-4000-8000-0000000000b1";
 const NOTE = "5eed0000-0000-4000-8000-0000000000c1";
@@ -38,10 +38,18 @@ beforeEach(() => {
 
 describe("saveTemplate", () => {
   it("saves the program under the trimmed name and goes back to the program, keeping the visit", async () => {
-    expect(await run(saveTemplate, { programId: PROGRAM, note: NOTE, name: "  Γόνατο μετά ACL " })).toBe(
+    expect(await run(saveTemplate, { programId: PROGRAM, note: NOTE, name: "  Γόνατο μετά ACL ", area: " Γόνατο " })).toBe(
       `REDIRECT /programs/${PROGRAM}?template=saved&note=${NOTE}#template`,
     );
-    expect(rpc).toHaveBeenCalledWith("save_template", { p_clinic_id: "c1", p_program_id: PROGRAM, p_name: "Γόνατο μετά ACL" });
+    expect(rpc).toHaveBeenCalledWith("save_template", { p_clinic_id: "c1", p_program_id: PROGRAM, p_name: "Γόνατο μετά ACL", p_area: "Γόνατο" });
+  });
+
+  it("no area: saved without one; an area over 60 characters is not sent", async () => {
+    await run(saveTemplate, { programId: PROGRAM, name: "Ώμος" });
+    expect(rpc).toHaveBeenCalledWith("save_template", { p_clinic_id: "c1", p_program_id: PROGRAM, p_name: "Ώμος", p_area: null });
+    rpc.mockClear();
+    expect(await run(saveTemplate, { programId: PROGRAM, name: "Ώμος", area: "α".repeat(61) })).toBe(`REDIRECT /programs/${PROGRAM}?template=badarea#template`);
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("an empty or too long name is not sent", async () => {
@@ -73,24 +81,25 @@ describe("saveTemplate", () => {
   });
 });
 
-describe("renameTemplate", () => {
-  it("renames and opens the same template again", async () => {
-    expect(await run(renameTemplate, { templateId: TEMPLATE, name: "Ώμος – κινητικότητα" })).toBe(
+describe("updateTemplate", () => {
+  it("saves the name and the area, and opens the same template again", async () => {
+    expect(await run(updateTemplate, { templateId: TEMPLATE, name: "Ώμος – κινητικότητα", area: "Ώμος" })).toBe(
       `REDIRECT /templates?done=renamed&open=${TEMPLATE}#t-${TEMPLATE}`,
     );
     expect(rpc).toHaveBeenCalledWith("rename_template", { p_clinic_id: "c1", p_template_id: TEMPLATE, p_name: "Ώμος – κινητικότητα" });
+    expect(rpc).toHaveBeenCalledWith("set_template_area", { p_clinic_id: "c1", p_template_id: TEMPLATE, p_area: "Ώμος" });
   });
 
   it("a name already in the library: says so on that template", async () => {
     rpc.mockResolvedValue({ data: null, error: { code: "P0001", message: "name taken" } });
-    expect(await run(renameTemplate, { templateId: TEMPLATE, name: "Γόνατο" })).toBe(
+    expect(await run(updateTemplate, { templateId: TEMPLATE, name: "Γόνατο" })).toBe(
       `REDIRECT /templates?done=taken&open=${TEMPLATE}#t-${TEMPLATE}`,
     );
   });
 
   it("assistants can't rename", async () => {
     member.role = "assistant";
-    expect(await run(renameTemplate, { templateId: TEMPLATE, name: "Γόνατο" })).toBe("REDIRECT /");
+    expect(await run(updateTemplate, { templateId: TEMPLATE, name: "Γόνατο" })).toBe("REDIRECT /");
     expect(rpc).not.toHaveBeenCalled();
   });
 });

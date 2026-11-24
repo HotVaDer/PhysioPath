@@ -12,8 +12,8 @@ vi.mock("@/app/lib/onboarding/session", () => ({
   }),
 }));
 const load = vi.hoisted(() => ({ loadTemplates: vi.fn() }));
-vi.mock("@/app/lib/templates/load", () => ({ ...load, TEMPLATE_NAME_MAX: 80 }));
-vi.mock("@/app/lib/templates/actions", () => ({ renameTemplate: vi.fn(), archiveTemplate: vi.fn() }));
+vi.mock("@/app/lib/templates/load", () => ({ ...load, TEMPLATE_NAME_MAX: 80, TEMPLATE_AREA_MAX: 60 }));
+vi.mock("@/app/lib/templates/actions", () => ({ updateTemplate: vi.fn(), archiveTemplate: vi.fn() }));
 vi.mock("@/app/components/paper/SignOut", () => ({ SignOut: () => null }));
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
@@ -30,6 +30,8 @@ import { expectNoA11yViolations } from "@/app/test/axe";
 const knee: Template = {
   id: "5eed0000-0000-4000-8000-0000000000d1",
   name: "Γόνατο μετά ACL – εβδ. 1–2",
+  area: "Γόνατο",
+  uses: 12,
   createdAt: "2026-11-20T10:00:00Z",
   program: {
     title: "Πρόγραμμα ασκήσεων – Γόνατο",
@@ -45,7 +47,7 @@ const knee: Template = {
     other: [],
   },
 };
-const shoulder: Template = { ...knee, id: "5eed0000-0000-4000-8000-0000000000d2", name: "Ώμος – κινητικότητα" };
+const shoulder: Template = { ...knee, id: "5eed0000-0000-4000-8000-0000000000d2", name: "Ώμος – κινητικότητα", area: null, uses: 0 };
 
 const open = (search: Record<string, string> = {}) =>
   TemplatesPage({ searchParams: Promise.resolve(search) } as PageProps<"/templates">);
@@ -66,12 +68,14 @@ describe("/templates", () => {
     expect(cards[0]).not.toHaveAttribute("open");
     const first = within(cards[0] as HTMLElement);
     expect(first.getByText("Γόνατο μετά ACL – εβδ. 1–2")).toBeInTheDocument();
-    expect(cards[0]).toHaveTextContent("2 ασκήσεις · αποθηκεύτηκε στις 20 Νοεμβρίου 2026");
+    expect(cards[0]).toHaveTextContent("Γόνατο · 2 ασκήσεις · χρησιμοποιήθηκε 12 φορές · αποθηκεύτηκε στις 20 Νοεμβρίου 2026");
+    expect(cards[1]).toHaveTextContent("2 ασκήσεις · αποθηκεύτηκε");
     expect(cards[0]).toHaveTextContent("3 σετ × 10 επαναλήψεις · 2 φορές τη μέρα");
     expect(cards[0]).toHaveTextContent("Μέχρι να πονέσει λίγο.");
     expect(cards[0]).toHaveTextContent("Όχι καθίσματα ακόμα.");
     expect(first.getByLabelText("Όνομα")).toHaveValue("Γόνατο μετά ACL – εβδ. 1–2");
-    expect(first.getByRole("button", { name: "Μετονομασία" })).toBeInTheDocument();
+    expect(first.getByLabelText("Περιοχή")).toHaveValue("Γόνατο");
+    expect(first.getByRole("button", { name: "Αποθήκευση αλλαγών" })).toBeInTheDocument();
     expect(first.getByRole("button", { name: "Αρχειοθέτηση" })).toBeInTheDocument();
     await expectNoA11yViolations(container);
   });
@@ -82,7 +86,7 @@ describe("/templates", () => {
     const cards = container.querySelectorAll("details");
     expect(cards[0]).not.toHaveAttribute("open");
     expect(cards[1]).toHaveAttribute("open");
-    expect(within(cards[1] as HTMLElement).getByRole("status")).toHaveTextContent("Το όνομα άλλαξε.");
+    expect(within(cards[1] as HTMLElement).getByRole("status")).toHaveTextContent("Οι αλλαγές αποθηκεύτηκαν.");
   });
 
   it("a name already taken: the error is on that template's name field", async () => {

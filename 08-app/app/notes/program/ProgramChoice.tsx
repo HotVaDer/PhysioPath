@@ -15,12 +15,13 @@ import { ProgramSummary } from "@/app/notes/ProgramSummary";
 type Props = {
   patient: { id: string; label: string };
   stored: { programId: string; approvedAt: string; program: PatientProgram };
+  area?: string | null; // «Περιοχή σώματος» of the last note, for «Προτεινόμενα» templates on the next page
 };
 
 const card =
   "flex min-h-[88px] w-full cursor-pointer items-center gap-4 rounded-md border-2 px-5 py-4 text-left text-ink";
 
-export function ProgramChoice({ patient, stored }: Props) {
+export function ProgramChoice({ patient, stored, area = null }: Props) {
   const router = useRouter();
   const { draft, dispatch, ready } = useDraft();
 
@@ -28,6 +29,9 @@ export function ProgramChoice({ patient, stored }: Props) {
   useEffect(() => {
     if (ready && draft.patient?.id !== patient.id) dispatch({ type: "setPatient", patient });
   }, [ready, draft.patient?.id, patient, dispatch]);
+  useEffect(() => {
+    if (ready && draft.patient?.id === patient.id) dispatch({ type: "setPatientArea", area });
+  }, [ready, draft.patient?.id, patient.id, area, dispatch]);
 
   if (!ready) return <p className="text-muted">Φόρτωση…</p>;
 
