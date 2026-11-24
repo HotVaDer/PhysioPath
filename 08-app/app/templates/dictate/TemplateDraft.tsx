@@ -3,6 +3,7 @@
 // and area, the title the patient sees, the exercises (as on the review page of a voice note: one box per
 // dose, «λείπει» in yellow) and the four lists of instructions. «Αποθήκευση» puts it in «Πρότυπα»;
 // «Δεν το θέλω» drops it. Once saved, it folds to one line with a link to it in the library.
+// «Αλλαγή με φωνή» (/templates/[id]/edit) uses the same card for the template being changed, with its own words.
 import Link from "next/link";
 import type { Route } from "next";
 import type { Dispatch } from "react";
@@ -41,26 +42,32 @@ const quiet = "min-h-11 cursor-pointer text-action underline underline-offset-[3
 
 const exerciseCount = (n: number) => (n === 1 ? "1 άσκηση" : `${n} ασκήσεις`);
 
+// The words of the card. The dictation's are the default; «Αλλαγή με φωνή» has its own.
+export type CardWords = { save: string; drop: string; saved: (name: string) => string };
+const DICTATION_WORDS: CardWords = { save: "Αποθήκευση", drop: "Δεν το θέλω", saved: (name) => `«${name}» αποθηκεύτηκε στα πρότυπα` };
+
 type Props = {
   card: DictatedCard;
-  n: number; // its place on the page, «Πρότυπο 2»
+  n?: number; // its place on the page, «Πρότυπο 2» (none: the one template being changed)
+  words?: CardWords;
   cards: DictatedCard[];
   library: ReadonlySet<string>;
   saving: boolean;
   dispatch: Dispatch<DictationAction>;
   onSave: () => void;
+  onDrop?: () => void; // the second button; by default it drops the card from the page
 };
 
-export function TemplateDraft({ card, n, cards, library, saving, dispatch, onSave }: Props) {
+export function TemplateDraft({ card, n, words = DICTATION_WORDS, cards, library, saving, dispatch, onSave, onDrop }: Props) {
   const { key, program } = card;
   const id = `c-${key}`;
-  const label = card.name.trim() || `Πρότυπο ${n}`;
+  const label = card.name.trim() || (n ? `Πρότυπο ${n}` : "Πρότυπο");
 
   if (card.savedId) {
     return (
       <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border-2 border-action bg-note-green px-4 py-3">
         <span className="font-semibold">
-          <span aria-hidden="true">✓</span> «{card.name.trim()}» αποθηκεύτηκε στα πρότυπα
+          <span aria-hidden="true">✓</span> {words.saved(card.name.trim())}
         </span>
         <span className="text-muted">
           {card.area.trim() ? `${card.area.trim()} · ` : ""}
@@ -80,7 +87,7 @@ export function TemplateDraft({ card, n, cards, library, saving, dispatch, onSav
   return (
     <article aria-labelledby={`${id}-h`} className="flex flex-col gap-4 rounded-md border-2 border-line bg-white px-4 pb-5 pt-4 sm:px-5">
       <h3 id={`${id}-h`} className="text-[21px] font-bold">
-        <span className="text-muted">Πρότυπο {n} · </span>
+        {n && <span className="text-muted">Πρότυπο {n} · </span>}
         {label}
       </h3>
 
@@ -221,11 +228,12 @@ export function TemplateDraft({ card, n, cards, library, saving, dispatch, onSav
       {otherError && <FormAlert>{otherError}</FormAlert>}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t-2 border-hairline pt-4">
         <button type="button" onClick={onSave} disabled={saving} className={greenButton}>
-          {saving ? "Αποθήκευση…" : "Αποθήκευση"}
+          {saving ? "Αποθήκευση…" : words.save}
           <span className="sr-only">: {label}</span>
         </button>
-        <button type="button" onClick={() => dispatch({ type: "dropCard", key })} disabled={saving} className={quiet}>
-          Δεν το θέλω<span className="sr-only">: {label}</span>
+        <button type="button" onClick={onDrop ?? (() => dispatch({ type: "dropCard", key }))} disabled={saving} className={quiet}>
+          {words.drop}
+          <span className="sr-only">: {label}</span>
         </button>
       </div>
     </article>

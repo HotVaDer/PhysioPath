@@ -3,6 +3,7 @@
 // mode "template": the template the physio picked (loaded by the route from the clinic's «Πρότυπα») goes
 // with the transcript, and the program starts from it.
 // mode "templates" («Πείτε τα πρότυπά σας»): several templates from one dictation; no patient, no note.
+// mode "edit_template" («Αλλαγή με φωνή»): the template (loaded by the route) with only the changes said.
 // Server only: this file uses the API key, which must never reach the browser.
 import "server-only";
 
@@ -13,6 +14,7 @@ import { systemPrompt, type GenerateMode, type NoteLanguage } from "@/app/lib/no
 import {
   MAX_DICTATED_TEMPLATES,
   NoteOnlyResult,
+  TemplateEditResult,
   TemplatesResult,
   VoiceNoteResult,
   type PatientProgram,
@@ -48,17 +50,25 @@ export function tidyTemplates(result: TemplatesResult): TemplatesResult {
   };
 }
 
+// «Αλλαγή με φωνή»: never a patient (as tidyTemplates).
+export function tidyEdit(result: TemplateEditResult): TemplateEditResult {
+  return { ...result, program: { ...result.program, patient_first_name: null, next_appointment: null } };
+}
+
 const FORMATS = {
   program: VoiceNoteResult,
   template: VoiceNoteResult,
   note: NoteOnlyResult,
   templates: TemplatesResult,
+  edit_template: TemplateEditResult,
 } as const;
+
+const usesTemplate = (mode: GenerateMode) => mode === "template" || mode === "edit_template";
 
 export async function generate(transcript: string, noteLang: NoteLanguage, mode: GenerateMode = "program", template?: TemplateInput) {
   const text = transcript.trim();
   if (!text) throw new GenerationError("Το κείμενο είναι κενό. Ηχογραφήστε ή γράψτε τη σημείωση πρώτα.");
-  if (mode === "template" && !template) throw new GenerationError("Το πρότυπο δεν βρέθηκε. Διαλέξτε άλλο ή συνεχίστε χωρίς πρότυπο.");
+  if (usesTemplate(mode) && !template) throw new GenerationError("Το πρότυπο δεν βρέθηκε. Διαλέξτε άλλο ή συνεχίστε χωρίς πρότυπο.");
   if (!process.env.ANTHROPIC_API_KEY) {
     console.error("generate: ANTHROPIC_API_KEY is not set");
     throw new GenerationError("Η εφαρμογή δεν είναι ρυθμισμένη ακόμα (λείπει το κλειδί του Claude).");
@@ -83,7 +93,7 @@ export async function generate(transcript: string, noteLang: NoteLanguage, mode:
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       system: systemPrompt(noteLang, mode),
-      messages: [{ role: "user", content: userMessage(text, mode === "template" ? template : undefined) }],
+      messages: [{ role: "user", content: userMessage(text, usesTemplate(mode) ? template : undefined) }],
     }, many ? { timeout: 110_000, maxRetries: 0 } : undefined);
   } catch (error) {
     console.error("generate:", error instanceof Error ? error.message : error);
@@ -103,7 +113,11 @@ export async function generate(transcript: string, noteLang: NoteLanguage, mode:
 
   const parsed = response.parsed_output;
   return {
-    result: many ? tidyTemplates(parsed as TemplatesResult) : parsed,
+    result: many
+      ? tidyTemplates(parsed as TemplatesResult)
+      : mode === "edit_template"
+        ? tidyEdit(parsed as TemplateEditResult)
+        : parsed,
     seconds: Math.round((performance.now() - started) / 100) / 10,
   };
 }

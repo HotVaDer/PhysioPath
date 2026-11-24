@@ -1,7 +1,7 @@
 // The template mode of the prompt: the rules stay, and the template is the one extra source.
 import { describe, expect, it } from "vitest";
 
-import { tidyTemplates, userMessage } from "@/app/lib/notes/generate";
+import { tidyEdit, tidyTemplates, userMessage } from "@/app/lib/notes/generate";
 import { systemPrompt } from "@/app/lib/notes/prompt";
 
 describe("systemPrompt", () => {
@@ -52,3 +52,21 @@ describe("userMessage", () => {
     expect(message.endsWith("<transcript>\nΧωρίς αλλαγές\n</transcript>")).toBe(true);
   });
 });
+
+describe("edit_template («Αλλαγή με φωνή»)", () => {
+  it("has its own prompt: keep the template, apply only what was said, list every change first, ask", () => {
+    const edit = systemPrompt("el", "edit_template");
+    expect(edit).toContain("Start from the template exactly");
+    expect(edit).toContain("Apply only the changes the physio says");
+    expect(edit).toContain("changes comes first");
+    expect(edit).toContain("patient_first_name and next_appointment are always null");
+    expect(edit).not.toContain("GeSY");
+  });
+
+  it("tidyEdit never keeps a patient", () => {
+    const program = { title: "Γόνατο", patient_first_name: "Κώστας", next_appointment: "Πέμπτη", exercises: [], after_exercises: [], avoid: [], contact_if: [], other: [] };
+    const tidy = tidyEdit({ changes: [], name: null, area: null, program, questions: [] });
+    expect(tidy.program).toMatchObject({ patient_first_name: null, next_appointment: null });
+  });
+});
+

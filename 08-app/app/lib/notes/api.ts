@@ -3,7 +3,7 @@
 // (413 for a too-large upload, 504 when a function runs out of time).
 import { AUDIO_TOO_LARGE } from "@/app/lib/notes/limits";
 import type { NoteLanguage } from "@/app/lib/notes/prompt";
-import type { NoteOnlyResult, TemplatesResult, VoiceNoteResult } from "@/app/lib/notes/schema";
+import type { NoteOnlyResult, TemplateEditResult, TemplatesResult, VoiceNoteResult } from "@/app/lib/notes/schema";
 
 export class ApiError extends Error {}
 
@@ -12,6 +12,7 @@ export type TranscribeResponse = { text: string; seconds: number };
 export type GenerateResponse = { result: VoiceNoteResult; seconds: number };
 export type GenerateNoteResponse = { result: NoteOnlyResult; seconds: number };
 export type GenerateTemplatesResponse = { result: TemplatesResult; seconds: number };
+export type EditTemplateResponse = { result: TemplateEditResult; seconds: number };
 
 const STATUS_MESSAGES: Record<number, string> = {
   429: "Πολλά αιτήματα. Περιμένετε λίγο και δοκιμάστε ξανά.",
@@ -70,4 +71,12 @@ export const generateTemplates = (transcript: string) =>
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ transcript, mode: "templates" }),
+  });
+
+// «Αλλαγή με φωνή»: the clinic's template templateId (the server reads it) with only the changes said.
+export const editTemplate = (transcript: string, templateId: string) =>
+  call<EditTemplateResponse>("/api/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ transcript, mode: "edit_template", templateId }),
   });

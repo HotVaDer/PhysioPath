@@ -33,6 +33,7 @@ const knee: Template = {
   area: "Γόνατο",
   uses: 12,
   createdAt: "2026-11-20T10:00:00Z",
+  updatedAt: null,
   program: {
     title: "Πρόγραμμα ασκήσεων – Γόνατο",
     patient_first_name: null,
@@ -77,7 +78,14 @@ describe("/templates", () => {
     expect(first.getByLabelText("Περιοχή")).toHaveValue("Γόνατο");
     expect(first.getByRole("button", { name: "Αποθήκευση αλλαγών" })).toBeInTheDocument();
     expect(first.getByRole("button", { name: "Αρχειοθέτηση" })).toBeInTheDocument();
+    expect(first.getByRole("link", { name: "Αλλαγή ασκήσεων" })).toHaveAttribute("href", `/templates/${knee.id}/edit`);
     await expectNoA11yViolations(container);
+  });
+
+  it("a template changed since it was saved says when", async () => {
+    load.loadTemplates.mockResolvedValue([{ ...knee, updatedAt: "2026-11-25T09:00:00Z" }]);
+    const { container } = render((await open()) as ReactElement);
+    expect(container.querySelector("details")).toHaveTextContent("άλλαξε στις 25 Νοεμβρίου 2026");
   });
 
   it("after a rename, that template is open and says so", async () => {

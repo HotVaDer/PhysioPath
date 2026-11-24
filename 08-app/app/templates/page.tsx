@@ -1,9 +1,10 @@
 // «Πρότυπα» (owner and physio): the clinic's library of templates, programs a physio approved and saved
 // under a name («Αποθήκευση ως πρότυπο» on the approved-program page), with a body area. Each one opens to
-// show its exercises, its name and area to change, and «Αρχειοθέτηση». A template never holds a patient (the database clears the name
+// show its exercises, «Αλλαγή ασκήσεων» (/templates/[id]/edit, by voice or by hand), its name and area to change,
+// and «Αρχειοθέτηση». A template never holds a patient (the database clears the name
 // and the appointment). «Πείτε τα πρότυπά σας» (/templates/dictate) makes several at once, by voice.
 // Assistants go home, like «Ασθενείς».
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -115,8 +116,10 @@ function TemplateCard({
           <span className="text-muted">
             {template.area ? `${template.area} · ` : ""}
             {exerciseCount(program.exercises.length)}
-            {template.uses > 0 ? ` · χρησιμοποιήθηκε ${template.uses === 1 ? "1 φορά" : `${template.uses} φορές`}` : ""} · αποθηκεύτηκε
-            στις {day.format(new Date(template.createdAt))}
+            {template.uses > 0 ? ` · χρησιμοποιήθηκε ${template.uses === 1 ? "1 φορά" : `${template.uses} φορές`}` : ""} ·{" "}
+            {template.updatedAt
+              ? `άλλαξε στις ${day.format(new Date(template.updatedAt))}`
+              : `αποθηκεύτηκε στις ${day.format(new Date(template.createdAt))}`}
           </span>
         </span>
         <span aria-hidden="true" className="ml-auto text-2xl text-action group-open:rotate-90">
@@ -146,6 +149,14 @@ function TemplateCard({
           <Extra title="Να αποφεύγει" items={program.avoid} />
           <Extra title="Επικοινωνία αν" items={program.contact_if} />
           <Extra title="Άλλες οδηγίες" items={program.other} />
+        </div>
+
+        {/* «Αλλαγή με φωνή»: the exercises and instructions, by voice or by hand, checked before saving. */}
+        <div className="flex flex-col gap-1">
+          <PaperLink href={`/templates/${template.id}/edit` as Route} variant="outline">
+            Αλλαγή ασκήσεων
+          </PaperLink>
+          <span className="text-base text-muted">Πείτε τι αλλάζει ή αλλάξτε το με το χέρι. Τα προγράμματα που δώσατε ήδη δεν αλλάζουν.</span>
         </div>
 
         <form action={updateTemplate} className="flex flex-col gap-3">

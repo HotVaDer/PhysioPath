@@ -1,4 +1,5 @@
-// «Πείτε τα πρότυπά σας» (/templates/dictate): the physio's work in progress. The text of one or more
+// «Πείτε τα πρότυπά σας» (/templates/dictate), and «Αλλαγή με φωνή» (/templates/[id]/edit, one card: the
+// template itself, with what the physio said applied): the physio's work in progress. The text of one or more
 // recordings, the templates the AI split it into (one card each), the physio's edits, and which cards are
 // saved. Nothing reaches the library until the physio presses «Αποθήκευση» on a card (createTemplate).
 // One reducer holds every rule, as for the voice note (app/lib/notes/draft.ts); DictateForm keeps the state
@@ -14,7 +15,8 @@ const NAME_MAX = 80;
 const AREA_MAX = 60;
 
 // Why a card was not saved. The database says the same in its own words (actions.ts → createTemplate).
-export const CardError = z.enum(["taken", "badname", "badarea", "badprogram", "full", "stale", "failed"]);
+// "gone": «Αλλαγή με φωνή» only, the template was archived meanwhile (or is not this clinic's).
+export const CardError = z.enum(["taken", "badname", "badarea", "badprogram", "full", "stale", "failed", "gone"]);
 export type CardError = z.infer<typeof CardError>;
 
 export const CARD_ERRORS: Record<CardError, string> = {
@@ -25,6 +27,7 @@ export const CARD_ERRORS: Record<CardError, string> = {
   full: "Η βιβλιοθήκη έχει ήδη 300 πρότυπα. Αρχειοθετήστε όσα δεν χρειάζεστε και δοκιμάστε ξανά.",
   stale: "Στο μεταξύ ανοίξατε άλλη κλινική. Ανοίξτε ξανά αυτή την κλινική για να αποθηκεύσετε.",
   failed: "Δεν αποθηκεύτηκε. Δοκιμάστε ξανά σε λίγο.",
+  gone: "Το πρότυπο δεν βρέθηκε πια (ίσως αρχειοθετήθηκε). Ανοίξτε ξανά τα «Πρότυπα».",
 };
 
 export const DictatedCard = z.object({
@@ -46,10 +49,15 @@ export const Dictation = z.object({
   cards: z.array(DictatedCard),
   general: z.array(z.string()), // the AI's questions about the dictation as a whole
   resultTranscript: z.string().nullable(), // the text the cards were made from (see isDictationStale)
+  // «Αλλαγή με φωνή»: the template as saved when the work started (JSON). A saved state for a template that has
+  // changed since (another tab, another physio) is thrown away instead of shown.
+  base: z.string().nullable().default(null),
+  // …and the card right after the last «Εφαρμογή αλλαγών» (sideOf), to tell edits made by hand since.
+  applied: z.string().nullable().default(null),
 });
 export type Dictation = z.infer<typeof Dictation>;
 
-export const emptyDictation: Dictation = { userId: null, clinicId: null, transcript: "", cards: [], general: [], resultTranscript: null };
+export const emptyDictation: Dictation = { userId: null, clinicId: null, transcript: "", cards: [], general: [], resultTranscript: null, base: null, applied: null };
 
 export type CardTextField = "name" | "area" | "title";
 
@@ -60,6 +68,8 @@ export type DictationAction =
   | { type: "heard"; text: string } // one more recording: its text goes after what is there
   | { type: "pickSample"; text: string }
   | { type: "generated"; result: TemplatesResult; transcript: string; keys: string[] }
+  // «Αλλαγή με φωνή»: the card's program with what was said applied, a new name or area only if said.
+  | { type: "applied"; key: string; program: PatientProgram; name: string | null; area: string | null; questions: string[]; transcript: string }
   | { type: "setText"; key: string; field: CardTextField; value: string }
   | { type: "setExercise"; key: string; index: number; field: keyof Exercise; value: string }
   | { type: "addExercise"; key: string }
@@ -129,6 +139,17 @@ export function dictationReducer(state: Dictation, action: DictationAction): Dic
       return edit({ exercises: card.program.exercises.filter((_, i) => i !== action.index) });
     case "setList":
       return edit({ [action.field]: action.items });
+    case "applied": {
+      const next = put({
+        program: { ...action.program, patient_first_name: null, next_appointment: null },
+        name: action.name ?? card.name,
+        area: action.area ?? card.area,
+        questions: action.questions,
+        error: null,
+      });
+      const applied = next.cards.find((c) => c.key === action.key)!;
+      return { ...next, resultTranscript: action.transcript, applied: sideOf(applied) };
+    }
     case "saved":
       return put({ savedId: action.id, error: null });
     case "failed":
@@ -138,6 +159,10 @@ export function dictationReducer(state: Dictation, action: DictationAction): Dic
   }
   return state;
 }
+
+// A card's name, area and program as one string, to compare two moments of the same template (base, applied).
+export const sideOf = (card: Pick<DictatedCard, "name" | "area" | "program">) =>
+  JSON.stringify({ name: card.name, area: card.area, program: card.program });
 
 // The text changed after the cards were made from it (another recording, typing, a sample).
 export function isDictationStale(state: Dictation): boolean {

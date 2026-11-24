@@ -597,3 +597,31 @@ No database changes. Each step was tested by the user in Firefox, Safari and Chr
   check, save) and the recording page (pick a template, «Όπως είναι»). It ticks «Πρότυπα» and «Πείτε τα
   πρότυπά σας»; the sheet (no staff frame) is ticked from the board's link. Templates pages never start step 1.
 - Greek and English texts (`app/lib/demo/text.ts`). Checks: `tsc` clean, **344 tests**, `next build` OK.
+
+## 2026-11-25 · Templates: «Αλλαγή ασκήσεων», change a template by voice or by hand (`/templates/[id]/edit`)
+- **Why:** the user asked to edit templates by voice. Until now a template's exercises could not change at all
+  (only its name and area). Decision (user, option A): the template is replaced; programs already given to
+  patients don't change (each is its own copy).
+- **Page:** «Αλλαγή ασκήσεων» on each open template of «Πρότυπα»; the card there says «άλλαξε στις …» once
+  changed. «Τι να πείτε: μόνο τι αλλάζει», recording / file / text / a fictional sample (`TEMPLATE_EDIT_SAMPLE`),
+  «Εφαρμογή αλλαγών» (all the text, applied to the saved template; edits by hand since the last apply are
+  asked about first), «Τι άλλαξε, σε σχέση με το αποθηκευμένο» (+ − ~, the app's own comparison in
+  `app/lib/templates/changes.ts`, never the AI's account), the editable card (`TemplateDraft`, its own words),
+  «Αποθήκευση αλλαγών» / «Ακύρωση αλλαγών» (back to the saved one). Kept in sessionStorage per template, dropped
+  when the saved template changed since or the changes were saved.
+- **Shared pieces:** `VoiceInput` (what to say, recording, file, sample, text box) and `useDictation`
+  (sessionStorage) now serve both this page and «Πείτε τα πρότυπά σας».
+- **AI:** mode `edit_template` (the route reads the template itself, as for «Με αλλαγές»), own prompt
+  `EDIT_TEMPLATE`: keep the template exactly, apply only what was said, add nothing, name/area only if said, no
+  patient. Schema `TemplateEditResult { changes: [{ said, applied, question }], name, area, program, questions }`:
+  `changes` comes first so the model goes through every change before writing (without it, 3 of 3 runs of an
+  unclear edit asked nothing). One counted Claude call.
+- **Live test with Claude** (fictional knee template): «βγάλε τα heel slides, γέφυρα 3×10 κάθε μέρα, πάγος 15
+  αντί για 20» → exactly that, no questions (4–7 s); Cypriot «μετονόμασε… την άσκηση με το πόδι κάμε τη δύο
+  φορές τη μέρα, τζαι πρόσθεσε τζαι ποδήλατο, τζαι τα squat επιτρέπονται» → renamed, bike added, squat line
+  out, and two questions (which leg exercise, naming the two others; the bike's dose); «όπως είναι, για τον
+  Κώστα την Πέμπτη» → unchanged, no patient, says both.
+- **Database** (`20261125120000_update_template.sql`, pushed live 2026-11-25 after a rolled-back trial, 414/414): `templates.updated_at`;
+  `update_template(clinic, template, name, area, program)` with the checks of `create_template` + 'template not
+  found' (other clinic, archived). `rls_check.sql` +11.
+- Checks: `tsc` clean, **365 tests**, `next build` OK.

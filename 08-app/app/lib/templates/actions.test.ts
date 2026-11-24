@@ -17,7 +17,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-const { archiveTemplate, createTemplate, updateTemplate, saveTemplate } = await import("@/app/lib/templates/actions");
+const { archiveTemplate, createTemplate, updateTemplate, updateTemplateProgram, saveTemplate } = await import("@/app/lib/templates/actions");
 
 const PROGRAM = "5eed0000-0000-4000-8000-0000000000b1";
 const NOTE = "5eed0000-0000-4000-8000-0000000000c1";
@@ -188,3 +188,48 @@ describe("createTemplate («Πείτε τα πρότυπά σας»)", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 });
+
+describe("updateTemplateProgram («Αλλαγή με φωνή»)", () => {
+  const program = {
+    title: "Γόνατο",
+    patient_first_name: "Γιώργος",
+    next_appointment: null,
+    exercises: [{ name: " Γέφυρα ", sets: 3, reps: "10", hold: null, frequency: null, notes: null }],
+    after_exercises: [],
+    avoid: [],
+    contact_if: [],
+    other: [],
+  };
+  const input = (changes: Record<string, unknown> = {}) => ({ clinicId: "c1", templateId: TEMPLATE, name: " Γόνατο εβδ. 3 ", area: "", program, ...changes });
+
+  it("replaces the template with the checked program, tidied and without a patient", async () => {
+    expect(await updateTemplateProgram(input())).toEqual({ ok: true, id: TEMPLATE });
+    expect(rpc).toHaveBeenCalledWith("update_template", {
+      p_clinic_id: "c1",
+      p_template_id: TEMPLATE,
+      p_name: "Γόνατο εβδ. 3",
+      p_area: null,
+      p_program: expect.objectContaining({ version: 1, patient_first_name: null, exercises: [expect.objectContaining({ name: "Γέφυρα" })] }),
+    });
+  });
+
+  it("a bad id, another clinic's page or no exercises is not sent", async () => {
+    expect(await updateTemplateProgram(input({ templateId: "x" }))).toEqual({ ok: false, error: "gone" });
+    expect(await updateTemplateProgram(input({ clinicId: "c2" }))).toEqual({ ok: false, error: "stale" });
+    expect(await updateTemplateProgram(input({ program: { ...program, exercises: [] } }))).toEqual({ ok: false, error: "badprogram" });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("the database's refusals: archived meanwhile, a name taken", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "P0001", message: "template not found" } });
+    expect(await updateTemplateProgram(input())).toEqual({ ok: false, error: "gone" });
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "P0001", message: "name taken" } });
+    expect(await updateTemplateProgram(input())).toEqual({ ok: false, error: "taken" });
+  });
+
+  it("an assistant is sent home", async () => {
+    member.role = "assistant";
+    expect(await updateTemplateProgram(input()).catch((e: Error) => e.message)).toBe("REDIRECT /");
+  });
+});
+

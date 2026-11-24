@@ -1,7 +1,8 @@
 // POST /api/generate: { transcript, noteLang, mode, templateId } → the patient program, the GeSY note and the
 // questions for the physio (mode "note", «Ίδιο πρόγραμμα»: only the note and the questions; mode "template":
 // the program starts from the clinic's template templateId; mode "templates", «Πείτε τα πρότυπά σας»: several
-// templates from one dictation, no patient and no note). Owner or physio only. Nothing is saved here:
+// templates from one dictation, no patient and no note; mode "edit_template", «Αλλαγή με φωνή»: the template
+// templateId with only the changes said). Owner or physio only. Nothing is saved here:
 // the physio reviews and approves (or saves each template) first. Every mode is one counted Claude call.
 // The template is read here with the physio's own login, so only a template of the open clinic, not
 // archived, can be used: the browser sends its id, never its contents.
@@ -48,8 +49,9 @@ export async function POST(request: Request) {
     const body = Body.safeParse(data);
     if (!body.success) throw new HttpError(400, body.error.issues[0]?.message ?? "Λάθος αίτημα.");
     const { transcript, noteLang, mode, templateId } = body.data;
-    if (mode === "template" && !templateId) throw new HttpError(400, TEMPLATE_GONE);
-    const template = mode === "template" ? await loadTemplate(supabase, templateId!) : undefined;
+    const withTemplate = mode === "template" || mode === "edit_template";
+    if (withTemplate && !templateId) throw new HttpError(400, TEMPLATE_GONE);
+    const template = withTemplate ? await loadTemplate(supabase, templateId!) : undefined;
     await countAiCall(supabase, "generate"); // only a valid request is counted
     return generate(transcript, noteLang, mode, template);
   }, [GenerationError]);

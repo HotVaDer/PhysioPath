@@ -8,35 +8,25 @@
 // Demo clinics: a dictation is one of the 5 programs, and each recording one of the 5 recordings.
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useReducer, useRef, useState, type Dispatch } from "react";
+import { useRef, useState } from "react";
 
-import { fieldBox } from "@/app/components/paper/LineField";
 import { FormAlert } from "@/app/components/paper/Notes";
-import { PartTitle } from "@/app/components/paper/StaffSheet";
 import { cx } from "@/app/lib/cx";
 import type { DemoLeft } from "@/app/lib/demo/left";
-import { ApiError, generateTemplates, transcribeAudio } from "@/app/lib/notes/api";
-import { AUDIO_TOO_LARGE, MAX_AUDIO_BYTES } from "@/app/lib/notes/limits";
+import { ApiError, generateTemplates } from "@/app/lib/notes/api";
 import type { Sample } from "@/app/lib/notes/samples";
 import { MAX_DICTATED_TEMPLATES } from "@/app/lib/notes/schema";
-import { MAX_RECORDING_SECONDS, useRecorder } from "@/app/lib/notes/useRecorder";
 import { createTemplate } from "@/app/lib/templates/actions";
-import {
-  cardProblem,
-  dictationReducer,
-  emptyDictation,
-  isDictationStale,
-  parseDictation,
-  type DictatedCard,
-  type DictationAction,
-} from "@/app/lib/templates/dictation";
-import { greenButton, LiveRecording } from "@/app/notes/LiveRecording";
+import { cardProblem, isDictationStale, type DictatedCard } from "@/app/lib/templates/dictation";
+import { useDictation } from "@/app/lib/templates/useDictation";
+import { greenButton } from "@/app/notes/LiveRecording";
+import { VoiceInput } from "@/app/templates/VoiceInput";
 
 import { TemplateDraft } from "./TemplateDraft";
 
 export const DICTATION_KEY = "physiopath:template-dictation";
 
-type Busy = null | "transcribing" | "generating";
+type Busy = null | "generating";
 
 type Props = {
   clinicId: string;
@@ -46,80 +36,14 @@ type Props = {
   demoLeft?: DemoLeft | null;
 };
 
-// The state of this page, kept in sessionStorage. A slow answer that arrives after the physio left the page
-// still goes into the saved state (as DraftProvider does for the voice note).
-function useDictation(clinicId: string, userId: string) {
-  const [state, dispatchHere] = useReducer(dictationReducer, emptyDictation);
-  const [ready, setReady] = useState(false);
-  const here = useRef(true);
-  useEffect(() => {
-    here.current = true;
-    return () => {
-      here.current = false;
-    };
-  }, []);
-  const dispatch = useCallback<Dispatch<DictationAction>>((action) => {
-    if (here.current) return dispatchHere(action);
-    try {
-      const saved = parseDictation(sessionStorage.getItem(DICTATION_KEY));
-      if (saved) sessionStorage.setItem(DICTATION_KEY, JSON.stringify(dictationReducer(saved, action)));
-    } catch {
-      // Storage blocked: nothing was kept anyway.
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      const saved = parseDictation(sessionStorage.getItem(DICTATION_KEY));
-      if (saved && saved.userId === userId && saved.clinicId === clinicId) dispatch({ type: "restore", state: saved });
-      else if (saved) sessionStorage.removeItem(DICTATION_KEY); // someone else's, or another clinic's
-    } catch {
-      // Storage blocked (e.g. private mode): the work just isn't kept across refreshes.
-    }
-    dispatch({ type: "stamp", userId, clinicId });
-    setReady(true);
-  }, [dispatch, userId, clinicId]);
-
-  useEffect(() => {
-    if (!ready) return;
-    try {
-      sessionStorage.setItem(DICTATION_KEY, JSON.stringify(state));
-    } catch {
-      // See above.
-    }
-  }, [state, ready]);
-
-  return { state, dispatch, ready };
-}
-
 export function DictateForm({ clinicId, userId, libraryNames, sample, demoLeft = null }: Props) {
   const router = useRouter();
-  const { state, dispatch, ready } = useDictation(clinicId, userId);
+  const { state, dispatch, ready } = useDictation(DICTATION_KEY, clinicId, userId);
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<ReadonlySet<string>>(new Set());
-  const fileRef = useRef<HTMLInputElement>(null);
-  const textRef = useRef<HTMLTextAreaElement>(null);
   const cardsRef = useRef<HTMLHeadingElement>(null);
   const library = new Set(libraryNames);
-
-  async function handleAudio(audio: Blob) {
-    if (audio.size > MAX_AUDIO_BYTES) return setError(AUDIO_TOO_LARGE);
-    setError(null);
-    setBusy("transcribing");
-    try {
-      const heard = await transcribeAudio(audio);
-      dispatch({ type: "heard", text: heard.text });
-      requestAnimationFrame(() => textRef.current?.focus());
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Η ηχογράφηση δεν διαβάστηκε. Δοκιμάστε ξανά.");
-    } finally {
-      setBusy(null);
-      if (demoLeft) router.refresh(); // the demo strip's «Μένουν» count, from the database again
-    }
-  }
-
-  const recorder = useRecorder((audio) => void handleAudio(audio));
 
   async function create() {
     if (!state.transcript.trim()) return setError("Ηχογραφήστε ή γράψτε πρώτα τα πρότυπα.");
@@ -165,9 +89,6 @@ export function DictateForm({ clinicId, userId, libraryNames, sample, demoLeft =
 
   if (!ready) return <p className="text-muted">Φόρτωση…</p>;
 
-  const recording = recorder.state === "recording";
-  const locked = busy !== null || recording;
-  const noRecordings = demoLeft !== null && demoLeft.transcribe <= 0;
   const hasText = state.transcript.trim().length > 0;
   const unsaved = state.cards.filter((c) => !c.savedId);
   const savedCount = state.cards.length - unsaved.length;
@@ -186,143 +107,52 @@ export function DictateForm({ clinicId, userId, libraryNames, sample, demoLeft =
         </p>
       </div>
 
-      {/* What to say, then the recording */}
-      <section aria-labelledby="say-h" className="flex flex-col gap-4 border-t-2 border-hairline pt-5">
-        <h2 id="say-h" className="text-[21px] font-bold">
-          Τι να πείτε
-        </h2>
-        <div className="flex flex-col gap-3 rounded-md border-2 border-hairline bg-white px-4 py-3.5 sm:px-5">
-          <ol className="flex flex-col gap-2.5">
-            {[
-              <>
-                <strong>Τον αριθμό και το όνομα</strong> κάθε προτύπου, π.χ. «Πρώτο, γόνατο μετά ACL, εβδομάδα 1».
-              </>,
-              <>
-                <strong>Τις ασκήσεις του</strong>, με σετ, επαναλήψεις και πόσο συχνά, όπως τις λέτε στον ασθενή.
-              </>,
-              <>
-                <strong>Τις οδηγίες του</strong>, αν έχει: πάγος, τι να αποφεύγει, πότε να σας πάρει τηλέφωνο.
-              </>,
-            ].map((item, i) => (
-              <li key={i} className="flex items-start gap-3 text-lg">
-                <span aria-hidden="true" className="flex size-8 flex-none items-center justify-center rounded-full bg-note-green font-bold text-action">
-                  {i + 1}
-                </span>
-                <span className="pt-0.5">{item}</span>
-              </li>
-            ))}
-          </ol>
-          <p className="flex flex-wrap justify-between gap-x-4 gap-y-1 border-t border-hairline pt-2.5 text-muted">
-            <span>Χωρίς ονόματα ασθενών. Έως {MAX_DICTATED_TEMPLATES} πρότυπα κάθε φορά.</span>
-            <span className="font-semibold">Έως {MAX_RECORDING_SECONDS / 60} λεπτά κάθε ηχογράφηση, όσες θέλετε</span>
-          </p>
-        </div>
-
-        {recording ? (
-          <LiveRecording recorder={recorder} />
-        ) : (
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+      <VoiceInput
+        say={[
+          <>
+            <strong>Τον αριθμό και το όνομα</strong> κάθε προτύπου, π.χ. «Πρώτο, γόνατο μετά ACL, εβδομάδα 1».
+          </>,
+          <>
+            <strong>Τις ασκήσεις του</strong>, με σετ, επαναλήψεις και πόσο συχνά, όπως τις λέτε στον ασθενή.
+          </>,
+          <>
+            <strong>Τις οδηγίες του</strong>, αν έχει: πάγος, τι να αποφεύγει, πότε να σας πάρει τηλέφωνο.
+          </>,
+        ]}
+        note={`Χωρίς ονόματα ασθενών. Έως ${MAX_DICTATED_TEMPLATES} πρότυπα κάθε φορά.`}
+        sample={sample}
+        text={state.transcript}
+        textLabel="Τα πρότυπα, όπως τα είπατε"
+        textHint="Διορθώστε ό,τι ακούστηκε λάθος. Από αυτό το κείμενο γράφουμε τα πρότυπα."
+        onType={(text) => dispatch({ type: "typeTranscript", text })}
+        onHeard={(text) => dispatch({ type: "heard", text })}
+        onSample={(text) => {
+          setError(null);
+          dispatch({ type: "pickSample", text });
+        }}
+        generating={busy === "generating"}
+        demoLeft={demoLeft}
+      >
+        {(working) => (
+          <>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-2">
               <button
                 type="button"
-                onClick={() => void recorder.start()}
-                disabled={busy !== null || noRecordings}
-                className={cx(greenButton, "min-h-16 text-xl disabled:cursor-not-allowed")}
+                onClick={() => void create()}
+                disabled={working || busy !== null || !hasText}
+                className={cx(greenButton, "disabled:cursor-not-allowed")}
               >
-                <span aria-hidden="true" className="size-5 rounded-full bg-error ring-[3px] ring-white" />
-                {hasText ? "Ηχογράφηση και άλλων" : "Έναρξη ηχογράφησης"}
+                {busy === "generating" ? "Γράφουμε τα πρότυπα…" : generated ? "Δημιουργία προτύπων ξανά" : "Δημιουργία προτύπων"}{" "}
+                <span aria-hidden="true">→</span>
               </button>
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={busy !== null || noRecordings}
-                className="min-h-11 cursor-pointer text-action underline underline-offset-[3px] hover:text-ink disabled:cursor-wait"
-              >
-                ή ανέβασμα αρχείου ήχου (έως 4 MB)
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="audio/*,video/*"
-                className="sr-only"
-                tabIndex={-1}
-                aria-hidden="true"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = "";
-                  if (file) void handleAudio(file);
-                }}
-              />
+              <span role="status" className="text-muted">
+                {busy === "generating" ? "Περίπου 20–40 δευτερόλεπτα. Μην κλείσετε τη σελίδα." : "Περίπου 20–40 δευτερόλεπτα."}
+              </span>
             </div>
-            <p className="text-base text-muted">
-              {hasText ? "Το κείμενο της νέας ηχογράφησης μπαίνει μετά από αυτό που υπάρχει. " : ""}Ο ήχος δεν αποθηκεύεται: κρατάμε μόνο το
-              κείμενο.
-            </p>
-            {noRecordings && (
-              <p className="self-start bg-tab-pink px-4 py-3">Τελείωσαν οι ηχογραφήσεις της δοκιμής. Δοκιμάστε το έτοιμο παράδειγμα εδώ κάτω.</p>
-            )}
-          </div>
+            <FormAlert>{error}</FormAlert>
+          </>
         )}
-        {recorder.error && <FormAlert>{recorder.error}</FormAlert>}
-        {busy === "transcribing" && (
-          <p role="status" className="font-semibold">
-            Γράφουμε αυτά που είπατε… λίγα δευτερόλεπτα.
-          </p>
-        )}
-      </section>
-
-      {/* No microphone: the sample, or type */}
-      {!recording && (
-        <section aria-labelledby="sample-h" className="flex flex-col gap-2.5 border-t-2 border-hairline pt-5">
-          <h2 id="sample-h" className="font-semibold">
-            Χωρίς μικρόφωνο; <span className="font-normal text-muted">Γράψτε τα στο κουτί πιο κάτω, ή δοκιμάστε ένα έτοιμο παράδειγμα.</span>
-          </h2>
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={() => {
-              setError(null);
-              dispatch({ type: "pickSample", text: sample.text });
-            }}
-            className="min-h-11 cursor-pointer self-start rounded-md border-2 border-line bg-white px-3.5 text-ink hover:border-action disabled:cursor-wait"
-          >
-            {sample.title}
-          </button>
-        </section>
-      )}
-
-      {/* The text, then «Δημιουργία προτύπων» */}
-      <section aria-labelledby="txt-h" className="flex flex-col gap-3.5 border-t-2 border-hairline pt-5">
-        <PartTitle id="txt-h">Το κείμενο</PartTitle>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="d-text" className="text-[19px] font-semibold">
-            Τα πρότυπα, όπως τα είπατε
-          </label>
-          <p id="d-text-hint" className="text-muted">
-            Διορθώστε ό,τι ακούστηκε λάθος. Από αυτό το κείμενο γράφουμε τα πρότυπα.
-          </p>
-          <textarea
-            id="d-text"
-            ref={textRef}
-            rows={8}
-            value={state.transcript}
-            aria-describedby="d-text-hint"
-            readOnly={busy === "generating"}
-            onChange={(e) => dispatch({ type: "typeTranscript", text: e.target.value })}
-            className={cx(fieldBox(), "resize-y py-2.5 text-lg leading-relaxed")}
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-2">
-          <button type="button" onClick={() => void create()} disabled={locked || !hasText} className={cx(greenButton, "disabled:cursor-not-allowed")}>
-            {busy === "generating" ? "Γράφουμε τα πρότυπα…" : generated ? "Δημιουργία προτύπων ξανά" : "Δημιουργία προτύπων"}{" "}
-            <span aria-hidden="true">→</span>
-          </button>
-          <span role="status" className="text-muted">
-            {busy === "generating" ? "Περίπου 20–40 δευτερόλεπτα. Μην κλείσετε τη σελίδα." : "Περίπου 20–40 δευτερόλεπτα."}
-          </span>
-        </div>
-        <FormAlert>{error}</FormAlert>
-      </section>
+      </VoiceInput>
 
       {/* The templates: one card each */}
       {generated && (

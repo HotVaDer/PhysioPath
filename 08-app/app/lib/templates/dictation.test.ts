@@ -11,6 +11,7 @@ import {
   nameKey,
   nameTaken,
   parseDictation,
+  sideOf,
   type Dictation,
 } from "@/app/lib/templates/dictation";
 
@@ -134,3 +135,23 @@ describe("parseDictation", () => {
     expect(parseDictation(null)).toBeNull();
   });
 });
+
+describe("«Αλλαγή με φωνή»: applied", () => {
+  it("rewrites the card's program (never with a patient), keeps its name and area unless said, and remembers the result", () => {
+    const start = withCards();
+    const changed = { ...program, exercises: [program.exercises[0]] };
+    let s = dictationReducer(start, { type: "applied", key: "k1", program: changed, name: null, area: null, questions: ["Ποια άσκηση;"], transcript: "Βγάλε το γλίστρημα" });
+    expect(s.cards[0]).toMatchObject({ name: "Γόνατο μετά ACL – εβδ. 1", area: "Γόνατο", questions: ["Ποια άσκηση;"] });
+    expect(s.cards[0].program.exercises).toHaveLength(1);
+    expect(s.cards[0].program).toMatchObject({ patient_first_name: null, next_appointment: null });
+    expect(s.resultTranscript).toBe("Βγάλε το γλίστρημα");
+    expect(s.applied).toBe(sideOf(s.cards[0]));
+    expect(s.cards[1]).toEqual(start.cards[1]);
+    s = dictationReducer(s, { type: "applied", key: "k1", program: changed, name: "Γόνατο εβδ. 3", area: "Γόνατο δεξί", questions: [], transcript: "x" });
+    expect(s.cards[0]).toMatchObject({ name: "Γόνατο εβδ. 3", area: "Γόνατο δεξί" });
+    // an edit by hand afterwards: the card no longer matches what was applied
+    s = dictationReducer(s, { type: "setText", key: "k1", field: "title", value: "Άλλο" });
+    expect(sideOf(s.cards[0])).not.toBe(s.applied);
+  });
+});
+

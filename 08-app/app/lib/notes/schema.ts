@@ -78,6 +78,26 @@ export const TemplatesResult = z.object({
   missing_or_unclear: greekList("Short questions for the physio, in Greek, about the dictation as a whole (not about one template)."),
 });
 
+// «Αλλαγή με φωνή» (/templates/[id]/edit): one template with only the changes the physio said.
+export const TemplateEditResult = z.object({
+  // First, so the model goes through what was said before it writes the program.
+  changes: z
+    .array(
+      z.object({
+        said: z.string().describe("One change the physio said, in a few Greek words, e.g. 'Ποδήλατο, νέα άσκηση'."),
+        applied: z.boolean().describe("True if it is in the program exactly and completely; false if any part was left out or is unclear."),
+        question: maybeText(
+          "A short Greek question for the physio when anything about this change is unclear or missing (which exercise, sets, repetitions, how often). Null only when it is clear and complete.",
+        ),
+      }),
+    )
+    .describe("Every change the physio said, one by one, in the order said."),
+  name: maybeText("A new name for the template, only if the physio said to rename it. Null otherwise."),
+  area: maybeText("A new body area, only if the physio said to change it. Null otherwise."),
+  program: PatientProgram.describe("The template's program with the changes applied. patient_first_name and next_appointment are always null."),
+  questions: greekList("Other short questions for the physio, in Greek (e.g. an unclear word, or that nothing changed). Not the ones already in changes."),
+});
+
 // At most this many templates from one dictation (the prompt says so too; more are cut, with a note).
 export const MAX_DICTATED_TEMPLATES = 10;
 
@@ -88,6 +108,7 @@ export type VoiceNoteResult = z.infer<typeof VoiceNoteResult>;
 export type NoteOnlyResult = z.infer<typeof NoteOnlyResult>;
 export type DictatedTemplate = z.infer<typeof DictatedTemplate>;
 export type TemplatesResult = z.infer<typeof TemplatesResult>;
+export type TemplateEditResult = z.infer<typeof TemplateEditResult>;
 
 // ---------- programs as saved in the database ----------
 // An approved program is a record and is never rewritten, so every shape ever saved has to stay

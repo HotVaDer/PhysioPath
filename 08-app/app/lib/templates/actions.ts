@@ -145,3 +145,37 @@ export async function createTemplate(input: unknown): Promise<CreateTemplateResu
   return { ok: true, id: data as string };
 }
 
+// «Αποθήκευση αλλαγών» on «Αλλαγή με φωνή» (/templates/[id]/edit): the template replaced by what the physio checked
+// there (name, area and program). Programs already given to patients don't change: each is its own copy.
+// update_template (20261125120000) checks it all again. "gone": archived meanwhile, or not this clinic's.
+export type UpdateTemplateResult = { ok: true; id: string } | { ok: false; error: CardError };
+
+export async function updateTemplateProgram(input: unknown): Promise<UpdateTemplateResult> {
+  const { supabase, profile } = await requireMember();
+  if (profile.role === "assistant") redirect("/");
+  const parsed = NewTemplate.extend({ templateId: z.uuid() }).safeParse(input);
+  if (!parsed.success) {
+    const field = parsed.error.issues[0]?.path[0];
+    return { ok: false, error: field === "name" ? "badname" : field === "area" ? "badarea" : field === "templateId" ? "gone" : field === "clinicId" ? "stale" : "badprogram" };
+  }
+  const { clinicId, templateId, name, area, program } = parsed.data;
+  if (!profile.clinic_id || clinicId !== profile.clinic_id) return { ok: false, error: "stale" };
+  const clean = cleanProgram(program);
+  if (clean.exercises.length < 1 || clean.exercises.length > 40) return { ok: false, error: "badprogram" };
+
+  const { error } = await supabase.rpc("update_template", {
+    p_clinic_id: profile.clinic_id,
+    p_template_id: templateId,
+    p_name: name,
+    p_area: area || null,
+    p_program: { ...clean, patient_first_name: null, next_appointment: null },
+  });
+  if (error) {
+    if (/template not found/.test(error.message)) return { ok: false, error: "gone" };
+    const result = /bad program/.test(error.message) ? "badprogram" : resultOf(error.message);
+    if (result === "failed") console.error("update_template failed:", error.code, error.message);
+    return { ok: false, error: result as CardError };
+  }
+  return { ok: true, id: templateId };
+}
+
