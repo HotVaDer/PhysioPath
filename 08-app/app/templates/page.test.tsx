@@ -108,6 +108,13 @@ describe("/templates", () => {
     render((await open()) as ReactElement);
     const empty = screen.getByText(/Δεν έχετε ακόμα πρότυπα/);
     expect(within(empty).getByRole("link", { name: "Νέα συνεδρία" })).toHaveAttribute("href", "/notes/new");
+    expect(within(empty).getByRole("link", { name: "Πείτε τα πρότυπά σας" })).toHaveAttribute("href", "/templates/dictate");
+  });
+
+  it("«Πείτε τα πρότυπά σας» is under the title, with templates or without", async () => {
+    load.loadTemplates.mockResolvedValue([knee]);
+    render((await open()) as ReactElement);
+    expect(screen.getByRole("link", { name: "Πείτε τα πρότυπά σας" })).toHaveAttribute("href", "/templates/dictate");
   });
 
   it("assistants go home", async () => {

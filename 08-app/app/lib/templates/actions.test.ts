@@ -17,7 +17,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-const { archiveTemplate, updateTemplate, saveTemplate } = await import("@/app/lib/templates/actions");
+const { archiveTemplate, createTemplate, updateTemplate, saveTemplate } = await import("@/app/lib/templates/actions");
 
 const PROGRAM = "5eed0000-0000-4000-8000-0000000000b1";
 const NOTE = "5eed0000-0000-4000-8000-0000000000c1";
@@ -114,5 +114,77 @@ describe("archiveTemplate", () => {
     rpc.mockResolvedValue({ data: null, error: { code: "P0001", message: "template not found" } });
     vi.spyOn(console, "error").mockImplementation(() => {});
     expect(await run(archiveTemplate, { templateId: TEMPLATE })).toBe("REDIRECT /templates?done=failed");
+  });
+});
+
+describe("createTemplate («Πείτε τα πρότυπά σας»)", () => {
+  const program = {
+    title: " Πρόγραμμα ασκήσεων – Γόνατο ",
+    patient_first_name: "Γιώργος",
+    next_appointment: "Πέμπτη",
+    exercises: [
+      { name: " Ανυψώσεις τεντωμένου ποδιού ", sets: 3, reps: "10", hold: null, frequency: "2 φορές τη μέρα", notes: null },
+      { name: "  ", sets: null, reps: null, hold: null, frequency: null, notes: null },
+    ],
+    after_exercises: ["Πάγος", " "],
+    avoid: [],
+    contact_if: [],
+    other: [],
+  };
+  const card = (changes: Record<string, unknown> = {}) => ({ clinicId: "c1", name: "  Γόνατο μετά ACL ", area: " Γόνατο ", program, ...changes });
+
+  it("sends the program tidied (empty exercises and lines out, version 1) without a patient, and answers with the id", async () => {
+    expect(await createTemplate(card())).toEqual({ ok: true, id: TEMPLATE });
+    expect(rpc).toHaveBeenCalledWith("create_template", {
+      p_clinic_id: "c1",
+      p_name: "Γόνατο μετά ACL",
+      p_area: "Γόνατο",
+      p_program: {
+        version: 1,
+        title: "Πρόγραμμα ασκήσεων – Γόνατο",
+        patient_first_name: null,
+        next_appointment: null,
+        exercises: [{ name: "Ανυψώσεις τεντωμένου ποδιού", sets: 3, reps: "10", hold: null, frequency: "2 φορές τη μέρα", notes: null }],
+        after_exercises: ["Πάγος"],
+        avoid: [],
+        contact_if: [],
+        other: [],
+      },
+    });
+  });
+
+  it("no area: sent as none", async () => {
+    await createTemplate(card({ area: "  " }));
+    expect(rpc.mock.calls[0][1]).toMatchObject({ p_area: null });
+  });
+
+  it("a bad name, area or program, or a page for another clinic, is not sent", async () => {
+    expect(await createTemplate(card({ name: " " }))).toEqual({ ok: false, error: "badname" });
+    expect(await createTemplate(card({ area: "α".repeat(61) }))).toEqual({ ok: false, error: "badarea" });
+    expect(await createTemplate(card({ program: { ...program, exercises: [program.exercises[1]] } }))).toEqual({ ok: false, error: "badprogram" });
+    expect(await createTemplate(card({ program: { title: "x" } }))).toEqual({ ok: false, error: "badprogram" });
+    expect(await createTemplate(card({ clinicId: "c2" }))).toEqual({ ok: false, error: "stale" });
+    expect(await createTemplate(null)).toEqual({ ok: false, error: "badprogram" });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("the database's refusals come back as the card's problem", async () => {
+    for (const [message, error] of [
+      ["name taken", "taken"],
+      ["bad program", "badprogram"],
+      ["too many templates", "full"],
+      ["other clinic", "stale"],
+      ["bad area", "badarea"],
+      ["connection lost", "failed"],
+    ]) {
+      rpc.mockResolvedValueOnce({ data: null, error: { code: "P0001", message } });
+      expect(await createTemplate(card())).toEqual({ ok: false, error });
+    }
+  });
+
+  it("an assistant is sent home", async () => {
+    member.role = "assistant";
+    expect(await createTemplate(card()).catch((e: Error) => e.message)).toBe("REDIRECT /");
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

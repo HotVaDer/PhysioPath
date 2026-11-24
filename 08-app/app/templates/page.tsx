@@ -1,13 +1,13 @@
 // «Πρότυπα» (owner and physio): the clinic's library of templates, programs a physio approved and saved
 // under a name («Αποθήκευση ως πρότυπο» on the approved-program page), with a body area. Each one opens to
 // show its exercises, its name and area to change, and «Αρχειοθέτηση». A template never holds a patient (the database clears the name
-// and the appointment). Starting a new program from a template comes in a later step.
+// and the appointment). «Πείτε τα πρότυπά σας» (/templates/dictate) makes several at once, by voice.
 // Assistants go home, like «Ασθενείς».
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { SubmitButton } from "@/app/components/paper/Buttons";
+import { PaperLink, SubmitButton } from "@/app/components/paper/Buttons";
 import { ConfirmSubmit } from "@/app/components/paper/ConfirmSubmit";
 import { LineField } from "@/app/components/paper/LineField";
 import { FormAlert } from "@/app/components/paper/Notes";
@@ -50,6 +50,14 @@ export default async function TemplatesPage({ searchParams }: PageProps<"/templa
           </p>
         </div>
 
+        {/* «Πείτε τα πρότυπά σας»: several new templates at once, by voice (a new clinic has none to reuse). */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <PaperLink href="/templates/dictate" variant={templates.length === 0 ? "green" : "outline"}>
+            Πείτε τα πρότυπά σας
+          </PaperLink>
+          <span className="max-w-[420px] text-muted">Λέτε μία φορά τα προγράμματα που δίνετε συχνά και γίνονται πρότυπα, αφού τα ελέγξετε.</span>
+        </div>
+
         {message &&
           (message.ok ? (
             <p role="status" className="self-start bg-note-green px-4 py-3 font-semibold">
@@ -61,8 +69,8 @@ export default async function TemplatesPage({ searchParams }: PageProps<"/templa
 
         {templates.length === 0 ? (
           <p className="bg-tab-yellow px-4 py-3">
-            Δεν έχετε ακόμα πρότυπα. Αποθηκεύστε ένα εγκεκριμένο πρόγραμμα ως πρότυπο: μετά την <Link href="/notes/new">Νέα συνεδρία</Link>,
-            στη σελίδα «Εγκρίθηκε».
+            Δεν έχετε ακόμα πρότυπα. <Link href="/templates/dictate">Πείτε τα πρότυπά σας</Link> μία φορά, ή αποθηκεύστε ένα εγκεκριμένο
+            πρόγραμμα ως πρότυπο: μετά την <Link href="/notes/new">Νέα συνεδρία</Link>, στη σελίδα «Εγκρίθηκε».
           </p>
         ) : (
           <ul className="flex flex-col gap-3">

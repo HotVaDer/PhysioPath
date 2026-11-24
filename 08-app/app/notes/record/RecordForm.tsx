@@ -27,10 +27,10 @@ import type { DemoLeft } from "@/app/lib/demo/left";
 import { ApiError, generateNote, generateProgram, transcribeAudio } from "@/app/lib/notes/api";
 import { useDraft } from "@/app/lib/notes/DraftContext";
 import { isStale, noteFor } from "@/app/lib/notes/draft";
-import { formatClock } from "@/app/lib/notes/format";
 import { AUDIO_TOO_LARGE, MAX_AUDIO_BYTES } from "@/app/lib/notes/limits";
 import type { Sample } from "@/app/lib/notes/samples";
 import { MAX_RECORDING_SECONDS, useRecorder } from "@/app/lib/notes/useRecorder";
+import { greenButton, LiveRecording } from "@/app/notes/LiveRecording";
 import { ProgramSummary } from "@/app/notes/ProgramSummary";
 import { StaleNotice } from "@/app/notes/StaleNotice";
 
@@ -38,11 +38,8 @@ import { TemplatePicker, type TemplateChoice } from "./TemplatePicker";
 
 type Busy = null | "transcribing" | "generating";
 
-const BARS = 20;
-
 const radio = "size-[22px] flex-none cursor-pointer accent-action";
-const green =
-  "inline-flex min-h-14 cursor-pointer items-center gap-2.5 bg-action px-6 text-[19px] font-bold text-white hover:bg-action-hover disabled:cursor-wait disabled:opacity-80";
+const green = greenButton;
 
 export type { TemplateChoice } from "./TemplatePicker";
 
@@ -140,7 +137,6 @@ export function RecordForm({
   const patientLabel = draft.patient.label.trim() || "ασθενής χωρίς όνομα";
   const programStep = draft.patient.id ? (`/notes/program?patient=${draft.patient.id}` as const) : null;
   const hasText = draft.transcript.length > 0;
-  const lit = Math.round(recorder.level * BARS);
   const noRecordings = demoLeft !== null && demoLeft.transcribe <= 0;
   // «Τι να πείτε»: what to say, in order (one line for «Ίδιο πρόγραμμα», two otherwise).
   const today = (
@@ -258,29 +254,7 @@ export function RecordForm({
         </div>
 
         {recording ? (
-          <div role="status" className="flex flex-wrap items-center gap-x-7 gap-y-4 rounded-md border-2 border-ink bg-white px-5 py-4">
-            <div className="flex flex-col">
-              <span className="flex items-center gap-2 font-bold">
-                <span aria-hidden="true" className="size-3.5 rounded-full bg-error" />
-                Ηχογραφείται
-              </span>
-              <span className="text-[34px] font-bold leading-tight tabular-nums">
-                {formatClock(recorder.elapsed)} <span className="text-lg font-normal">/ {formatClock(MAX_RECORDING_SECONDS)}</span>
-              </span>
-            </div>
-            <span aria-hidden="true" className="flex h-12 flex-[1_1_200px] items-center gap-1">
-              {Array.from({ length: BARS }, (_, i) => (
-                <span key={i} className={cx("max-w-2.5 flex-1 rounded-sm", i < lit ? "bg-ink" : "bg-hairline")} style={{ height: `${14 + ((i * 7) % 30)}px` }} />
-              ))}
-            </span>
-            <button type="button" onClick={recorder.stop} className={green}>
-              <span aria-hidden="true" className="size-3.5 bg-white" />
-              Τέλος ηχογράφησης
-            </button>
-            {recorder.tooQuiet && (
-              <p className="basis-full font-semibold">Δεν σας ακούμε καλά. Πλησιάστε το μικρόφωνο ή μιλήστε πιο δυνατά.</p>
-            )}
-          </div>
+          <LiveRecording recorder={recorder} />
         ) : (
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">

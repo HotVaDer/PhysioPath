@@ -531,3 +531,35 @@ No database changes. Each step was tested by the user in Firefox, Safari and Chr
   (`patientArea`). «Περιοχή» field when saving (prefilled from the note) and on «Πρότυπα» («Αποθήκευση αλλαγών»).
 - Checks: `tsc` clean, **301 tests**, `next build` OK.
 
+
+## 2026-11-24 · Templates, phase 3: «Πείτε τα πρότυπά σας» (`/templates/dictate`)
+- **Why:** a new clinic starts with an empty «Πρότυπα» library, and building templates one by one is what took
+  P03 so long in Physitrack. The physio now says their usual programs once; each becomes a card to check and save.
+  Nothing reaches the library without «Αποθήκευση».
+- **Page:** linked from «Πρότυπα» (under the title, and in the empty state). «Τι να πείτε» (number + name,
+  exercises with doses, instructions), recording (`useRecorder`, the box `LiveRecording` now shared with
+  `RecordForm`), file, typed text, a fictional sample (`TEMPLATES_SAMPLE`). Each recording's text goes after the
+  text already there (3′ each, as many as wanted). «Δημιουργία προτύπων» → one card per template
+  (`TemplateDraft`): the AI's questions for it, name, area, patient title, exercises (yellow «λείπει»), the four
+  lists, «Αποθήκευση» / «Δεν το θέλω»; saved cards fold to one line with «Άνοιγμα». «Αποθήκευση όλων (N)» saves
+  one at a time; refused ones stay with their problem. A name already in the library is a warning while typing;
+  the database decides. New cards replacing unsaved ones asks first. State in sessionStorage
+  (`physiopath:template-dictation`, reducer `app/lib/templates/dictation.ts`), dropped for another user/clinic.
+- **AI:** mode `templates` in `/api/generate`, its own prompt `DICTATE_TEMPLATES` (same rules worded for
+  templates: only what was said, never an extra exercise or template, name and area from the physio's words, no
+  patient, questions per template + general ones, at most 10). Schema `TemplatesResult { templates: [{ name,
+  area, program, questions }], missing_or_unclear }`; `tidyTemplates` cuts to 10 (with a line) and clears any
+  patient. One counted Claude call; `max_tokens` 32000, 110 s in one try for this mode.
+- **Live test with Claude, 4 fictional dictations:** 3 numbered templates with a correction → 3 exact templates,
+  questions for the missing doses; an unnumbered one naming a patient and «πάγο σε όλα» → 2 templates, no
+  patient, ice in both with a question to confirm; 5 templates where one is «για τον ώμο τα συνηθισμένα» → 4
+  templates, no invented shoulder exercises, a general question instead; 11 templates → 10 in 27 s and a line
+  about the 11th. Times 15–27 s.
+- **Database** (`20261124230000_create_template.sql`, pushed live 2026-11-24 after a rolled-back trial, 403/403): `create_template(clinic,
+  name, area, program)`, security definer, the usual checks (`template_clinic`, `template_name`,
+  `template_area`), only the program's own keys kept, version 1, never a patient, 'bad program' for a wrong
+  shape, at most 300 active templates per clinic ('too many templates'). `rls_check.sql`: +15 checks (tidy +
+  no patient + nothing extra, duplicate name, 4 bad shapes, empty name, long area, A for clinic B, B in A, B
+  doesn't see it, assistant, the 301st, anon).
+- **Demo:** allowed. A dictation is 1 of the 5 programs; each recording 1 of the 5 recordings; the sample needs none.
+- Checks: `tsc` clean, **327 tests**, `next build` OK.

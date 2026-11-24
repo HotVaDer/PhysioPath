@@ -64,11 +64,30 @@ export const NoteOnlyResult = z.object({
   missing_or_unclear: greekList("Short questions for the physio, in Greek, about today's session and missing GeSY parts only."),
 });
 
+// «Πείτε τα πρότυπά σας» (/templates/dictate): the physio says several of their usual programs at once,
+// and each becomes a template they check and save. No patient in any of them.
+export const DictatedTemplate = z.object({
+  name: z.string().describe("The template's name, from the physio's own words, e.g. 'Γόνατο μετά ACL – εβδ. 1'."),
+  area: maybeText("Body area as the physio said it, without the side, e.g. 'Γόνατο', 'Ώμος'. Null if not said."),
+  program: PatientProgram.describe("The program as the physio said it. patient_first_name and next_appointment are always null."),
+  questions: greekList("Short questions for the physio about this template only, in Greek: missing sets/reps/frequency, unclear words."),
+});
+
+export const TemplatesResult = z.object({
+  templates: z.array(DictatedTemplate),
+  missing_or_unclear: greekList("Short questions for the physio, in Greek, about the dictation as a whole (not about one template)."),
+});
+
+// At most this many templates from one dictation (the prompt says so too; more are cut, with a note).
+export const MAX_DICTATED_TEMPLATES = 10;
+
 export type Exercise = z.infer<typeof Exercise>;
 export type PatientProgram = z.infer<typeof PatientProgram>;
 export type ClinicalNote = z.infer<typeof ClinicalNote>;
 export type VoiceNoteResult = z.infer<typeof VoiceNoteResult>;
 export type NoteOnlyResult = z.infer<typeof NoteOnlyResult>;
+export type DictatedTemplate = z.infer<typeof DictatedTemplate>;
+export type TemplatesResult = z.infer<typeof TemplatesResult>;
 
 // ---------- programs as saved in the database ----------
 // An approved program is a record and is never rewritten, so every shape ever saved has to stay

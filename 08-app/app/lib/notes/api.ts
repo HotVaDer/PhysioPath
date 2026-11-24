@@ -3,7 +3,7 @@
 // (413 for a too-large upload, 504 when a function runs out of time).
 import { AUDIO_TOO_LARGE } from "@/app/lib/notes/limits";
 import type { NoteLanguage } from "@/app/lib/notes/prompt";
-import type { NoteOnlyResult, VoiceNoteResult } from "@/app/lib/notes/schema";
+import type { NoteOnlyResult, TemplatesResult, VoiceNoteResult } from "@/app/lib/notes/schema";
 
 export class ApiError extends Error {}
 
@@ -11,6 +11,7 @@ export class ApiError extends Error {}
 export type TranscribeResponse = { text: string; seconds: number };
 export type GenerateResponse = { result: VoiceNoteResult; seconds: number };
 export type GenerateNoteResponse = { result: NoteOnlyResult; seconds: number };
+export type GenerateTemplatesResponse = { result: TemplatesResult; seconds: number };
 
 const STATUS_MESSAGES: Record<number, string> = {
   429: "Πολλά αιτήματα. Περιμένετε λίγο και δοκιμάστε ξανά.",
@@ -61,4 +62,12 @@ export const generateNote = (transcript: string, noteLang: NoteLanguage) =>
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ transcript, noteLang, mode: "note" }),
+  });
+
+// «Πείτε τα πρότυπά σας»: several templates from one dictation (nothing saved; the physio checks each one).
+export const generateTemplates = (transcript: string) =>
+  call<GenerateTemplatesResponse>("/api/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ transcript, mode: "templates" }),
   });

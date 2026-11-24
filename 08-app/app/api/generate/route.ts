@@ -1,7 +1,8 @@
 // POST /api/generate: { transcript, noteLang, mode, templateId } → the patient program, the GeSY note and the
 // questions for the physio (mode "note", «Ίδιο πρόγραμμα»: only the note and the questions; mode "template":
-// the program starts from the clinic's template templateId). Owner or physio only. Nothing is saved here:
-// the physio reviews and approves first.
+// the program starts from the clinic's template templateId; mode "templates", «Πείτε τα πρότυπά σας»: several
+// templates from one dictation, no patient and no note). Owner or physio only. Nothing is saved here:
+// the physio reviews and approves (or saves each template) first. Every mode is one counted Claude call.
 // The template is read here with the physio's own login, so only a template of the open clinic, not
 // archived, can be used: the browser sends its id, never its contents.
 import * as z from "zod";
@@ -12,7 +13,8 @@ import { GenerateMode, NoteLanguage } from "@/app/lib/notes/prompt";
 import { readProgram } from "@/app/lib/notes/schema";
 import type { Supabase } from "@/app/lib/supabase/server";
 
-// Claude takes about 20 s with effort medium; generate.ts gives up at 50 s plus one retry.
+// Claude takes about 20 s with effort medium; generate.ts gives up at 50 s plus one retry (templates: 110 s, once;
+// ten templates took 27 s in the test of 2026-11-24).
 export const maxDuration = 120;
 
 const Body = z.object({

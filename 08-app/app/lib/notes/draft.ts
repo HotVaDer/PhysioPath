@@ -90,7 +90,7 @@ export type DraftAction =
 // so spaces don't vanish while typing.
 const optional = (value: string) => (value === "" ? null : value);
 
-function exerciseValue(field: keyof Exercise, value: string): Exercise[keyof Exercise] {
+export function exerciseValue(field: keyof Exercise, value: string): Exercise[keyof Exercise] {
   if (field === "name") return value;
   if (field === "sets") {
     const n = Number.parseInt(value, 10);

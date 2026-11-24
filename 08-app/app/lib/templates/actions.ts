@@ -1,6 +1,6 @@
 "use server";
 // The clinic's templates («Πρότυπα», owner or physio): save an approved program under a name and an area,
-// change a template's name and area, archive one. The database does every check again (20261124180000,
+// create one the physio checked on «Πείτε τα πρότυπά σας», change a template's name and area, archive one. The database does every check again (20261124180000,
 // 20261124220000): the program must be this clinic's,
 // names are unique in the clinic's library, and a template never holds a patient's name or appointment.
 // After each action the page shows a line saying what happened (?template=… or ?done=…).
@@ -8,7 +8,10 @@ import type { Route } from "next";
 import { redirect } from "next/navigation";
 import * as z from "zod";
 
+import { cleanProgram } from "@/app/lib/notes/approval";
+import { PatientProgram } from "@/app/lib/notes/schema";
 import { requireMember, requireSameClinic } from "@/app/lib/onboarding/session";
+import type { CardError } from "@/app/lib/templates/dictation";
 import { TEMPLATE_AREA_MAX, TEMPLATE_NAME_MAX, type TemplateResult } from "@/app/lib/templates/load";
 
 const Name = z.string().trim().min(1).max(TEMPLATE_NAME_MAX);
@@ -101,3 +104,44 @@ export async function archiveTemplate(form: FormData): Promise<void> {
   }
   redirect(`/templates?done=archived` as Route);
 }
+
+// «Αποθήκευση» on one card of «Πείτε τα πρότυπά σας» (/templates/dictate): a template from the program the
+// physio checked there. Called from the page with the card itself (not a form), so it answers instead of
+// redirecting, and the page shows the result on that card. create_template (20261124230000) checks it all
+// again, keeps only the program's own keys and never a patient.
+export type CreateTemplateResult = { ok: true; id: string } | { ok: false; error: CardError };
+
+const NewTemplate = z.object({
+  clinicId: z.string(),
+  name: Name,
+  area: z.string().trim().max(TEMPLATE_AREA_MAX),
+  program: PatientProgram,
+});
+
+export async function createTemplate(input: unknown): Promise<CreateTemplateResult> {
+  const { supabase, profile } = await requireMember();
+  if (profile.role === "assistant") redirect("/");
+  const parsed = NewTemplate.safeParse(input);
+  if (!parsed.success) {
+    const field = parsed.error.issues[0]?.path[0];
+    return { ok: false, error: field === "name" ? "badname" : field === "area" ? "badarea" : field === "clinicId" ? "stale" : "badprogram" };
+  }
+  const { clinicId, name, area, program } = parsed.data;
+  if (!profile.clinic_id || clinicId !== profile.clinic_id) return { ok: false, error: "stale" }; // as requireSameClinic
+  const clean = cleanProgram(program); // exercises without a name left out, names trimmed, version stamped
+  if (clean.exercises.length < 1 || clean.exercises.length > 40) return { ok: false, error: "badprogram" };
+
+  const { data, error } = await supabase.rpc("create_template", {
+    p_clinic_id: profile.clinic_id,
+    p_name: name,
+    p_area: area || null,
+    p_program: { ...clean, patient_first_name: null, next_appointment: null },
+  });
+  if (error) {
+    const result = /bad program/.test(error.message) ? "badprogram" : /too many templates/.test(error.message) ? "full" : resultOf(error.message);
+    if (result === "failed") console.error("create_template failed:", error.code, error.message);
+    return { ok: false, error: result as CardError };
+  }
+  return { ok: true, id: data as string };
+}
+

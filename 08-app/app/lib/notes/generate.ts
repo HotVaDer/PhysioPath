@@ -2,6 +2,7 @@
 // mode "note" («Ίδιο πρόγραμμα»): only the GeSY note and the questions; the stored program is never sent.
 // mode "template": the template the physio picked (loaded by the route from the clinic's «Πρότυπα») goes
 // with the transcript, and the program starts from it.
+// mode "templates" («Πείτε τα πρότυπά σας»): several templates from one dictation; no patient, no note.
 // Server only: this file uses the API key, which must never reach the browser.
 import "server-only";
 
@@ -9,7 +10,13 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 
 import { systemPrompt, type GenerateMode, type NoteLanguage } from "@/app/lib/notes/prompt";
-import { NoteOnlyResult, VoiceNoteResult, type PatientProgram } from "@/app/lib/notes/schema";
+import {
+  MAX_DICTATED_TEMPLATES,
+  NoteOnlyResult,
+  TemplatesResult,
+  VoiceNoteResult,
+  type PatientProgram,
+} from "@/app/lib/notes/schema";
 
 export type TemplateInput = { name: string; program: PatientProgram };
 
@@ -26,6 +33,28 @@ export class GenerationError extends Error {}
 
 let client: Anthropic | undefined;
 
+// What the AI wrote for «Πείτε τα πρότυπά σας», made safe to show: at most MAX_DICTATED_TEMPLATES, and never a
+// patient (the prompt says so; this makes sure, and create_template clears them again).
+export function tidyTemplates(result: TemplatesResult): TemplatesResult {
+  const extra = result.templates.length > MAX_DICTATED_TEMPLATES;
+  return {
+    templates: result.templates.slice(0, MAX_DICTATED_TEMPLATES).map((t) => ({
+      ...t,
+      program: { ...t.program, patient_first_name: null, next_appointment: null },
+    })),
+    missing_or_unclear: extra
+      ? [...result.missing_or_unclear, `Κρατήσαμε τα πρώτα ${MAX_DICTATED_TEMPLATES} πρότυπα. Πείτε τα υπόλοιπα σε νέα υπαγόρευση.`]
+      : result.missing_or_unclear,
+  };
+}
+
+const FORMATS = {
+  program: VoiceNoteResult,
+  template: VoiceNoteResult,
+  note: NoteOnlyResult,
+  templates: TemplatesResult,
+} as const;
+
 export async function generate(transcript: string, noteLang: NoteLanguage, mode: GenerateMode = "program", template?: TemplateInput) {
   const text = transcript.trim();
   if (!text) throw new GenerationError("Το κείμενο είναι κενό. Ηχογραφήστε ή γράψτε τη σημείωση πρώτα.");
@@ -37,23 +66,25 @@ export async function generate(transcript: string, noteLang: NoteLanguage, mode:
   // 50 s and one retry: the route has 120 s, so a slow answer ends with a clear message, not a timeout page.
   client ??= new Anthropic({ timeout: 50_000, maxRetries: 1 });
 
+  const many = mode === "templates";
   const started = performance.now();
   let response;
   try {
     response = await client.beta.messages.parse({
       model: MODEL,
-      max_tokens: 16000,
+      // Ten templates in Greek are long: more room, and more time (in one try: the route has 120 s).
+      max_tokens: many ? 32000 : 16000,
       output_config: {
         // Medium, not low: low changed exercises in 3 of 5 test notes (03-prototype/docs/transcription.md).
         effort: "medium",
-        format: mode === "note" ? betaZodOutputFormat(NoteOnlyResult) : betaZodOutputFormat(VoiceNoteResult),
+        format: betaZodOutputFormat(FORMATS[mode]),
       },
       // If a safety classifier declines, retry server-side on Anthropic's recommended model.
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       system: systemPrompt(noteLang, mode),
       messages: [{ role: "user", content: userMessage(text, mode === "template" ? template : undefined) }],
-    });
+    }, many ? { timeout: 110_000, maxRetries: 0 } : undefined);
   } catch (error) {
     console.error("generate:", error instanceof Error ? error.message : error);
     if (error instanceof Anthropic.RateLimitError)
@@ -70,8 +101,9 @@ export async function generate(transcript: string, noteLang: NoteLanguage, mode:
   if (response.stop_reason === "max_tokens" || !response.parsed_output)
     throw new GenerationError("Η απάντηση κόπηκε ή δεν διαβάστηκε. Δοκιμάστε ξανά.");
 
+  const parsed = response.parsed_output;
   return {
-    result: response.parsed_output,
+    result: many ? tidyTemplates(parsed as TemplatesResult) : parsed,
     seconds: Math.round((performance.now() - started) / 100) / 10,
   };
 }
