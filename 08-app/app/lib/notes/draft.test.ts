@@ -251,3 +251,57 @@ describe("draftReducer: the clinic a note belongs to", () => {
     expect(parseDraft(JSON.stringify(old))?.clinicId).toBeNull();
   });
 });
+
+describe("draftReducer: «Ξεκινήστε από πρότυπο»", () => {
+  const knee = { id: "7b3c0d6e-8f41-4a2b-9c7d-1e2f3a4b5c6d", name: "Γόνατο μετά ACL", asIs: false };
+  const shoulder = { id: "8b3c0d6e-8f41-4a2b-9c7d-1e2f3a4b5c6d", name: "Ώμος", asIs: false };
+  const base = { programId: "6b3c0d6e-8f41-4a2b-9c7d-1e2f3a4b5c6d", approvedAt: "2026-11-01T10:00:00Z", program: result.program };
+
+  it("picking a template keeps the text; another template throws away a program made from the old one", () => {
+    const typed = { ...withResult, transcript: "Χωρίς την τρίτη" };
+    const picked = draftReducer(typed, { type: "setTemplate", template: knee });
+    expect(picked.template).toEqual(knee);
+    expect(picked.result).toBeNull();
+    expect(picked.transcript).toBe("Χωρίς την τρίτη");
+    const made = draftReducer(picked, { type: "generated", result, seconds: 9, noteLang: "el", draftId: DRAFT_ID });
+    expect(draftReducer(made, { type: "setTemplate", template: knee })).toBe(made); // the same one: nothing changes
+    expect(draftReducer(made, { type: "setTemplate", template: shoulder }).result).toBeNull();
+    expect(draftReducer(made, { type: "setTemplate", template: null }).template).toBeNull();
+  });
+
+  it("«Όπως είναι» ↔ «Με αλλαγές» throws away a program made the other way", () => {
+    const made = draftReducer(draftReducer(emptyDraft, { type: "setTemplate", template: knee }), {
+      type: "generated", result, seconds: 9, noteLang: "el", draftId: DRAFT_ID,
+    });
+    const asIs = draftReducer(made, { type: "setTemplate", template: { ...knee, asIs: true } });
+    expect(asIs.template?.asIs).toBe(true);
+    expect(asIs.result).toBeNull();
+    expect(noteFor(asIs)).not.toBe(noteFor(made)); // a slow answer made the other way is thrown away
+  });
+
+  it("«Ίδιο πρόγραμμα» writes no program, so it takes no template", () => {
+    const picked = draftReducer(emptyDraft, { type: "setTemplate", template: knee });
+    const same = draftReducer(picked, { type: "setMode", mode: "same", base });
+    expect(same.template).toBeNull();
+    expect(draftReducer(same, { type: "setTemplate", template: knee }).template).toBeNull();
+  });
+
+  it("another patient starts without a template", () => {
+    const maria = { id: "9b3c0d6e-8f41-4a2b-9c7d-1e2f3a4b5c6d", label: "Μαρία" };
+    const picked = draftReducer({ ...emptyDraft, patient: maria }, { type: "setTemplate", template: knee });
+    expect(draftReducer(picked, { type: "setPatient", patient: { id: null, label: "Νίκος" } }).template).toBeNull();
+    expect(draftReducer(picked, { type: "setPatient", patient: { ...maria, label: "Μαρία Κ." } }).template).toEqual(knee); // the same patient
+  });
+
+  it("a program made from one template, arriving after the physio picked another, is thrown away", () => {
+    const picked = draftReducer(emptyDraft, { type: "setTemplate", template: knee });
+    const startedFor = noteFor(picked);
+    const changed = draftReducer(picked, { type: "setTemplate", template: shoulder });
+    expect(draftReducer(changed, { type: "generated", result, seconds: 9, noteLang: "el", draftId: DRAFT_ID, startedFor }).result).toBeNull();
+  });
+
+  it("a draft saved before templates reads back with none", () => {
+    const { template: _, ...old } = { ...emptyDraft, transcript: "παλιό" };
+    expect(parseDraft(JSON.stringify(old))?.template).toBeNull();
+  });
+});

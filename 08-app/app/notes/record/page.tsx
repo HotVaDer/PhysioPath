@@ -5,17 +5,20 @@ import type { Metadata } from "next";
 import { StaffSheet } from "@/app/components/paper/StaffSheet";
 import { SAMPLES } from "@/app/lib/notes/samples";
 import { requireMember } from "@/app/lib/onboarding/session";
+import { loadTemplates } from "@/app/lib/templates/load";
 
 import { RecordForm } from "./RecordForm";
 
 export const metadata: Metadata = { title: "Νέα συνεδρία · ηχογράφηση" };
 
 export default async function RecordPage() {
-  const { profile } = await requireMember();
+  const { supabase, profile } = await requireMember();
+  // The clinic's templates for «Ξεκινήστε από πρότυπο» (owners and physios; an assistant gets none).
+  const templates = (await loadTemplates(supabase)).map((t) => ({ id: t.id, name: t.name, program: t.program }));
   return (
     <StaffSheet profile={profile} current="new" step={{ n: 3, of: 4 }}>
       {/* A demo clinic: what is left of its recordings (the yellow strip on top shows the numbers). */}
-      <RecordForm samples={SAMPLES} demoLeft={profile.demo?.left ?? null} />
+      <RecordForm samples={SAMPLES} demoLeft={profile.demo?.left ?? null} templates={templates} />
     </StaffSheet>
   );
 }

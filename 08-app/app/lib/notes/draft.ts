@@ -30,6 +30,10 @@ export const Draft = z.object({
   // keeps the stored program (base, read-only) and only today's GeSY note is written.
   mode: z.enum(["new", "same"]).default("new"),
   base: z.object({ programId: z.uuid(), approvedAt: z.string(), program: PatientProgram }).nullable().default(null),
+  // «Ξεκινήστε από πρότυπο» on the recording page (a new program only): the clinic's template the program
+  // starts from. asIs («Όπως είναι»): the program is the template unchanged and the AI writes only the note;
+  // otherwise («Με αλλαγές») the server reads the template and the AI applies the changes the physio says.
+  template: z.object({ id: z.uuid(), name: z.string(), asIs: z.boolean().default(false) }).nullable().default(null),
   // The clinic this note belongs to: stamped by DraftProvider with the open clinic when the note starts
   // and again whenever the patient is chosen (from that clinic's list). Someone in several clinics can
   // open another one meanwhile: the patient, program and beds are this clinic's, so «Έγκριση» refuses
@@ -46,7 +50,8 @@ export type Draft = z.infer<typeof Draft>;
 
 export const emptyDraft: Draft = {
   transcript: "", noteLang: "el", result: null, resultNoteLang: "el", timings: {}, removed: null,
-  patient: null, draftId: null, activityCode: null, where: null, mode: "new", base: null, clinicId: null, resultTranscript: null, userId: null,
+  patient: null, draftId: null, activityCode: null, where: null, mode: "new", base: null, template: null, clinicId: null,
+  resultTranscript: null, userId: null,
 };
 
 export const emptyExercise = (): Exercise => ({ name: "", sets: null, reps: null, hold: null, frequency: null, notes: null });
@@ -64,6 +69,7 @@ export type DraftAction =
   | { type: "keepResult" }
   | { type: "setPatient"; patient: { id: string | null; label: string } | null }
   | { type: "setMode"; mode: "new" | "same"; base: Draft["base"] }
+  | { type: "setTemplate"; template: Draft["template"] }
   | { type: "setActivityCode"; code: ActivityCode | null }
   | { type: "setWhere"; where: string | null }
   | { type: "setProgramText"; field: ProgramTextField; value: string }
@@ -90,11 +96,19 @@ function exerciseValue(field: keyof Exercise, value: string): Exercise[keyof Exe
   return optional(value);
 }
 
-// Which note a slow answer belongs to: the patient, and new program or «Ίδιο πρόγραμμα» (and which one).
+// Which note a slow answer belongs to: the patient, new program or «Ίδιο πρόγραμμα» (and which one), and
+// the template it starts from.
 // The recording and the generation take seconds; RecordForm stamps this when it starts, and an answer
 // that arrives after the physio picked someone or something else is thrown away (startedFor).
 export function noteFor(draft: Draft): string {
-  return JSON.stringify([draft.patient?.id ?? null, draft.patient?.label ?? null, draft.mode, draft.base?.programId ?? null]);
+  return JSON.stringify([
+    draft.patient?.id ?? null,
+    draft.patient?.label ?? null,
+    draft.mode,
+    draft.base?.programId ?? null,
+    draft.template?.id ?? null,
+    draft.template?.asIs ?? null,
+  ]);
 }
 
 // The text changed after the program (or note) was made from it: approving it would approve something
@@ -142,13 +156,31 @@ export function draftReducer(draft: Draft, action: DraftAction): Draft {
       // over from a note in another clinic, in the same tab, made «Έγκριση» refuse a note of this one.)
       const other = (action.patient?.id ?? null) !== (draft.patient?.id ?? null);
       return other
-        ? { ...draft, patient: action.patient, mode: "new", base: null, result: null, draftId: null, removed: null, clinicId: null }
+        ? { ...draft, patient: action.patient, mode: "new", base: null, template: null, result: null, draftId: null, removed: null, clinicId: null }
         : { ...draft, patient: action.patient, clinicId: null };
     }
     case "setMode":
       // A different choice: what was generated for the other one no longer fits (the transcript stays).
       if (draft.mode === action.mode && draft.base?.programId === action.base?.programId) return draft;
-      return { ...draft, mode: action.mode, base: action.mode === "same" ? action.base : null, result: null, draftId: null, removed: null };
+      // «Ίδιο πρόγραμμα» writes no program, so no template either.
+      return {
+        ...draft,
+        mode: action.mode,
+        base: action.mode === "same" ? action.base : null,
+        template: action.mode === "same" ? null : draft.template,
+        result: null,
+        draftId: null,
+        removed: null,
+      };
+    case "setTemplate":
+      // Another template (or none), or «Όπως είναι» ↔ «Με αλλαγές»: a program made the other way no longer
+      // fits (the transcript stays).
+      if (
+        draft.mode === "same" ||
+        ((draft.template?.id ?? null) === (action.template?.id ?? null) && (draft.template?.asIs ?? null) === (action.template?.asIs ?? null))
+      )
+        return draft;
+      return { ...draft, template: action.template, result: null, draftId: null, removed: null };
     case "setActivityCode":
       return { ...draft, activityCode: action.code };
     case "setWhere":

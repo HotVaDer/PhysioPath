@@ -7,6 +7,13 @@
 // Plain look (2026-11-17): the record button as the main green button, the text in a white box, no italics.
 // A demo clinic («Δοκιμάστε το») has 5 programs and 5 recordings in all (the yellow strip on top says how many
 // are left): once the recordings are used up the record buttons rest (the samples still work while programs are left).
+// «Ξεκινήστε από πρότυπο» (a new program, when the clinic has templates): the physio picks one of the clinic's
+// own templates. «Όπως είναι»: the program is the template unchanged and only the GeSY note is written (as for
+// «Ίδιο πρόγραμμα»: the AI never sees the program). «Με αλλαγές»: they say only what changes and the AI
+// applies it to the template. Never offered for «Ίδιο πρόγραμμα».
+// Layout (2026-11-24): three blocks split by hairlines, in the order they are used: 1. «Πρότυπο» (optional,
+// first because it changes what to say), 2. «Τι να πείτε» as a short numbered list in a white box + the record
+// button (the privacy line right under it), 3. «Χωρίς μικρόφωνο;» samples, quieter because they are secondary.
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,7 +30,9 @@ import { isStale, noteFor } from "@/app/lib/notes/draft";
 import { formatClock } from "@/app/lib/notes/format";
 import { AUDIO_TOO_LARGE, MAX_AUDIO_BYTES } from "@/app/lib/notes/limits";
 import type { Sample } from "@/app/lib/notes/samples";
+import type { PatientProgram } from "@/app/lib/notes/schema";
 import { MAX_RECORDING_SECONDS, useRecorder } from "@/app/lib/notes/useRecorder";
+import { ProgramSummary } from "@/app/notes/ProgramSummary";
 import { StaleNotice } from "@/app/notes/StaleNotice";
 
 type Busy = null | "transcribing" | "generating";
@@ -34,11 +43,26 @@ const radio = "size-[22px] flex-none cursor-pointer accent-action";
 const green =
   "inline-flex min-h-14 cursor-pointer items-center gap-2.5 bg-action px-6 text-[19px] font-bold text-white hover:bg-action-hover disabled:cursor-wait disabled:opacity-80";
 
-export function RecordForm({ samples, demoLeft = null }: { samples: Sample[]; demoLeft?: DemoLeft | null }) {
+// One of the clinic's templates, for the picker.
+export type TemplateChoice = { id: string; name: string; program: PatientProgram };
+
+export function RecordForm({
+  samples,
+  demoLeft = null,
+  templates = [],
+}: {
+  samples: Sample[];
+  demoLeft?: DemoLeft | null;
+  templates?: TemplateChoice[];
+}) {
   const router = useRouter();
   const { draft, dispatch, ready } = useDraft();
   // «Ίδιο πρόγραμμα»: only today's GeSY note is written; the stored program stays as it is.
   const same = draft.mode === "same" && Boolean(draft.base);
+  // The template picked for a new program, and whether it is used «Όπως είναι» (then only the note is written).
+  const chosen = !same && draft.template ? (templates.find((t) => t.id === draft.template!.id) ?? null) : null;
+  const asIsTemplate = chosen && draft.template?.asIs ? chosen : null;
+  const noteOnly = same || asIsTemplate !== null;
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
   const [heardSeconds, setHeardSeconds] = useState<number | null>(null);
@@ -73,6 +97,12 @@ export function RecordForm({ samples, demoLeft = null }: { samples: Sample[]; de
 
   const recorder = useRecorder((audio, seconds) => void handleAudio(audio, seconds));
 
+  // The template picked earlier was archived meanwhile: start without it.
+  const templateGone = ready && draft.template !== null && !templates.some((t) => t.id === draft.template!.id);
+  useEffect(() => {
+    if (templateGone) dispatch({ type: "setTemplate", template: null });
+  }, [templateGone, dispatch]);
+
   // No patient chosen (opened directly, or the draft was cleared): back to step 1.
   const noPatient = ready && !draft.patient;
   useEffect(() => {
@@ -86,17 +116,19 @@ export function RecordForm({ samples, demoLeft = null }: { samples: Sample[]; de
     const startedFor = noteFor(draft);
     const sent = draft.transcript; // what the result is made from (isStale)
     try {
-      if (same && draft.base) {
+      // «Ίδιο πρόγραμμα», or a template «Όπως είναι»: only the note is written; the program goes in unchanged.
+      const kept = same && draft.base ? draft.base.program : asIsTemplate?.program;
+      if (kept) {
         const { result, seconds } = await generateNote(draft.transcript, draft.noteLang);
-        const full = { program: draft.base.program, note: result.note, missing_or_unclear: result.missing_or_unclear };
+        const full = { program: kept, note: result.note, missing_or_unclear: result.missing_or_unclear };
         dispatch({ type: "generated", result: full, seconds, noteLang: draft.noteLang, draftId: crypto.randomUUID(), startedFor, transcript: sent });
       } else {
-        const { result, seconds } = await generateProgram(draft.transcript, draft.noteLang);
+        const { result, seconds } = await generateProgram(draft.transcript, draft.noteLang, draft.template?.id);
         dispatch({ type: "generated", result, seconds, noteLang: draft.noteLang, draftId: crypto.randomUUID(), startedFor, transcript: sent });
       }
       if (here.current) router.push("/notes/review");
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : same ? "Η σημείωση δεν γράφτηκε. Δοκιμάστε ξανά." : "Το πρόγραμμα δεν γράφτηκε. Δοκιμάστε ξανά.");
+      setError(e instanceof ApiError ? e.message : noteOnly ? "Η σημείωση δεν γράφτηκε. Δοκιμάστε ξανά." : "Το πρόγραμμα δεν γράφτηκε. Δοκιμάστε ξανά.");
       setBusy(null);
       if (demoLeft) router.refresh();
     }
@@ -110,6 +142,27 @@ export function RecordForm({ samples, demoLeft = null }: { samples: Sample[]; de
   const hasText = draft.transcript.length > 0;
   const lit = Math.round(recorder.level * BARS);
   const noRecordings = demoLeft !== null && demoLeft.transcribe <= 0;
+  // «Τι να πείτε»: what to say, in order (one line for «Ίδιο πρόγραμμα», two otherwise).
+  const today = (
+    <>
+      <strong>Τι κάνατε σήμερα</strong> και πώς πάει
+    </>
+  );
+  const say: ReactNode[] = noteOnly
+    ? [today]
+    : chosen
+      ? [
+          today,
+          <>
+            <strong>Μόνο τι αλλάζει</strong> από το πρότυπο «{chosen.name}», π.χ. «χωρίς την τρίτη άσκηση, 2 σετ αντί για 3».
+          </>,
+        ]
+      : [
+          today,
+          <>
+            <strong>Τις ασκήσεις για το σπίτι</strong>, όπως τις λέτε στον ασθενή
+          </>,
+        ];
 
   return (
     <div className="flex flex-col gap-7">
@@ -136,19 +189,88 @@ export function RecordForm({ samples, demoLeft = null }: { samples: Sample[]; de
         )}
       </div>
 
-      {/* The recording */}
-      <section aria-label="Ηχογράφηση" className="flex flex-col gap-3">
-        {same ? (
-          <p className="max-w-[62ch]">
-            Πείτε <strong>τι κάνατε σήμερα και πώς πάει</strong>. Το πρόγραμμα για το σπίτι μένει ίδιο: γράφουμε μόνο τη
-            σημείωση για τον ΓεΣΥ. Έως {MAX_RECORDING_SECONDS / 60} λεπτά.
+      {/* 1. The template (optional). First, because it changes what the physio says. */}
+      {!same && templates.length > 0 && (
+        <div className="flex flex-col gap-1.5 border-t-2 border-hairline pt-5">
+          <label htmlFor="template" className="text-[21px] font-bold">
+            Πρότυπο <span className="text-[19px] font-normal text-muted">(προαιρετικό)</span>
+          </label>
+          <p id="template-hint" className="text-base text-muted">
+            Ένα από τα πρότυπα της κλινικής σας, όπως είναι ή με αλλαγές που λέτε.
           </p>
-        ) : (
-          <p className="max-w-[62ch]">
-            Πείτε πρώτα <strong>τι κάνατε σήμερα και πώς πάει</strong>. Μετά <strong>τις ασκήσεις για το σπίτι</strong>, όπως τις λέτε στον
-            ασθενή. Έως {MAX_RECORDING_SECONDS / 60} λεπτά.
+          <select
+            id="template"
+            aria-describedby="template-hint"
+            value={chosen?.id ?? ""}
+            disabled={busy !== null || recording}
+            onChange={(e) => {
+              const picked = templates.find((t) => t.id === e.target.value);
+              setError(null);
+              // A new pick starts «Όπως είναι»: the usual case, and the AI doesn't touch the program.
+              dispatch({ type: "setTemplate", template: picked ? { id: picked.id, name: picked.name, asIs: draft.template?.asIs ?? true } : null });
+            }}
+            className={cx(fieldBox(), "max-w-[480px] cursor-pointer")}
+          >
+            <option value="">Χωρίς πρότυπο</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} ({t.program.exercises.length === 1 ? "1 άσκηση" : `${t.program.exercises.length} ασκήσεις`})
+              </option>
+            ))}
+          </select>
+          {chosen && draft.template && (
+            <>
+              <fieldset className="flex flex-col gap-1 pt-2">
+                <legend className="sr-only">Πώς θα χρησιμοποιηθεί το πρότυπο</legend>
+                {([
+                  [true, "Όπως είναι", "Οι ίδιες ασκήσεις και οδηγίες. Ηχογραφείτε μόνο τι κάνατε σήμερα, για τον ΓεΣΥ."],
+                  [false, "Με αλλαγές", "Λέτε τι αλλάζει (π.χ. ένα σετ λιγότερο, μια άσκηση έξω) και το αλλάζουμε."],
+                ] as const).map(([asIs, label, text]) => (
+                  <label key={label} className="flex min-h-11 cursor-pointer items-start gap-2.5 py-1">
+                    <input
+                      type="radio"
+                      name="template-use"
+                      checked={draft.template!.asIs === asIs}
+                      disabled={busy !== null || recording}
+                      onChange={() => dispatch({ type: "setTemplate", template: { ...draft.template!, asIs } })}
+                      className={cx(radio, "mt-0.5")}
+                    />
+                    <span>
+                      <strong>{label}</strong> <span className="text-muted">· {text}</span>
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+              <ProgramSummary id="template-preview" program={chosen.program} />
+            </>
+          )}
+        </div>
+      )}
+
+      {/* 2. What to say (a short list to glance at while speaking), then the recording itself */}
+      <section aria-labelledby="say-h" className="flex flex-col gap-4 border-t-2 border-hairline pt-5">
+        <h2 id="say-h" className="text-[21px] font-bold">
+          Τι να πείτε
+        </h2>
+        <div className="flex flex-col gap-3 rounded-md border-2 border-hairline bg-white px-4 py-3.5 sm:px-5">
+          <ol className="flex flex-col gap-2.5">
+            {say.map((item, i) => (
+              <li key={i} className="flex items-start gap-3 text-lg">
+                {say.length > 1 && (
+                  <span aria-hidden="true" className="flex size-8 flex-none items-center justify-center rounded-full bg-note-green font-bold text-action">
+                    {i + 1}
+                  </span>
+                )}
+                <span className={say.length > 1 ? "pt-0.5" : undefined}>{item}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="flex flex-wrap justify-between gap-x-4 gap-y-1 border-t border-hairline pt-2.5 text-muted">
+            {same && <span>Το πρόγραμμα για το σπίτι μένει ίδιο: γράφουμε μόνο τη σημείωση για τον ΓεΣΥ.</span>}
+            {asIsTemplate && <span>Το πρόγραμμα είναι το πρότυπο «{asIsTemplate.name}» όπως είναι: γράφουμε μόνο τη σημείωση για τον ΓεΣΥ.</span>}
+            <span className="ml-auto font-semibold">Έως {MAX_RECORDING_SECONDS / 60} λεπτά</span>
           </p>
-        )}
+        </div>
 
         {recording ? (
           <div role="status" className="flex flex-wrap items-center gap-x-7 gap-y-4 rounded-md border-2 border-ink bg-white px-5 py-4">
@@ -175,7 +297,7 @@ export function RecordForm({ samples, demoLeft = null }: { samples: Sample[]; de
             )}
           </div>
         ) : (
-          <div className="flex flex-col gap-3.5">
+          <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
               <button type="button" onClick={() => void recorder.start()} disabled={busy !== null || noRecordings} className={cx(green, "min-h-16 text-xl disabled:cursor-not-allowed")}>
                 <span aria-hidden="true" className="size-5 rounded-full bg-error ring-[3px] ring-white" />
@@ -203,28 +325,10 @@ export function RecordForm({ samples, demoLeft = null }: { samples: Sample[]; de
                 }}
               />
             </div>
+            <p className="text-base text-muted">Ο ήχος δεν αποθηκεύεται: κρατάμε μόνο το κείμενο.</p>
             {noRecordings && (
               <p className="self-start bg-tab-pink px-4 py-3">Τελείωσαν οι ηχογραφήσεις της δοκιμής. Δοκιμάστε ένα έτοιμο παράδειγμα εδώ κάτω.</p>
             )}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <span>Δοκιμή χωρίς μικρόφωνο:</span>
-              {samples.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  disabled={busy !== null}
-                  onClick={() => {
-                    setError(null);
-                    setHeardSeconds(null);
-                    dispatch({ type: "pickSample", text: s.text });
-                  }}
-                  className="min-h-11 cursor-pointer rounded-md border-2 border-line bg-white px-3.5 text-ink hover:border-action disabled:cursor-wait"
-                >
-                  {s.title}
-                </button>
-              ))}
-            </div>
-            <p className="text-muted">Ο ήχος δεν αποθηκεύεται: κρατάμε μόνο το κείμενο.</p>
           </div>
         )}
         {recorder.error && <FormAlert>{recorder.error}</FormAlert>}
@@ -234,6 +338,32 @@ export function RecordForm({ samples, demoLeft = null }: { samples: Sample[]; de
           </p>
         )}
       </section>
+
+      {/* 3. No microphone: a ready sample (secondary, so quieter) */}
+      {!recording && (
+        <section aria-labelledby="samples-h" className="flex flex-col gap-2.5 border-t-2 border-hairline pt-5">
+          <h2 id="samples-h" className="font-semibold">
+            Χωρίς μικρόφωνο; <span className="font-normal text-muted">Δοκιμάστε ένα έτοιμο παράδειγμα.</span>
+          </h2>
+          <div className="flex flex-wrap gap-x-3 gap-y-2">
+            {samples.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                disabled={busy !== null}
+                onClick={() => {
+                  setError(null);
+                  setHeardSeconds(null);
+                  dispatch({ type: "pickSample", text: s.text });
+                }}
+                className="min-h-11 cursor-pointer rounded-md border-2 border-line bg-white px-3.5 text-ink hover:border-action disabled:cursor-wait"
+              >
+                {s.title}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* What we heard */}
       {hasText && (
@@ -245,7 +375,7 @@ export function RecordForm({ samples, demoLeft = null }: { samples: Sample[]; de
               Το κείμενο
             </label>
             <p id="t-text-hint" className="text-muted">
-              Διορθώστε ό,τι ακούστηκε λάθος. Από αυτό το κείμενο γράφουμε {same ? "τη σημείωση" : "το πρόγραμμα"}.
+              Διορθώστε ό,τι ακούστηκε λάθος. Από αυτό το κείμενο γράφουμε {noteOnly ? "τη σημείωση" : "το πρόγραμμα"}.
             </p>
             <textarea
               id="t-text"
@@ -273,10 +403,10 @@ export function RecordForm({ samples, demoLeft = null }: { samples: Sample[]; de
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-2">
             <button type="button" onClick={() => void create()} disabled={busy !== null || recording} className={green}>
               {busy === "generating"
-                ? same
+                ? noteOnly
                   ? "Γράφουμε τη σημείωση…"
                   : "Γράφουμε το πρόγραμμα…"
-                : same
+                : noteOnly
                   ? "Δημιουργία σημείωσης"
                   : "Δημιουργία προγράμματος"}{" "}
               <span aria-hidden="true">→</span>
@@ -287,12 +417,12 @@ export function RecordForm({ samples, demoLeft = null }: { samples: Sample[]; de
           </div>
           {draft.result && busy === null && !isStale(draft) && (
             <p>
-              Υπάρχει ήδη {same ? "σημείωση" : "πρόγραμμα"} από αυτό το κείμενο. <Link href="/notes/review">Συνέχεια στον έλεγχο</Link>
+              Υπάρχει ήδη {noteOnly ? "σημείωση" : "πρόγραμμα"} από αυτό το κείμενο. <Link href="/notes/review">Συνέχεια στον έλεγχο</Link>
             </p>
           )}
           {draft.result && busy === null && isStale(draft) && (
             <StaleNotice
-              same={same}
+              same={noteOnly}
               onNew={() => void create()}
               onKeep={() => {
                 dispatch({ type: "keepResult" });

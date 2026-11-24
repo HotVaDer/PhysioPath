@@ -497,3 +497,23 @@ No database changes. Each step was tested by the user in Firefox, Safari and Chr
   μένουν: N από 5», refreshes after each call, and rests the record buttons when recordings run out. Guide step 1
   and the limit error say the numbers.
 - Checks: `tsc` clean, **273 tests**.
+
+## 2026-11-24 · Templates, phase 2: «Ξεκινήστε από πρότυπο» in the voice note
+- **Recording page:** for a new program, when the clinic has templates, a picker «Ξεκινήστε από πρότυπο
+  (προαιρετικό)». With one picked, the instruction says to say only what changes. The review says
+  «Από το πρότυπο «…»». Not offered for «Ίδιο πρόγραμμα». Draft: `template` {id, name}; another template,
+  «Ίδιο πρόγραμμα» or another patient clears it; a slow answer for another template is thrown away.
+- **AI:** mode `template` in `/api/generate`. The route reads the template itself with the physio's login (open
+  clinic, not archived), before counting the call; the browser sends only its id. Prompt: `FROM_TEMPLATE` added
+  after the usual rules (keep the template exactly, apply only the changes said, add nothing from elsewhere,
+  patient name and appointment only from the transcript). Still one Claude call per program.
+- **Live test with Claude, 3 fictional cases** (knee template): unchanged → identical program; "remove heel slides,
+  SLR 2 sets" → exactly that; "add wall half-squats 3x10 daily, ice 15′" → added and changed, and it asked about
+  the template's «Όχι καθίσματα ακόμα» clashing with the new squats. It also asks to confirm the side (left knee)
+  that comes from the template.
+- Checks: `tsc` clean, **282 tests**, `next build` OK. No database change.
+- **«Όπως είναι» / «Με αλλαγές»** (after the user's test): under the picker, two choices and a preview of the
+  template's exercises. «Όπως είναι» (picked first) writes only the GeSY note (mode `note`, as for «Ίδιο
+  πρόγραμμα») and puts the template's program in unchanged: the AI never sees it. The review can still edit it
+  by hand. «Με αλλαγές» is the template mode above. **286 tests.**
+

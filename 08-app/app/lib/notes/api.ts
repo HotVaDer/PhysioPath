@@ -47,11 +47,12 @@ export function transcribeAudio(audio: Blob): Promise<TranscribeResponse> {
   return call("/api/transcribe", { method: "POST", headers: { "Content-Type": type }, body: audio });
 }
 
-export const generateProgram = (transcript: string, noteLang: NoteLanguage) =>
+// templateId: start from this template of the clinic («Πρότυπα»); the server reads it itself.
+export const generateProgram = (transcript: string, noteLang: NoteLanguage, templateId?: string | null) =>
   call<GenerateResponse>("/api/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ transcript, noteLang }),
+    body: JSON.stringify(templateId ? { transcript, noteLang, mode: "template", templateId } : { transcript, noteLang }),
   });
 
 // «Ίδιο πρόγραμμα»: only today's GeSY note and the questions (the stored program stays as it is).

@@ -7,8 +7,9 @@ export const NoteLanguage = z.enum(["el", "en"]);
 export type NoteLanguage = z.infer<typeof NoteLanguage>;
 
 // "program": a new program and the note (the usual case). "note": «Ίδιο πρόγραμμα», the patient keeps
-// the program they already have; only today's GeSY note is written.
-export const GenerateMode = z.enum(["program", "note"]);
+// the program they already have; only today's GeSY note is written. "template": a new program that starts
+// from a template the physio picked (their clinic's own, from «Πρότυπα»), with only the changes they say.
+export const GenerateMode = z.enum(["program", "note", "template"]);
 export type GenerateMode = z.infer<typeof GenerateMode>;
 
 const NOTE_LANGUAGE_NAMES: Record<NoteLanguage, string> = { el: "Greek", en: "English" };
@@ -47,6 +48,20 @@ const NOTE_ONLY = `
 
 This time the patient keeps the home exercise program they already have: it does not change and you do not write one. Write only the clinical note about today's session and missing_or_unclear. If the physio mentions the home exercises, record that in treatment_plan as said (for example that the same program continues); never add, remove or change exercises. Do not ask about sets, repetitions or frequency of the home exercises: they are already set. Ask only about today's session and the GeSY parts.`;
 
+// Added for templates (2026-11-24). The physio picked the template themselves; it is the one extra source
+// allowed, and every other rule above still holds.
+const FROM_TEMPLATE = `
+
+This time the physio started from one of their clinic's own templates: a program they wrote and approved earlier, given in <template> as JSON, in the same shape as the program you write. The physio chose it, so it counts as their own words. Build the home program from it:
+- Start from the template exactly: keep its title, every exercise with its name, sets, repetitions, hold, frequency and notes, and its instructions (after_exercises, avoid, contact_if, other), unless the physio says to change them.
+- Apply only the changes the physio says in the transcript: removing, adding or changing an exercise, a dose or an instruction. If it is unclear what a change refers to (for example which exercise), leave that part as in the template and add a question to missing_or_unclear.
+- Add nothing that is in neither the template nor the transcript. The template is the only other source you may use; for everything else the rules above still hold.
+- patient_first_name and next_appointment come only from the transcript: the template never has them.
+- If the physio says nothing about the home program, the program is the template unchanged.
+- Do not ask about sets, repetitions or frequency that the template already gives. Ask only about what is missing in both.
+- The clinical note is about today's session, as always. In treatment_plan, write the home program as it ends up (the template with the changes) in compact clinical form.`;
+
 export function systemPrompt(noteLang: NoteLanguage, mode: GenerateMode = "program"): string {
-  return SYSTEM_PROMPT.replace("{note_language}", NOTE_LANGUAGE_NAMES[noteLang]) + (mode === "note" ? NOTE_ONLY : "");
+  const extra = mode === "note" ? NOTE_ONLY : mode === "template" ? FROM_TEMPLATE : "";
+  return SYSTEM_PROMPT.replace("{note_language}", NOTE_LANGUAGE_NAMES[noteLang]) + extra;
 }

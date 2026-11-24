@@ -1,5 +1,7 @@
 // Turns a voice-note transcript into the patient's program and the GeSY clinical note, with Claude.
 // mode "note" («Ίδιο πρόγραμμα»): only the GeSY note and the questions; the stored program is never sent.
+// mode "template": the template the physio picked (loaded by the route from the clinic's «Πρότυπα») goes
+// with the transcript, and the program starts from it.
 // Server only: this file uses the API key, which must never reach the browser.
 import "server-only";
 
@@ -7,7 +9,15 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 
 import { systemPrompt, type GenerateMode, type NoteLanguage } from "@/app/lib/notes/prompt";
-import { NoteOnlyResult, VoiceNoteResult } from "@/app/lib/notes/schema";
+import { NoteOnlyResult, VoiceNoteResult, type PatientProgram } from "@/app/lib/notes/schema";
+
+export type TemplateInput = { name: string; program: PatientProgram };
+
+// What Claude reads: the template (for mode "template") and the transcript.
+export function userMessage(transcript: string, template?: TemplateInput): string {
+  const said = `<transcript>\n${transcript}\n</transcript>`;
+  return template ? `<template>\n${JSON.stringify({ name: template.name, program: template.program })}\n</template>\n${said}` : said;
+}
 
 export const MODEL = "claude-opus-5-5";
 
@@ -16,9 +26,10 @@ export class GenerationError extends Error {}
 
 let client: Anthropic | undefined;
 
-export async function generate(transcript: string, noteLang: NoteLanguage, mode: GenerateMode = "program") {
+export async function generate(transcript: string, noteLang: NoteLanguage, mode: GenerateMode = "program", template?: TemplateInput) {
   const text = transcript.trim();
   if (!text) throw new GenerationError("Το κείμενο είναι κενό. Ηχογραφήστε ή γράψτε τη σημείωση πρώτα.");
+  if (mode === "template" && !template) throw new GenerationError("Το πρότυπο δεν βρέθηκε. Διαλέξτε άλλο ή συνεχίστε χωρίς πρότυπο.");
   if (!process.env.ANTHROPIC_API_KEY) {
     console.error("generate: ANTHROPIC_API_KEY is not set");
     throw new GenerationError("Η εφαρμογή δεν είναι ρυθμισμένη ακόμα (λείπει το κλειδί του Claude).");
@@ -41,7 +52,7 @@ export async function generate(transcript: string, noteLang: NoteLanguage, mode:
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       system: systemPrompt(noteLang, mode),
-      messages: [{ role: "user", content: `<transcript>\n${text}\n</transcript>` }],
+      messages: [{ role: "user", content: userMessage(text, mode === "template" ? template : undefined) }],
     });
   } catch (error) {
     console.error("generate:", error instanceof Error ? error.message : error);

@@ -178,7 +178,16 @@ export function ReviewForm({ slots, notesPerPatient, signer, today, clinicId }: 
         <>
           {/* The patient's program */}
           <section aria-labelledby="p-h" className="flex flex-col gap-4 border-t-2 border-hairline pt-5">
-            <PartTitle id="p-h" note="Αυτό βλέπει ο ασθενής στο κινητό του, με απλά λόγια.">
+            <PartTitle
+              id="p-h"
+              note={
+                draft.template
+                  ? draft.template.asIs
+                    ? `Το πρότυπο «${draft.template.name}» όπως είναι. Αλλάξτε εδώ ό,τι χρειάζεται. Αυτό βλέπει ο ασθενής στο κινητό του.`
+                    : `Από το πρότυπο «${draft.template.name}», με τις αλλαγές που είπατε. Αυτό βλέπει ο ασθενής στο κινητό του.`
+                  : "Αυτό βλέπει ο ασθενής στο κινητό του, με απλά λόγια."
+              }
+            >
               Το πρόγραμμα του ασθενή
             </PartTitle>
 
