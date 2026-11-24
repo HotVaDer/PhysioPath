@@ -14,7 +14,8 @@ export default async function RecordPage() {
   const { profile } = await requireMember();
   return (
     <StaffSheet profile={profile} current="new" step={{ n: 3, of: 4 }}>
-      <RecordForm samples={SAMPLES} />
+      {/* A demo clinic: what is left of its recordings (the yellow strip on top shows the numbers). */}
+      <RecordForm samples={SAMPLES} demoLeft={profile.demo?.left ?? null} />
     </StaffSheet>
   );
 }

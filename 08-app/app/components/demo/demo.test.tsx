@@ -28,6 +28,14 @@ describe("DemoStrip", () => {
     await expectNoA11yViolations(container);
   });
 
+  it("says what is left of the 5 programs and 5 recordings, pink when something ran out", () => {
+    const { rerender } = render(<DemoStrip demo={{ expiresAt: inDays(7), lang: "el", left: { of: 5, generate: 4, transcribe: 5 } }} />);
+    const left = screen.getByText("Μένουν 4 από 5 προγράμματα και 5 από 5 ηχογραφήσεις");
+    expect(left).not.toHaveClass("bg-tab-pink");
+    rerender(<DemoStrip demo={{ expiresAt: inDays(7), lang: "el", left: { of: 5, generate: 0, transcribe: 2 } }} />);
+    expect(screen.getByText("Μένουν 0 από 5 προγράμματα και 2 από 5 ηχογραφήσεις")).toHaveClass("bg-tab-pink");
+  });
+
   it("in English, and says the app's screens are still Greek", () => {
     render(<DemoStrip demo={{ expiresAt: inDays(1), lang: "en" }} />);
     const strip = screen.getByRole("complementary", { name: "Demo clinic" });
@@ -45,7 +53,7 @@ const cardOf = (id: string, label: string, call: BoardCard["call"]): BoardCard =
 const andreas = cardOf("a1", "Ανδρέας Μ.", null);
 let clinic = 0;
 const guide = (over: Partial<React.ComponentProps<typeof DemoGuide>> = {}) => (
-  <DemoGuide lang="el" clinicId={`c-${++clinic}`} initialCards={[andreas]} patientCard={{ id: "a1", href: "/s/tok" }} madeProgram={false} {...over} />
+  <DemoGuide lang="el" clinicId={`c-${++clinic}`} initialCards={[andreas]} patientCard={{ id: "a1", href: "/s/tok" }} lastProgramAt={inDays(-2)} {...over} />
 );
 const sendBoard = (cards: BoardCard[]) => act(() => { window.dispatchEvent(new CustomEvent(BOARD_EVENT, { detail: cards })); });
 
@@ -67,8 +75,11 @@ describe("DemoGuide", () => {
   });
 
   it("after a program of their own: be the patient; a new call on the board leads to «Το είδα»; then the end", async () => {
-    render(guide({ madeProgram: true }));
+    const props = { clinicId: `c-${++clinic}` };
+    const { rerender } = render(guide(props));
     await userEvent.click(screen.getByRole("button", { name: /Ξεκινάμε/ }));
+    // the visitor approves a program: the board now has a newer one than the start of step 1
+    rerender(guide({ ...props, lastProgramAt: new Date(Date.now() + 1000).toISOString() }));
     // step 1 is done (a program was approved): step 2 opens the patient's phone screen
     const two = screen.getByRole("region", { name: /Γίνετε ο ασθενής/ });
     expect(within(two).getByRole("link", { name: /Άνοιξε την οθόνη του ασθενή/ })).toHaveAttribute("href", "/s/tok");
@@ -88,6 +99,19 @@ describe("DemoGuide", () => {
     await userEvent.click(screen.getByRole("button", { name: "Παράλειψη" }));
     expect(screen.getByRole("region", { name: /Γίνετε ο ασθενής/ })).toHaveTextContent("Βήμα 2 από 3");
     expect(screen.getByRole("button", { name: "Ξαναγέμισε την αίθουσα" })).toBeInTheDocument();
+  });
+
+  it("«Από την αρχή» goes back to the introduction, and step 1 waits for a new program", async () => {
+    // a program the visitor made in an earlier round of the tour
+    render(guide({ lastProgramAt: new Date(Date.now() - 60_000).toISOString() }));
+    await userEvent.click(screen.getByRole("button", { name: /Ξεκινάμε/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Παράλειψη" }));
+    expect(screen.getByRole("region", { name: /Γίνετε ο ασθενής/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Από την αρχή" }));
+    expect(screen.getByRole("region", { name: "Καλώς ήρθατε στο PhysioPath" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Ξεκινάμε/ }));
+    // not skipped to step 2 by the old program
+    expect(screen.getByRole("region", { name: /Μιλάτε/ })).toHaveTextContent("Βήμα 1 από 3");
   });
 
   it("in English", () => {

@@ -32,7 +32,7 @@ export function DemoCoach({ lang, clinicId }: { lang: DemoLang; clinicId: string
   useEffect(() => {
     let now = loadTour(clinicId);
     // Opening a session from anywhere is step 1, even if they skipped the intro.
-    if (now.step === 0 && page !== "other" && page !== "programPage") now = { step: 1 };
+    if (now.step === 0 && page !== "other" && page !== "programPage") now = { step: 1, since: new Date().toISOString() };
     // Straight from «Έγκριση»: step 1 is done, the patient's phone is next.
     if (now.step <= 1 && page === "programPage" && approved) now = { step: 2, since: new Date().toISOString() };
     saveTour(clinicId, now);

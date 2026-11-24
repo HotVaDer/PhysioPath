@@ -49,6 +49,8 @@ const TEXT = {
     stripTitle: "Κλινική δοκιμής",
     stripText: (days: number) => `Φανταστικοί ασθενείς · διαγράφεται σε ${days === 1 ? "1 μέρα" : `${days} μέρες`}`,
     stripAppInGreek: null as string | null,
+    stripLeft: (programs: number, recordings: number, of: number) =>
+      `Μένουν ${programs} από ${of} προγράμματα και ${recordings} από ${of} ηχογραφήσεις`,
     own: "Θέλω τη δική μου κλινική",
     ownNote: "Η δοκιμή κλείνει και η δική σας κλινική ξεκινά καθαρή, χωρίς τους φανταστικούς ασθενείς.",
     leaving: "Μία στιγμή…",
@@ -63,7 +65,7 @@ const TEXT = {
     steps: [
       {
         title: "Μιλάτε. Το PhysioPath γράφει.",
-        text: "Κάντε μια συνεδρία με τη φωνή σας: διαλέξτε ασθενή και πείτε τις ασκήσεις φωναχτά, όπως τις λέτε στον ασθενή. Σε περίπου 15 δευτερόλεπτα έχετε τη σημείωση για τον ΓεΣΥ και το πρόγραμμα για το σπίτι.",
+        text: "Κάντε μια συνεδρία με τη φωνή σας: διαλέξτε ασθενή και πείτε τις ασκήσεις φωναχτά, όπως τις λέτε στον ασθενή. Σε περίπου 15 δευτερόλεπτα έχετε τη σημείωση για τον ΓεΣΥ και το πρόγραμμα για το σπίτι. Η δοκιμή έχει 5 προγράμματα και 5 ηχογραφήσεις: η κίτρινη γραμμή πάνω δείχνει πόσα μένουν.",
         action: "Νέα συνεδρία με φωνή",
       },
       {
@@ -94,6 +96,7 @@ const TEXT = {
     doneText: "Η σημείωση από τη φωνή σας, το κινητό του ασθενή και η αίθουσα σε μία οθόνη. Θέλετε το ίδιο για τη δική σας κλινική;",
     stepDone: "Έγινε",
     skip: "Παράλειψη",
+    restart: "Από την αρχή",
     again: "Ξανά από την αρχή",
     emptyBoard: "Η αίθουσα άδειασε.",
     refill: "Ξαναγέμισε την αίθουσα",
@@ -125,6 +128,8 @@ const TEXT = {
     stripTitle: "Demo clinic",
     stripText: (days: number) => `Fictional patients · deleted in ${days === 1 ? "1 day" : `${days} days`}`,
     stripAppInGreek: "The app's screens are in Greek for now; your demo patients are in English.",
+    stripLeft: (programs: number, recordings: number, of: number) =>
+      `${programs} of ${of} programs and ${recordings} of ${of} recordings left`,
     own: "I want my own clinic",
     ownNote: "The demo closes and your own clinic starts clean, without the fictional patients.",
     leaving: "One moment…",
@@ -138,7 +143,7 @@ const TEXT = {
     steps: [
       {
         title: "You speak. PhysioPath writes.",
-        text: "Do a session by voice: pick a patient and say the exercises out loud, the way you tell the patient. In about 15 seconds you have the GeSY note and the home program.",
+        text: "Do a session by voice: pick a patient and say the exercises out loud, the way you tell the patient. In about 15 seconds you have the GeSY note and the home program. The demo has 5 programs and 5 recordings: the yellow strip on top shows how many are left.",
         action: "New session by voice",
       },
       {
@@ -168,6 +173,7 @@ const TEXT = {
     doneText: "The note from your voice, the patient's phone and the room on one screen. Want the same for your own clinic?",
     stepDone: "Done",
     skip: "Skip",
+    restart: "Start over",
     again: "Start the tour again",
     emptyBoard: "The room is empty.",
     refill: "Fill the room again",

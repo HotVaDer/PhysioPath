@@ -9,7 +9,7 @@ describe("aiRefusal", () => {
     ["too fast", "Πολλά αιτήματα μέσα σε ένα λεπτό"],
     ["daily limit", "Η κλινική έφτασε το όριο για σήμερα"],
     ["app limit", "Η υπηρεσία έφτασε το όριο για σήμερα"],
-    ["demo limit", "Στην κλινική δοκιμής υπάρχει όριο"],
+    ["demo limit", "Η δοκιμή έφτασε το όριό της (5 ηχογραφήσεις και 5 προγράμματα)"],
   ])("a limit (%s) becomes 429 with a Greek message", (reason, text) => {
     const refusal = aiRefusal(reason);
     expect(refusal?.status).toBe(429);

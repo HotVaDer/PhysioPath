@@ -472,3 +472,28 @@ No database changes. Each step was tested by the user in Firefox, Safari and Chr
   never lands on sign-up (`requireFormUser`, `/start` → `/try`). Texts in `app/lib/demo/text.ts`; the screens inside
   the app stay Greek. Welcome page links to `/try`.
 - Checks: `tsc` clean, **248 tests**.
+
+## 2026-11-24 · Templates, phase 1: «Αποθήκευση ως πρότυπο» and «Πρότυπα» (branch try-demo)
+- **Why:** P03 asked for program templates from his clinic's data; building them in Physitrack took him a long time.
+  Templates come only from programs the physio approved, never from the AI (CLAUDE.md).
+- **Database** (`20261124180000_templates.sql`, pushed live 2026-11-24 after a rolled-back trial, 372/372):
+  - `templates` (clinic, name, program, archived_at). Same shape check as programs, plus no patient name or next
+    appointment in it. Names unique per clinic among the active ones (capitals don't count). Read: owner + physio.
+  - `save_template`, `rename_template`, `archive_template` (security definer, the usual clinic and role checks).
+  - `fill_demo`: new demos get 3 templates (knee, shoulder, back) from the fictional programs.
+  - `rls_check.sql`: a templates section (save, tidy name, duplicate, other clinic, B, assistant C, archive and
+    reuse of the name, direct writes refused, no patient in a template), demo templates, cleanup, anon calls.
+- **App:** «Αποθήκευση ως πρότυπο» box on `/programs/[id]` (name prefilled with the program title); new page
+  `/templates` (each template opens to its exercises, «Μετονομασία», «Αρχειοθέτηση»); «Πρότυπα» in the top bar.
+  Code in `app/lib/templates/` (actions, load).
+- Checks: `tsc` clean, **269 tests**, `next build` OK.
+
+## 2026-11-24 · Demo: the guide restarts properly, and visitors see their limits
+- **Guide:** «Από την αρχή» on steps 1–3. Step 1 now remembers when it started (`since`) and only a program approved
+  after that finishes it. Before, any visitor program (count > 4) skipped step 1 after a restart.
+- **Limits** (`20261124200000_demo_ai_left.sql`, pushed live after a rolled-back trial, 376/376): `demo_ai_left()`
+  reads what a demo has left of its 5 programs (Claude) and 5 recordings (OpenAI); null in a real clinic. The 5 is
+  also in `use_ai`: change both together. The record page shows «Προγράμματα που μένουν: N από 5 · Ηχογραφήσεις που
+  μένουν: N από 5», refreshes after each call, and rests the record buttons when recordings run out. Guide step 1
+  and the limit error say the numbers.
+- Checks: `tsc` clean, **273 tests**.

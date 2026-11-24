@@ -7,6 +7,7 @@ import type { User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { DemoLeft } from "@/app/lib/demo/left";
 import { DraftSchema, type Draft } from "@/app/lib/onboarding/schema";
 import { createClient, type Supabase } from "@/app/lib/supabase/server";
 
@@ -18,9 +19,10 @@ export type Profile = {
   full_name: string | null;
   onboarded_at: string | null;
   clinic_name: string | null;
-  // Set when the open clinic is a demo clinic («Δοκιμάστε το», /try): when it is deleted, and the
-  // language the visitor picked. Optional so the many test profiles stay as they are.
-  demo?: { expiresAt: string; lang: "el" | "en" } | null;
+  // Set when the open clinic is a demo clinic («Δοκιμάστε το», /try): when it is deleted, the language
+  // the visitor picked, and what is left of its 5 programs and 5 recordings (shown in the yellow strip).
+  // Optional so the many test profiles stay as they are.
+  demo?: { expiresAt: string; lang: "el" | "en"; left?: DemoLeft | null } | null;
 };
 
 // One of the clinics someone belongs to (public.my_clinics()).
@@ -46,10 +48,16 @@ export async function loadProfile(supabase: Supabase, userId: string): Promise<P
   const { clinic, ...profile } = data as unknown as Omit<Profile, "clinic_name" | "demo"> & {
     clinic: { name: string; is_demo?: boolean; demo_expires_at?: string | null; demo_lang?: string | null } | null;
   };
-  const demo =
-    clinic?.is_demo && clinic.demo_expires_at
-      ? { expiresAt: clinic.demo_expires_at, lang: clinic.demo_lang === "en" ? ("en" as const) : ("el" as const) }
-      : null;
+  let demo: Profile["demo"] = null;
+  if (clinic?.is_demo && clinic.demo_expires_at) {
+    // One more read, only in a demo clinic.
+    const left = DemoLeft.safeParse((await supabase.rpc("demo_ai_left")).data);
+    demo = {
+      expiresAt: clinic.demo_expires_at,
+      lang: clinic.demo_lang === "en" ? "en" : "el",
+      left: left.success ? left.data : null,
+    };
+  }
   return { ...profile, clinic_name: clinic?.name ?? null, demo };
 }
 

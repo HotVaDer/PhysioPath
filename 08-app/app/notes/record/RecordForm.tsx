@@ -5,6 +5,8 @@
 // note; the stored program goes into the result unchanged (it is never sent to the AI).
 // Everything is kept in the draft (sessionStorage), so going back and forth between the steps loses nothing.
 // Plain look (2026-11-17): the record button as the main green button, the text in a white box, no italics.
+// A demo clinic («Δοκιμάστε το») has 5 programs and 5 recordings in all (the yellow strip on top says how many
+// are left): once the recordings are used up the record buttons rest (the samples still work while programs are left).
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,6 +16,7 @@ import { fieldBox } from "@/app/components/paper/LineField";
 import { FormAlert } from "@/app/components/paper/Notes";
 import { PartTitle } from "@/app/components/paper/StaffSheet";
 import { cx } from "@/app/lib/cx";
+import type { DemoLeft } from "@/app/lib/demo/left";
 import { ApiError, generateNote, generateProgram, transcribeAudio } from "@/app/lib/notes/api";
 import { useDraft } from "@/app/lib/notes/DraftContext";
 import { isStale, noteFor } from "@/app/lib/notes/draft";
@@ -31,7 +34,7 @@ const radio = "size-[22px] flex-none cursor-pointer accent-action";
 const green =
   "inline-flex min-h-14 cursor-pointer items-center gap-2.5 bg-action px-6 text-[19px] font-bold text-white hover:bg-action-hover disabled:cursor-wait disabled:opacity-80";
 
-export function RecordForm({ samples }: { samples: Sample[] }) {
+export function RecordForm({ samples, demoLeft = null }: { samples: Sample[]; demoLeft?: DemoLeft | null }) {
   const router = useRouter();
   const { draft, dispatch, ready } = useDraft();
   // «Ίδιο πρόγραμμα»: only today's GeSY note is written; the stored program stays as it is.
@@ -64,6 +67,7 @@ export function RecordForm({ samples }: { samples: Sample[] }) {
       setError(e instanceof ApiError ? e.message : "Η ηχογράφηση δεν διαβάστηκε. Δοκιμάστε ξανά.");
     } finally {
       setBusy(null);
+      if (demoLeft) router.refresh(); // the demo strip's «Μένουν» count, from the database again
     }
   }
 
@@ -94,6 +98,7 @@ export function RecordForm({ samples }: { samples: Sample[] }) {
     } catch (e) {
       setError(e instanceof ApiError ? e.message : same ? "Η σημείωση δεν γράφτηκε. Δοκιμάστε ξανά." : "Το πρόγραμμα δεν γράφτηκε. Δοκιμάστε ξανά.");
       setBusy(null);
+      if (demoLeft) router.refresh();
     }
   }
 
@@ -104,6 +109,7 @@ export function RecordForm({ samples }: { samples: Sample[] }) {
   const programStep = draft.patient.id ? (`/notes/program?patient=${draft.patient.id}` as const) : null;
   const hasText = draft.transcript.length > 0;
   const lit = Math.round(recorder.level * BARS);
+  const noRecordings = demoLeft !== null && demoLeft.transcribe <= 0;
 
   return (
     <div className="flex flex-col gap-7">
@@ -171,14 +177,14 @@ export function RecordForm({ samples }: { samples: Sample[] }) {
         ) : (
           <div className="flex flex-col gap-3.5">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <button type="button" onClick={() => void recorder.start()} disabled={busy !== null} className={cx(green, "min-h-16 text-xl")}>
+              <button type="button" onClick={() => void recorder.start()} disabled={busy !== null || noRecordings} className={cx(green, "min-h-16 text-xl disabled:cursor-not-allowed")}>
                 <span aria-hidden="true" className="size-5 rounded-full bg-error ring-[3px] ring-white" />
                 {hasText ? "Νέα ηχογράφηση" : "Έναρξη ηχογράφησης"}
               </button>
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                disabled={busy !== null}
+                disabled={busy !== null || noRecordings}
                 className="min-h-11 cursor-pointer text-action underline underline-offset-[3px] hover:text-ink disabled:cursor-wait"
               >
                 ή ανέβασμα αρχείου ήχου (έως 4 MB)
@@ -197,6 +203,9 @@ export function RecordForm({ samples }: { samples: Sample[] }) {
                 }}
               />
             </div>
+            {noRecordings && (
+              <p className="self-start bg-tab-pink px-4 py-3">Τελείωσαν οι ηχογραφήσεις της δοκιμής. Δοκιμάστε ένα έτοιμο παράδειγμα εδώ κάτω.</p>
+            )}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <span>Δοκιμή χωρίς μικρόφωνο:</span>
               {samples.map((s) => (

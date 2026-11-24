@@ -2,7 +2,8 @@
 // other page of the demo (DemoCoach in the staff frame). Kept in this browser only: a convenience, and the
 // tour still works (from the start) if storage is blocked.
 //   0 intro: what PhysioPath is            → «Ξεκινάμε»
-//   1 record: a session by voice            → done when a program is approved (the program page)
+//   1 record: a session by voice            → done when a program is approved after the step started
+//                                             (the program page, or a newer program on the board)
 //   2 patient: be the patient, «Πονάω»      → done when a new call reaches the board
 //   3 board: «Το είδα» on that red card     → done when that call is cleared
 //   4 done: «Θέλω τη δική μου κλινική»

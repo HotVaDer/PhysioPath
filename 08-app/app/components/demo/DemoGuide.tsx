@@ -20,7 +20,9 @@ type Props = {
   clinicId: string;
   initialCards: BoardCard[];
   patientCard: { id: string; href: string } | null; // the newest card not calling: whose phone step 2 opens
-  madeProgram: boolean; // the visitor approved a program of their own (step 1 done, even without the coach)
+  // When the clinic's newest program was approved. One approved after step 1 started finishes step 1, even
+  // without the coach. The demo's own programs are days old, so after «Από την αρχή» step 1 waits for a new one.
+  lastProgramAt: string | null;
 };
 
 export const bigButton =
@@ -32,7 +34,7 @@ const sameTabOnPhone = (event: React.MouseEvent<HTMLAnchorElement>) => {
   if (window.matchMedia?.("(max-width: 639px)").matches) event.currentTarget.removeAttribute("target");
 };
 
-export function DemoGuide({ lang, clinicId, initialCards, patientCard, madeProgram }: Props) {
+export function DemoGuide({ lang, clinicId, initialCards, patientCard, lastProgramAt }: Props) {
   const t = demoText(lang);
   const [cards, setCards] = useState(initialCards);
   const [tour, setTour] = useState<Tour>({ step: 0 });
@@ -60,7 +62,7 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, madeProgr
 
   // Tick off what happened.
   useEffect(() => {
-    if (tour.step === 1 && madeProgram) {
+    if (tour.step === 1 && tour.since && lastProgramAt && Date.parse(lastProgramAt) > Date.parse(tour.since)) {
       go({ step: 2, since: new Date().toISOString() });
     } else if (tour.step === 2 && tour.since) {
       const since = tour.since;
@@ -72,9 +74,10 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, madeProgr
     }
     // go is stable enough: it only writes what this effect decided
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tour, cards, madeProgram]);
+  }, [tour, cards, lastProgramAt]);
 
-  const next = (step: TourStep) => go(step === 2 ? { step, since: new Date().toISOString() } : { step });
+  // since: when step 1 or 2 started, so only what happens after it ticks the step off.
+  const next = (step: TourStep) => go(step === 1 || step === 2 ? { step, since: new Date().toISOString() } : { step });
   const total = t.steps.length;
 
   return (
@@ -106,7 +109,7 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, madeProgr
           <h2 id="demo-tour" className="font-display text-[24px] leading-tight sm:text-[28px]">
             {t.introTitle}
           </h2>
-          <p className="max-w-[66ch] text-lg leading-[1.45]">{t.introText}</p>
+          <p className="text-lg leading-[1.45]">{t.introText}</p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <button type="button" onClick={() => next(1)} className={cx(bigButton, "cursor-pointer")}>
               {t.introStart} <span aria-hidden="true">→</span>
@@ -124,7 +127,7 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, madeProgr
             </span>
             {t.steps[tour.step - 1].title}
           </h2>
-          <p className="max-w-[62ch] text-lg leading-[1.45]">{t.steps[tour.step - 1].text}</p>
+          <p className="text-lg leading-[1.45]">{t.steps[tour.step - 1].text}</p>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             {tour.step === 1 && (
               <Link href={"/notes/new" as Route} className={bigButton}>
@@ -144,6 +147,9 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, madeProgr
             <button type="button" onClick={() => next((tour.step + 1) as TourStep)} className={quiet}>
               {t.skip}
             </button>
+            <button type="button" onClick={() => next(0)} className={quiet}>
+              {t.restart}
+            </button>
           </div>
         </div>
       )}
@@ -154,7 +160,7 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, madeProgr
           <h2 id="demo-tour" className="font-display text-[26px] leading-tight sm:text-[30px]">
             ✓ {t.doneTitle}
           </h2>
-          <p className="max-w-[62ch] text-lg leading-[1.5]">{t.doneText}</p>
+          <p className="text-lg leading-[1.5]">{t.doneText}</p>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <form action={leaveDemo}>
               <SubmitButton pending={t.leaving}>
