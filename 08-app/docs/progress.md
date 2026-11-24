@@ -563,3 +563,37 @@ No database changes. Each step was tested by the user in Firefox, Safari and Chr
   doesn't see it, assistant, the 301st, anon).
 - **Demo:** allowed. A dictation is 1 of the 5 programs; each recording 1 of the 5 recordings; the sample needs none.
 - Checks: `tsc` clean, **327 tests**, `next build` OK.
+
+## 2026-11-24 · Templates, phase 4: «Εκτύπωση για τον ασθενή» (`/programs/[id]/print`)
+- **Why:** some patients (often elderly) never open a link; P03's patients didn't use Physitrack's app at all.
+  The clinic now hands them the program on paper.
+- **Page:** «Εκτύπωση για τον ασθενή» on the approved-program page (under «Αντιγραφή συνδέσμου», not when a
+  newer program exists). Owner, physio and assistant. The same letter as `/p/<token>` (clinic letterhead, for
+  whom and when, title, next appointment, instructions, the physio's name), read on the server with
+  `home_program(token)` (it only reads; the diary is not passed to the page). Shown on screen as it will print:
+  two weeks of day boxes under each exercise (`PaperExercises`), no buttons, nothing that saves, never the
+  GeSY note. Bar (not printed): «← Πίσω στο πρόγραμμα», «Κανονικά» / «Μεγάλα γράμματα» (`?size=large`: 18px
+  on paper instead of 14px, one column), «Εκτύπωση». A newer program: not printed, a link to print that one.
+- **How:** a Tailwind variant `paper:` (globals.css) = printed, or inside `[data-paper]`; `HomeProgramLetter`
+  uses it instead of `print:` (the phone page looks and prints as before, 1 week of boxes), and takes a
+  `paper` prop; `PatientSheet` takes the size. The `home_program` zod shapes moved to `app/lib/home/program.ts`.
+- No database change. Checks: `tsc` clean, **337 tests**, `next build` OK.
+
+## 2026-11-24 · Templates: a correction without its comma (prompt)
+- **Why:** the user's own recording of the sample turned «τρία σετ, όχι, δύο σετ» into «τρία σετ, όχι δύο σετ»
+  (it may read "3 sets, not 2"). Claude picked 2 but didn't say it was unsure.
+- `DICTATE_TEMPLATES`: when it isn't clear which number is the correction, use the number said last and ask the
+  physio to confirm it. Live test: the recording → 2 sets and «Στο εκκρεμές είπατε «τρία σετ, όχι δύο σετ».
+  Γράψαμε 2 σετ. Είναι σωστό;»; the clean sample (with commas) → 2 sets, no extra question. The voice-note
+  prompt is unchanged.
+
+## 2026-11-24 · Templates, phase 5: templates and the paper sheet in the demo guide
+- The 3-step tour stays as it was. The intro adds «Μετά την ξενάγηση: πρότυπα και χαρτί για τον ασθενή.»
+- The end of the tour adds «Δείτε και αυτά · προαιρετικά», under «Θέλω τη δική μου κλινική» (still the main
+  button): «Πρότυπα» (/templates), «Πείτε τα πρότυπά σας» (/templates/dictate, «Παίρνει 1 από τα 5
+  προγράμματα της δοκιμής») and «Χαρτί για τον ασθενή» (the newest program's /print, only when there is one).
+  Each gets ✓ «Το είδατε» once opened (`seen` in the tour's storage, kept through «Από την αρχή»).
+- DemoCoach after the tour, only on those pages: «Πρότυπα», «Πείτε τα πρότυπά σας» (tap the sample, create,
+  check, save) and the recording page (pick a template, «Όπως είναι»). It ticks «Πρότυπα» and «Πείτε τα
+  πρότυπά σας»; the sheet (no staff frame) is ticked from the board's link. Templates pages never start step 1.
+- Greek and English texts (`app/lib/demo/text.ts`). Checks: `tsc` clean, **344 tests**, `next build` OK.

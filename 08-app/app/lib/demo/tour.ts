@@ -6,9 +6,12 @@
 //                                             (the program page, or a newer program on the board)
 //   2 patient: be the patient, «Πονάω»      → done when a new call reaches the board
 //   3 board: «Το είδα» on that red card     → done when that call is cleared
-//   4 done: «Θέλω τη δική μου κλινική»
+//   4 done: «Θέλω τη δική μου κλινική», and «Δείτε και αυτά» (optional, not steps): templates, say your
+//     templates, the paper sheet. seen: which of them the visitor opened (a ✓ on the board).
 export type TourStep = 0 | 1 | 2 | 3 | 4;
-export type Tour = { step: TourStep; since?: string; calledCard?: string };
+export const EXTRAS = ["templates", "dictate", "print"] as const;
+export type TourExtra = (typeof EXTRAS)[number];
+export type Tour = { step: TourStep; since?: string; calledCard?: string; seen?: TourExtra[] };
 
 export const TOUR_EVENT = "physiopath:tour";
 const key = (clinicId: string) => `physiopath:demo-tour:${clinicId}`;
@@ -18,7 +21,13 @@ export function loadTour(clinicId: string): Tour {
     const value = JSON.parse(localStorage.getItem(key(clinicId)) ?? "null") as Partial<Tour> | null;
     const step = value?.step;
     if (step === 0 || step === 1 || step === 2 || step === 3 || step === 4) {
-      return { step, since: typeof value?.since === "string" ? value.since : undefined, calledCard: typeof value?.calledCard === "string" ? value.calledCard : undefined };
+      const seen = Array.isArray(value?.seen) ? EXTRAS.filter((extra) => value.seen!.includes(extra)) : [];
+      return {
+        step,
+        since: typeof value?.since === "string" ? value.since : undefined,
+        calledCard: typeof value?.calledCard === "string" ? value.calledCard : undefined,
+        ...(seen.length > 0 && { seen }),
+      };
     }
   } catch {
     // storage blocked or a bad value: start from the intro
@@ -34,4 +43,13 @@ export function saveTour(clinicId: string, tour: Tour): void {
     // storage blocked
   }
   window.dispatchEvent(new CustomEvent<Tour>(TOUR_EVENT, { detail: tour }));
+}
+
+// One of «Δείτε και αυτά» was opened: kept with the tour (also through «Από την αρχή»).
+export function markSeen(clinicId: string, extra: TourExtra): Tour {
+  const tour = loadTour(clinicId);
+  if (tour.seen?.includes(extra)) return tour;
+  const next = { ...tour, seen: EXTRAS.filter((e) => e === extra || tour.seen?.includes(e)) };
+  saveTour(clinicId, next);
+  return next;
 }

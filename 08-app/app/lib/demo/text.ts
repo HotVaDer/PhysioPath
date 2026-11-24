@@ -61,6 +61,7 @@ const TEXT = {
     introText:
       "Το PhysioPath είναι ένα εργαλείο για φυσιοθεραπευτές. Στο τέλος της συνεδρίας λέτε τις ασκήσεις φωναχτά, και γράφει τη σημείωση για τον ΓεΣΥ και το πρόγραμμα του ασθενή για το σπίτι. Εσείς ελέγχετε και εγκρίνετε. Στην αίθουσα βλέπετε σε μία οθόνη ποιος ασκείται, ποιος έχει απορία και ποιος πονάει.",
     introSmall: "Η ξενάγηση έχει 3 βήματα και παίρνει περίπου 2 λεπτά.",
+    introAfter: "Μετά την ξενάγηση: πρότυπα και χαρτί για τον ασθενή.",
     introStart: "Ξεκινάμε",
     steps: [
       {
@@ -91,7 +92,25 @@ const TEXT = {
         "Εγκρίθηκε! Αυτό παίρνει ο ασθενής. Ανοίξτε τον σύνδεσμο για το κινητό πιο κάτω (ή σκανάρετε το QR με το κινητό σας), πατήστε «Χρειάζομαι τον φυσιοθεραπευτή» → «Πονάω», και μετά γυρίστε στην «Αίθουσα».",
       other: "Συνεχίστε την ξενάγηση από την αίθουσα.",
       back: "Στην ξενάγηση",
+      // after the tour, on the pages of «Δείτε και αυτά»
+      templates:
+        "Τα πρότυπα της κλινικής. Ανοίξτε ένα για να δείτε τις ασκήσεις. Στη «Νέα συνεδρία» ξεκινάτε από ένα και λέτε μόνο τι αλλάζει.",
+      dictate: "Πατήστε το παράδειγμα «Τρία πρότυπα» και μετά «Δημιουργία προτύπων». Ελέγξτε τις κάρτες και αποθηκεύστε.",
+      recordTemplate: "Διαλέξτε ένα πρότυπο πάνω, «Όπως είναι», και πείτε μόνο τι κάνατε σήμερα.",
     },
+    // the end of the tour: optional, one line each (DemoGuide); ✓ once the page was opened
+    extrasTitle: "Δείτε και αυτά",
+    extrasNote: "προαιρετικά",
+    extras: {
+      templates: { title: "Πρότυπα", text: "Ξεκινήστε μια συνεδρία από έτοιμο πρότυπο της κλινικής και πείτε μόνο τι αλλάζει." },
+      dictate: {
+        title: "Πείτε τα πρότυπά σας",
+        text: "Τα προγράμματα που δίνετε συχνά, μία φορά, και γίνονται πρότυπα. Παίρνει 1 από τα 5 προγράμματα της δοκιμής.",
+      },
+      print: { title: "Χαρτί για τον ασθενή", text: "Για ασθενή χωρίς κινητό: το πρόγραμμα σε χαρτί, με κουτάκια για 2 εβδομάδες." },
+    },
+    extraOpen: "Άνοιγμα",
+    extraSeen: "Το είδατε",
     doneTitle: "Αυτό είναι το PhysioPath",
     doneText: "Η σημείωση από τη φωνή σας, το κινητό του ασθενή και η αίθουσα σε μία οθόνη. Θέλετε το ίδιο για τη δική σας κλινική;",
     stepDone: "Έγινε",
@@ -139,6 +158,7 @@ const TEXT = {
     introText:
       "PhysioPath is a tool for physiotherapists. At the end of a session you say the exercises out loud, and it writes the GeSY clinical note and the patient's home program. You check and approve. In the room, one screen shows who is exercising, who has a question and who is in pain.",
     introSmall: "The tour has 3 steps and takes about 2 minutes.",
+    introAfter: "After the tour: templates, and a paper sheet for the patient.",
     introStart: "Let's start",
     steps: [
       {
@@ -168,7 +188,24 @@ const TEXT = {
         "Approved! This is what the patient gets. Open the phone link below (or scan the QR with your phone), press «Χρειάζομαι τον φυσιοθεραπευτή» → «Πονάω», then come back to «Αίθουσα» (“Room”).",
       other: "Continue the tour from the room.",
       back: "Back to the tour",
+      templates:
+        "The clinic's templates. Open one to see its exercises. In «Νέα συνεδρία» (“New session”) you start from one and say only what changes.",
+      dictate:
+        "Tap the sample «Τρία πρότυπα» (“Three templates”), then «Δημιουργία προτύπων» (“Create templates”). Check the cards and save them.",
+      recordTemplate: "Pick a template at the top, «Όπως είναι» (“As it is”), and say only what you did today.",
     },
+    extrasTitle: "See these too",
+    extrasNote: "optional",
+    extras: {
+      templates: { title: "Templates", text: "Start a session from one of the clinic's templates and say only what changes." },
+      dictate: {
+        title: "Say your templates",
+        text: "The programs you give often, said once, become templates. Uses 1 of the demo's 5 programs.",
+      },
+      print: { title: "Paper for the patient", text: "For a patient without a phone: the program on paper, with boxes for 2 weeks." },
+    },
+    extraOpen: "Open",
+    extraSeen: "Seen",
     doneTitle: "That's PhysioPath",
     doneText: "The note from your voice, the patient's phone and the room on one screen. Want the same for your own clinic?",
     stepDone: "Done",

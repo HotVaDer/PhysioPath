@@ -63,13 +63,15 @@ function NextStep({ n, href, title, text, done }: { n: number; href: Route; titl
 async function loadTour(supabase: Awaited<ReturnType<typeof requireMember>>["supabase"]) {
   const [{ data: open }, { data: newest }] = await Promise.all([
     supabase.from("sessions").select("id, token").is("finished_at", null).is("call_reason", null).order("created_at", { ascending: false }).limit(1),
-    supabase.from("programs").select("approved_at").order("approved_at", { ascending: false }).limit(1),
+    supabase.from("programs").select("id, approved_at").order("approved_at", { ascending: false }).limit(1),
   ]);
   const card = open?.[0] as { id: string; token: string } | undefined;
   return {
     patientCard: card ? { id: card.id, href: `/s/${card.token}` } : null,
     // When the newest program was approved: step 1 is done once one is approved after step 1 started.
     lastProgramAt: (newest?.[0]?.approved_at as string | undefined) ?? null,
+    // «Χαρτί για τον ασθενή» at the end of the tour: the newest program's paper sheet.
+    printHref: newest?.[0]?.id ? `/programs/${newest[0].id as string}/print` : null,
   };
 }
 
@@ -114,7 +116,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const notices = (
     <>
       {profile.demo && tour && (
-        <DemoGuide lang={profile.demo.lang} clinicId={profile.clinic_id!} initialCards={board.cards} patientCard={tour.patientCard} lastProgramAt={tour.lastProgramAt} />
+        <DemoGuide lang={profile.demo.lang} clinicId={profile.clinic_id!} initialCards={board.cards} patientCard={tour.patientCard} lastProgramAt={tour.lastProgramAt} printHref={tour.printHref} />
       )}
       <InviteNotice invites={myInvites} />
       {welcome === "1" && (

@@ -3,6 +3,8 @@
 // big button that does it (app/lib/demo/tour.ts has the steps). On the other pages DemoCoach carries on
 // with a line saying what to do there. Steps tick themselves off as things happen on the live board
 // (BOARD_EVENT from RoomBoard): a new call from the patient's phone, then «Το είδα» on it.
+// The end adds «Δείτε και αυτά»: templates, «Πείτε τα πρότυπά σας» and the paper sheet, optional and quieter than
+// «Θέλω τη δική μου κλινική», each with a ✓ once opened (DemoCoach marks the pages; the sheet is marked here).
 import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -13,7 +15,7 @@ import type { BoardCard } from "@/app/lib/board/board";
 import { cx } from "@/app/lib/cx";
 import { leaveDemo, refillDemo } from "@/app/lib/demo/actions";
 import { demoText, type DemoLang } from "@/app/lib/demo/text";
-import { TOUR_EVENT, loadTour, saveTour, type Tour, type TourStep } from "@/app/lib/demo/tour";
+import { EXTRAS, TOUR_EVENT, loadTour, markSeen, saveTour, type Tour, type TourExtra, type TourStep } from "@/app/lib/demo/tour";
 
 type Props = {
   lang: DemoLang;
@@ -23,6 +25,8 @@ type Props = {
   // When the clinic's newest program was approved. One approved after step 1 started finishes step 1, even
   // without the coach. The demo's own programs are days old, so after «Από την αρχή» step 1 waits for a new one.
   lastProgramAt: string | null;
+  // The paper sheet of the clinic's newest program («Χαρτί για τον ασθενή» at the end), or null without one.
+  printHref: string | null;
 };
 
 export const bigButton =
@@ -34,14 +38,16 @@ const sameTabOnPhone = (event: React.MouseEvent<HTMLAnchorElement>) => {
   if (window.matchMedia?.("(max-width: 639px)").matches) event.currentTarget.removeAttribute("target");
 };
 
-export function DemoGuide({ lang, clinicId, initialCards, patientCard, lastProgramAt }: Props) {
+export function DemoGuide({ lang, clinicId, initialCards, patientCard, lastProgramAt, printHref }: Props) {
   const t = demoText(lang);
   const [cards, setCards] = useState(initialCards);
   const [tour, setTour] = useState<Tour>({ step: 0 });
 
+  // What was opened of «Δείτε και αυτά» stays, whatever the step.
   const go = (next: Tour) => {
-    setTour(next);
-    saveTour(clinicId, next);
+    const kept = { ...next, ...(tour.seen && { seen: tour.seen }) };
+    setTour(kept);
+    saveTour(clinicId, kept);
   };
 
   // Where this browser left the tour (after the first render: the server can't see it), and changes
@@ -114,7 +120,9 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, lastProgr
             <button type="button" onClick={() => next(1)} className={cx(bigButton, "cursor-pointer")}>
               {t.introStart} <span aria-hidden="true">→</span>
             </button>
-            <span className="text-base text-muted">{t.introSmall}</span>
+            <span className="text-base text-muted">
+              {t.introSmall} {t.introAfter}
+            </span>
           </div>
         </div>
       )}
@@ -171,6 +179,12 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, lastProgr
               {t.again}
             </button>
           </div>
+          <Extras
+            t={t}
+            seen={tour.seen ?? []}
+            hrefs={{ templates: "/templates", dictate: "/templates/dictate", print: printHref }}
+            onPrint={() => setTour(markSeen(clinicId, "print"))}
+          />
         </div>
       )}
 
@@ -182,5 +196,49 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, lastProgr
         </form>
       )}
     </section>
+  );
+}
+
+// «Δείτε και αυτά»: one line each, with «Άνοιγμα»; ✓ «Το είδατε» once opened. The sheet only with a program.
+function Extras({
+  t,
+  seen,
+  hrefs,
+  onPrint,
+}: {
+  t: ReturnType<typeof demoText>;
+  seen: TourExtra[];
+  hrefs: Record<TourExtra, string | null>;
+  onPrint: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2 border-t border-hairline pt-3">
+      <h3 id="demo-extras" className="font-bold">
+        {t.extrasTitle} <span className="font-normal text-muted">· {t.extrasNote}</span>
+      </h3>
+      <ul aria-labelledby="demo-extras" className="flex flex-col gap-1.5">
+        {EXTRAS.map((extra) => {
+          const href = hrefs[extra];
+          if (!href) return null;
+          const done = seen.includes(extra);
+          const { title, text } = t.extras[extra];
+          return (
+            <li key={extra} className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+              <span aria-hidden="true" className={cx("w-5 flex-none text-center font-bold", done ? "text-action" : "text-muted")}>
+                {done ? "✓" : "○"}
+              </span>
+              <span className="min-w-0 flex-[1_1_260px]">
+                <strong>{title}</strong>
+                {done && <span className="font-semibold text-action"> · {t.extraSeen}</span>} <span className="text-muted">· {text}</span>
+              </span>
+              <Link href={href as Route} onClick={extra === "print" ? onPrint : undefined} className="min-h-11 content-center font-semibold">
+                {t.extraOpen}
+                <span className="sr-only">: {title}</span> <span aria-hidden="true">→</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }

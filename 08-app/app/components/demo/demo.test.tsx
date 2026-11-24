@@ -14,6 +14,9 @@ import { BOARD_EVENT } from "@/app/components/board/RoomBoard";
 import type { BoardCard } from "@/app/lib/board/board";
 import { StaffSheet } from "@/app/components/paper/StaffSheet";
 import { expectNoA11yViolations } from "@/app/test/axe";
+import { useMemoryStorage } from "@/app/test/storage";
+
+useMemoryStorage();
 
 const inDays = (n: number) => new Date(Date.now() + n * 24 * 60 * 60 * 1000 - 60_000).toISOString();
 
@@ -53,7 +56,15 @@ const cardOf = (id: string, label: string, call: BoardCard["call"]): BoardCard =
 const andreas = cardOf("a1", "Ανδρέας Μ.", null);
 let clinic = 0;
 const guide = (over: Partial<React.ComponentProps<typeof DemoGuide>> = {}) => (
-  <DemoGuide lang="el" clinicId={`c-${++clinic}`} initialCards={[andreas]} patientCard={{ id: "a1", href: "/s/tok" }} lastProgramAt={inDays(-2)} {...over} />
+  <DemoGuide
+    lang="el"
+    clinicId={`c-${++clinic}`}
+    initialCards={[andreas]}
+    patientCard={{ id: "a1", href: "/s/tok" }}
+    lastProgramAt={inDays(-2)}
+    printHref="/programs/p1/print"
+    {...over}
+  />
 );
 const sendBoard = (cards: BoardCard[]) => act(() => { window.dispatchEvent(new CustomEvent(BOARD_EVENT, { detail: cards })); });
 
@@ -63,6 +74,7 @@ describe("DemoGuide", () => {
     const tour = screen.getByRole("region", { name: "Καλώς ήρθατε στο PhysioPath" });
     expect(tour).toHaveTextContent("εργαλείο για φυσιοθεραπευτές");
     expect(within(tour).getByRole("button", { name: /Ξεκινάμε/ })).toBeInTheDocument();
+    expect(tour).toHaveTextContent("Μετά την ξενάγηση: πρότυπα και χαρτί για τον ασθενή.");
     await expectNoA11yViolations(container);
   });
 
@@ -112,6 +124,34 @@ describe("DemoGuide", () => {
     await userEvent.click(screen.getByRole("button", { name: /Ξεκινάμε/ }));
     // not skipped to step 2 by the old program
     expect(screen.getByRole("region", { name: /Μιλάτε/ })).toHaveTextContent("Βήμα 1 από 3");
+  });
+
+  it("the end offers «Δείτε και αυτά»: templates, say your templates, the paper sheet; ✓ once opened", async () => {
+    const clinicId = `c-${++clinic}`;
+    localStorage.setItem(`physiopath:demo-tour:${clinicId}`, JSON.stringify({ step: 4, seen: ["templates", "nonsense"] }));
+    const { container } = render(guide({ clinicId }));
+    const extras = await screen.findByRole("list", { name: /Δείτε και αυτά/ });
+    const items = within(extras).getAllByRole("listitem");
+    expect(items.map((li) => within(li).getByRole("link").getAttribute("href"))).toEqual(["/templates", "/templates/dictate", "/programs/p1/print"]);
+    expect(items[0]).toHaveTextContent("Πρότυπα · Το είδατε");
+    expect(items[1]).not.toHaveTextContent("Το είδατε");
+    // still the main button: a clinic of their own
+    expect(screen.getByRole("button", { name: /Θέλω τη δική μου κλινική/ })).toBeInTheDocument();
+    // the paper sheet has no coach page: opening it from here ticks it
+    within(items[2]).getByRole("link").addEventListener("click", (e) => e.preventDefault());
+    await userEvent.click(within(items[2]).getByRole("link", { name: /Χαρτί για τον ασθενή/ }));
+    expect(items[2]).toHaveTextContent("Το είδατε");
+    expect(JSON.parse(localStorage.getItem(`physiopath:demo-tour:${clinicId}`)!).seen).toEqual(["templates", "print"]);
+    await expectNoA11yViolations(container);
+  });
+
+  it("without a program there is no paper sheet to open; what was opened stays after «Ξανά από την αρχή»", async () => {
+    const clinicId = `c-${++clinic}`;
+    localStorage.setItem(`physiopath:demo-tour:${clinicId}`, JSON.stringify({ step: 4, seen: ["dictate"] }));
+    render(guide({ clinicId, printHref: null }));
+    expect(within(await screen.findByRole("list", { name: /Δείτε και αυτά/ })).getAllByRole("listitem")).toHaveLength(2);
+    await userEvent.click(screen.getByRole("button", { name: "Ξανά από την αρχή" }));
+    expect(JSON.parse(localStorage.getItem(`physiopath:demo-tour:${clinicId}`)!)).toEqual({ step: 0, seen: ["dictate"] });
   });
 
   it("in English", () => {
