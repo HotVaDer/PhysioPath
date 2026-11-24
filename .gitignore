@@ -64,3 +64,10 @@ private/
 
 # Vercel CLI link (project and team ids, per computer)
 .vercel/
+
+# Local docs: research, reports and reviews that stay off the repo
+05-business/competitors.md
+05-business/physitrack-deep-research-2026-11.md
+08-app/docs/code-review.md
+reports/
+research_notes/
