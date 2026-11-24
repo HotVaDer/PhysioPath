@@ -143,3 +143,30 @@ describe("HomeProgramLetter", () => {
     await expectNoA11yViolations(container);
   });
 });
+
+describe("HomeProgramLetter on paper (printed by the clinic)", () => {
+  const { token: _token, log: _log, today: _today, firstDay: _firstDay, ...letter } = full;
+  const onPaper = (size: "normal" | "large" = "normal") => render(<HomeProgramLetter {...letter} paper={{ size, bar: <span>Εργαλεία</span> }} />);
+
+  it("is shown as it will print: two weeks of boxes per exercise, no buttons, nothing that saves", async () => {
+    const { container } = onPaper();
+    expect(screen.getByRole("main")).toHaveAttribute("data-paper");
+    expect(screen.getByText("Εργαλεία")).toBeInTheDocument(); // the clinic's bar, not the patient's «Αα»
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Οι ασκήσεις" })).toBeInTheDocument();
+    for (const week of ["1η εβδομάδα", "2η εβδομάδα"])
+      expect(screen.getAllByRole("list", { name: `${week}: οι μέρες` })).toHaveLength(2); // the blank row is left out
+    expect(screen.queryByRole("list", { name: "3η εβδομάδα: οι μέρες" })).not.toBeInTheDocument();
+    expect(screen.getByText("Σφίξτε τους γλουτούς.")).toBeInTheDocument();
+    expect(screen.getByText("Τηλέφωνο: 25 000000")).toBeInTheDocument(); // the call button gives way to the number
+    expect(container.querySelector("style")?.textContent).toContain("font-size:14px");
+    await expectNoA11yViolations(container);
+  });
+
+  it("«Μεγάλα γράμματα» prints bigger, in one column", () => {
+    const { container } = onPaper("large");
+    expect(container.querySelector("style")?.textContent).toContain("font-size:18px");
+    expect(container.querySelector("[class*='paper:grid']")).toBeNull();
+  });
+});
+

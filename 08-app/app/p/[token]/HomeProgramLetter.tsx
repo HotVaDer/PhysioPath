@@ -8,7 +8,9 @@
 // physio's instructions in the app's flat boxes (yellow «Αποφύγετε», pink «Πάρτε μας τηλέφωνο αν» with a
 // call button), a closing line and the physio's name like a signature.
 // On a laptop and on paper the instructions sit in a column beside the exercises. Printed, it is a sheet
-// for the fridge, with day boxes to tick with a pen.
+// for the fridge, with day boxes to tick with a pen. The clinic can also print it for a patient without a
+// phone (paper: /programs/[id]/print): then the screen shows it as it will print («paper:» classes, see
+// globals.css), with two weeks of boxes and nothing that saves.
 // Every text here is the physio's or neutral: it never advises, diagnoses or suggests treatment, and it
 // never guesses the patient's gender.
 import type { ReactNode } from "react";
@@ -19,13 +21,13 @@ import type { LogEntry } from "@/app/lib/home/log";
 import { doseLines, isBlank } from "@/app/lib/notes/format";
 import { ExerciseChecklist, type ChecklistExercise } from "@/app/p/[token]/ExerciseChecklist";
 import { HomeBar } from "@/app/p/[token]/HomeBar";
+import { PaperExercises } from "@/app/p/[token]/PaperExercises";
 import { AvoidIcon, CalendarIcon, PhoneIcon } from "@/app/p/[token]/icons";
 
 type Text = string | null | undefined;
 
 // The same shape page.tsx checks with zod (loose: older programs may miss fields).
-export type HomeProgramLetterProps = {
-  token: string;
+type Letter = {
   program: {
     title?: string;
     patient_first_name?: Text;
@@ -41,10 +43,23 @@ export type HomeProgramLetterProps = {
   clinicName: string;
   clinicCity: string | null;
   clinicPhone: string | null;
+};
+
+// On the patient's phone (/p/<token>): the exercises with their buttons, saved in the home diary.
+type OnPhone = Letter & {
+  token: string;
   log: LogEntry[]; // the home diary of the last 7 days
   today: string; // the clinic's day now (YYYY-MM-DD); the checklist moves to the device's own day
   firstDay: string; // the day the program was given
+  paper?: undefined;
 };
+
+// Printed by the clinic (/programs/[id]/print), for a patient without a phone: shown on screen as it will
+// print, with two weeks of boxes to tick with a pen, and nothing that saves. «Μεγάλα γράμματα» is one column.
+export type PaperSize = "normal" | "large";
+type OnPaper = Letter & { paper: { size: PaperSize; bar: ReactNode } };
+
+export type HomeProgramLetterProps = OnPhone | OnPaper;
 
 const clean = (text: Text) => (isBlank(text) ? null : text!.trim());
 const lines = (items?: string[]) => (items ?? []).map((item) => item.trim()).filter(Boolean);
@@ -62,20 +77,11 @@ const formatDay = (iso: string) => {
 // is at least 42rem wide at the chosen text size: a laptop at normal or medium size, but one column on
 // a phone, a tablet, or a laptop at «Μεγάλα», where two columns would squeeze the words.
 const columns =
-  "@min-[42rem]:grid @min-[42rem]:grid-cols-[minmax(0,1fr)_17rem] @min-[42rem]:gap-x-12 print:grid print:grid-cols-[minmax(0,1fr)_17rem] print:gap-x-12";
+  "@min-[42rem]:grid @min-[42rem]:grid-cols-[minmax(0,1fr)_17rem] @min-[42rem]:gap-x-12 paper:grid paper:grid-cols-[minmax(0,1fr)_17rem] paper:gap-x-12";
 
-export function HomeProgramLetter({
-  token,
-  program,
-  approvedAt,
-  approvedBy,
-  clinicName,
-  clinicCity,
-  clinicPhone,
-  log,
-  today,
-  firstDay,
-}: HomeProgramLetterProps) {
+export function HomeProgramLetter(props: HomeProgramLetterProps) {
+  const { program, approvedAt, approvedBy, clinicName, clinicCity, clinicPhone, paper } = props;
+  const large = paper?.size === "large";
   const clinic = clinicName.trim();
   const name = clean(program.patient_first_name);
   const title = clean(program.title);
@@ -88,6 +94,8 @@ export function HomeProgramLetter({
   const contactIf = lines(program.contact_if);
   const other = lines(program.other);
   const hasInstructions = after.length + avoid.length + contactIf.length + other.length > 0;
+  // Two columns (the instructions beside the exercises), except on paper in big letters: one column there.
+  const sideBySide = hasInstructions && !large;
   // Each keeps its place in the program (what the diary saves), even when a blank row before it is hidden.
   const exercises: ChecklistExercise[] = program.exercises
     .map((exercise, index) => ({ exercise, index }))
@@ -108,8 +116,9 @@ export function HomeProgramLetter({
 
   return (
     <PatientSheet
-      wide={hasInstructions}
-      bar={<HomeBar />}
+      wide={sideBySide}
+      bar={paper ? paper.bar : <HomeBar />}
+      paper={paper?.size}
       letterhead={<Letterhead name={clinic} city={city} phone={phone} />}
       footer={<Closing approvedBy={clean(approvedBy)} clinic={clinic} phone={phone} />}
     >
@@ -132,7 +141,7 @@ export function HomeProgramLetter({
           </div>
         )}
 
-        <div className={cx("flex flex-col gap-5", next && hasInstructions && cx(columns, "@min-[42rem]:items-end print:items-end"))}>
+        <div className={cx("flex flex-col gap-5", next && sideBySide && cx(columns, "@min-[42rem]:items-end paper:items-end"))}>
           <div className="flex flex-col gap-2">
             <h1 className="font-display text-[min(2rem,10vw)] leading-[1.1] text-balance sm:text-[2.5rem]">
               {title ? keepSeparators(title) : "Το πρόγραμμά σας για το σπίτι"}
@@ -146,14 +155,16 @@ export function HomeProgramLetter({
       </div>
 
       {/* The day's work, and the physio's instructions beside it (under it on a phone). */}
-      <div className={cx("flex flex-col gap-10", hasInstructions && cx(columns, "@min-[42rem]:items-start print:items-start"))}>
-        {exercises.length > 0 ? (
+      <div className={cx("flex flex-col gap-10", sideBySide && cx(columns, "@min-[42rem]:items-start paper:items-start"))}>
+        {exercises.length > 0 && paper ? (
+          <PaperExercises exercises={exercises} twoColumns={!hasInstructions && !large} />
+        ) : exercises.length > 0 && !props.paper ? (
           <ExerciseChecklist
-            token={token}
+            token={props.token}
             exercises={exercises}
-            log={log}
-            today={today}
-            firstDay={firstDay}
+            log={props.log}
+            today={props.today}
+            firstDay={props.firstDay}
             clinicPhone={phone}
             printColumns={!hasInstructions}
           />
@@ -162,7 +173,7 @@ export function HomeProgramLetter({
         )}
 
         {hasInstructions && (
-          <div className="flex flex-col gap-7 print:gap-4">
+          <div className="flex flex-col gap-7 paper:gap-4">
             <Section id="after-title" title="Μετά τις ασκήσεις" items={after} />
             <Section id="avoid-title" title="Αποφύγετε" items={avoid} tone="yellow" icon={<AvoidIcon className="size-[1.5rem]" />} />
             <Section id="call-title" title="Πάρτε μας τηλέφωνο αν" items={contactIf} tone="pink" icon={<PhoneIcon className="size-[1.5rem]" />}>
@@ -171,7 +182,7 @@ export function HomeProgramLetter({
                   <a
                     href={telHref(phone)}
                     aria-label={`Καλέστε μας, ${phone}`}
-                    className="mt-2 flex min-h-[3.5rem] items-center justify-center gap-3 bg-action px-4 py-2.5 text-white no-underline hover:bg-action-hover hover:text-white print:hidden"
+                    className="mt-2 flex min-h-[3.5rem] items-center justify-center gap-3 bg-action px-4 py-2.5 text-white no-underline hover:bg-action-hover hover:text-white paper:hidden"
                   >
                     <PhoneIcon className="size-[1.5rem]" />
                     <span className="flex flex-col items-start leading-tight">
@@ -179,7 +190,7 @@ export function HomeProgramLetter({
                       <span className="text-[1.05rem] whitespace-nowrap">{phone}</span>
                     </span>
                   </a>
-                  <p className="hidden font-bold print:block">Τηλέφωνο: {phone}</p>
+                  <p className="hidden font-bold paper:block">Τηλέφωνο: {phone}</p>
                 </>
               )}
             </Section>
@@ -206,12 +217,12 @@ function Letterhead({ name, city, phone }: { name: string; city: string | null; 
             <a
               href={telHref(phone)}
               aria-label={`Τηλέφωνο: ${phone}`}
-              className="-ml-0.5 inline-flex min-h-[3rem] items-center gap-2 font-bold print:min-h-0 print:font-normal print:text-ink print:no-underline"
+              className="-ml-0.5 inline-flex min-h-[3rem] items-center gap-2 font-bold paper:min-h-0 paper:font-normal paper:text-ink paper:no-underline"
             >
-              <PhoneIcon className="size-[1.2rem] print:hidden" />
+              <PhoneIcon className="size-[1.2rem] paper:hidden" />
               <span>
                 {/* Written out on paper, where the icon isn't printed. */}
-                <span className="hidden print:inline">Τηλέφωνο: </span>
+                <span className="hidden paper:inline">Τηλέφωνο: </span>
                 <span className="whitespace-nowrap">{phone}</span>
               </span>
             </a>
@@ -229,9 +240,9 @@ function NextAppointment({ text }: { text: string }) {
     // word like «Νοεμβρίου» is never split.
     <section
       aria-labelledby="next-title"
-      className="flex flex-wrap items-center gap-x-4 gap-y-1 border-2 border-action bg-white px-4 py-3.5 sm:px-5 print:break-inside-avoid print:border-ink"
+      className="flex flex-wrap items-center gap-x-4 gap-y-1 border-2 border-action bg-white px-4 py-3.5 sm:px-5 paper:break-inside-avoid paper:border-ink"
     >
-      <CalendarIcon className="size-[2rem] text-action print:text-ink" />
+      <CalendarIcon className="size-[2rem] text-action paper:text-ink" />
       <div className="flex min-w-0 flex-[1_1_10rem] flex-col">
         <h2 id="next-title" className="text-muted">
           Επόμενο ραντεβού
@@ -264,8 +275,8 @@ function Section({
     <section
       aria-labelledby={id}
       className={cx(
-        "flex flex-col gap-2.5 print:break-inside-avoid",
-        tone !== "plain" && "px-4 py-4 sm:px-5 print:border-2 print:border-ink print:px-4 print:py-3",
+        "flex flex-col gap-2.5 paper:break-inside-avoid",
+        tone !== "plain" && "px-4 py-4 sm:px-5 paper:border-2 paper:border-ink paper:px-4 paper:py-3",
         tone === "yellow" && "bg-tab-yellow",
         tone === "pink" && "bg-tab-pink",
       )}
@@ -293,7 +304,7 @@ function Closing({ approvedBy, clinic, phone }: { approvedBy: string | null; cli
           Για οποιαδήποτε απορία, καλέστε μας στο{" "}
           <a
             href={telHref(phone)}
-            className="inline-flex min-h-[3rem] items-center font-bold whitespace-nowrap print:min-h-0 print:font-normal print:text-ink print:no-underline"
+            className="inline-flex min-h-[3rem] items-center font-bold whitespace-nowrap paper:min-h-0 paper:font-normal paper:text-ink paper:no-underline"
           >
             {phone}
           </a>

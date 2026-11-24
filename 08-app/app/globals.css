@@ -17,6 +17,18 @@
   color-scheme: light;
 }
 
+/* «paper:» = how the patient's letter looks on paper: when printed, and on screen inside [data-paper] (the
+   staff print page /programs/[id]/print shows the sheet as it will print). The phone page uses it only
+   when printed. */
+@custom-variant paper {
+  @media print {
+    @slot;
+  }
+  &:where([data-paper], [data-paper] *) {
+    @slot;
+  }
+}
+
 @theme {
   --color-desk: #e7e0d2; /* the desk the sheet lies on */
   --color-sheet: #fffdf7; /* the paper */

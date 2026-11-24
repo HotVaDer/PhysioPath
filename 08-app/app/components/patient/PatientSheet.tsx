@@ -12,6 +12,12 @@ import type { ReactNode } from "react";
 import { cx } from "@/app/lib/cx";
 
 const PRINT_CSS = "@media print{html{font-size:14px!important}}@page{size:A4;margin:14mm 15mm}";
+// Printed by the clinic (/programs/[id]/print): the sheet on screen as it will print, at a fixed size there
+// too (the patient's «Αα» is on their phone, not here). «Μεγάλα γράμματα» prints at 18px instead of 14px.
+const PAPER_CSS = {
+  normal: "html{font-size:16px}@media print{html{font-size:14px!important}}@page{size:A4;margin:14mm 15mm}",
+  large: "html{font-size:20px}@media print{html{font-size:18px!important}}@page{size:A4;margin:14mm 15mm}",
+} as const;
 
 type Props = {
   // Who the letter is from: the clinic's name, city and phone. Above a rule at the top of the sheet.
@@ -24,12 +30,14 @@ type Props = {
   // Wider on a laptop, for a page laid out in two columns there. Without it the sheet stays one
   // comfortable column at every screen size.
   wide?: boolean;
+  // Printed by the clinic: shown on screen as on paper («paper:» classes inside), at this size.
+  paper?: "normal" | "large";
 };
 
-export function PatientSheet({ letterhead, children, bar, footer, wide = false }: Props) {
+export function PatientSheet({ letterhead, children, bar, footer, wide = false, paper }: Props) {
   return (
     <div className="desk-pattern min-h-dvh text-[1rem] leading-normal break-words print:min-h-0">
-      <style>{PRINT_CSS}</style>
+      <style>{paper ? PAPER_CSS[paper] : PRINT_CSS}</style>
 
       {bar && (
         // A size container, so the bar's pieces can tell when one line has no room left (in rem, so it
@@ -43,6 +51,7 @@ export function PatientSheet({ letterhead, children, bar, footer, wide = false }
       <div className="px-[8px] pt-3 pb-10 sm:px-4 sm:pt-8 sm:pb-14 print:p-0">
         <main
           id="main"
+          data-paper={paper ? "" : undefined}
           // As tall as its content, and one comfortable column wide (36rem grows with the text size, so a
           // line keeps about the same number of words); `wide` on a laptop for two columns.
           className={cx(

@@ -1,5 +1,6 @@
 // After «Έγκριση»: a green «Εγκρίθηκε» line, the QR code for the patient's phone (the session in the room,
-// or the home program), the link, and the GeSY note to copy into the GeSY portal.
+// or the home program), the link, «Εκτύπωση για τον ασθενή» (./print, for a patient without a phone), and the
+// GeSY note to copy into the GeSY portal.
 // «Νέος σύνδεσμος» (owner, physio): the old links stop at once and the page shows the new QR, e.g. after
 // a link went to the wrong number. The home link also stops once a newer program is approved for the
 // patient (20261122160000); the page says so.
@@ -145,6 +146,14 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
               </a>
             </div>
             <CopyButton text={link} label="Αντιγραφή συνδέσμου" done="Ο σύνδεσμος αντιγράφηκε." />
+            {!newer && (
+              <p className="flex flex-col gap-0.5">
+                <Link href={`/programs/${program.id}/print`} className="min-h-11 content-center self-start font-semibold">
+                  Εκτύπωση για τον ασθενή
+                </Link>
+                <span className="text-base text-muted">Για ασθενή χωρίς κινητό: το πρόγραμμα σε χαρτί, με κουτάκια για 2 εβδομάδες.</span>
+              </p>
+            )}
             {linkResult === "new" && (
               <p role="status" className="bg-note-green px-4 py-3">
                 <span className="font-semibold">Ο παλιός σύνδεσμος έκλεισε.</span> Δώστε στον ασθενή τον νέο κωδικό QR ή τον νέο σύνδεσμο.
