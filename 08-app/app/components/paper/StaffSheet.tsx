@@ -1,5 +1,5 @@
 // The frame of every page for the clinic's staff (home, voice note, review, approved, settings):
-// a plain top bar (logo, «Αίθουσα», «Νέα συνεδρία», «Ασθενείς», «Κλινική», the open clinic with «Αλλαγή», who is signed in,
+// a plain top bar (logo, «Αίθουσα», «Νέα συνεδρία», «Ασθενείς», «Πρότυπα», «Κλινική», the open clinic with «Αλλαγή», who is signed in,
 // «Αποσύνδεση») and one sheet
 // of paper under it, with «Βήμα n από m» where a page is a step of something.
 // Same plain look as sign-up (2026-11-17): no folder tabs, red margin, double rules, «Σελ.», capital
@@ -19,13 +19,14 @@ import { cx } from "@/app/lib/cx";
 import type { Profile } from "@/app/lib/onboarding/session";
 import { BOARD_TAB, CLINIC_TAB, WORK_TAB } from "@/app/lib/tabs";
 
-export type StaffTab = "board" | "new" | "patients" | "clinic";
+export type StaffTab = "board" | "new" | "patients" | "templates" | "clinic";
 
 // tab: which browser tab the link belongs in (two-tab way of working, app/lib/tabs.ts).
 const LINKS: { id: StaffTab; href: Route; label: string; physioOnly?: boolean; tab?: string }[] = [
   { id: "board", href: "/", label: "Αίθουσα", tab: BOARD_TAB },
   { id: "new", href: "/notes/new", label: "Νέα συνεδρία", physioOnly: true, tab: WORK_TAB },
   { id: "patients", href: "/patients", label: "Ασθενείς", physioOnly: true, tab: WORK_TAB },
+  { id: "templates", href: "/templates", label: "Πρότυπα", physioOnly: true, tab: WORK_TAB },
   { id: "clinic", href: "/settings", label: "Κλινική", tab: CLINIC_TAB },
 ];
 
@@ -53,8 +54,7 @@ export function StaffSheet({ children, profile, current, step, width = "narrow" 
             <Logo />
           </TabLink>
           <nav aria-label="Κύρια πλοήγηση" className="order-last w-full sm:order-none sm:w-auto">
-            {/* Four links: a little smaller on a phone, and onto a second line if they still don't fit. */}
-            {/* On a phone the four links stay on one line (smaller), scrolling sideways if a screen is narrower still. */}
+            {/* On a phone the five links stay on one line (smaller), scrolling sideways if a screen is narrower still. */}
             <ul className="flex gap-x-0.5 overflow-x-auto sm:flex-wrap sm:gap-x-1 sm:overflow-visible">
               {links.map((link) => (
                 <li key={link.id}>

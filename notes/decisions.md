@@ -2,6 +2,12 @@
 
 Newest first. One entry per decision: what, why, what we'd need to see to change it.
 
+## 2026-11-24 – Clinic templates, built from the clinic's own programs
+
+- **Decision:** Add templates («Πρότυπα»). A physio saves an approved program under a name and the clinic keeps a library. Later steps: start a program from a template in a voice note, "say all your templates once", and a free move of a clinic's existing templates. Templates come only from programs the physio approved; the physio names and picks them; the AI never chooses one from symptoms. The course report is not a priority: the goal is to sell.
+- **Why:** P03 (solo physio, used Physitrack) asked for templates from his clinic's data, which he approves. He left Physitrack because building templates took a long time and his patients wouldn't use the app. Physitrack's new AI EMR "suggests" programs; suggesting exercises also moves software towards an MDR medical device (see `reports/Beating Physitrack in Cyprus and Greece.md`). Keeping the physio as the one who picks keeps PhysioPath a documentation tool.
+- **Revisit if:** Physios don't reuse saved templates, or regulatory advice says even organising the clinic's own programs counts as decision support.
+
 ## 2026-10-25 – Back to v0: the end of the session is the product
 
 - **Decision:** The main product is v0 again: at the end of a one-to-one session the physio speaks for ~30 s and gets the clinical note and the patient's home program, both reviewed before use. Session mode (patient session screen, room board) is parked, not deleted, as a possible later option for GeSY group exercise (PHYS04), private group classes or sports rehab.

@@ -12,8 +12,9 @@ import QRCode from "qrcode";
 import * as z from "zod";
 
 import { AutoRefresh } from "@/app/components/paper/AutoRefresh";
-import { PaperLink } from "@/app/components/paper/Buttons";
+import { PaperLink, SubmitButton } from "@/app/components/paper/Buttons";
 import { ConfirmSubmit } from "@/app/components/paper/ConfirmSubmit";
+import { LineField } from "@/app/components/paper/LineField";
 import { FormAlert } from "@/app/components/paper/Notes";
 import { Panel, PanelTitle, StaffSheet } from "@/app/components/paper/StaffSheet";
 import { slotLabel } from "@/app/lib/notes/approval";
@@ -23,6 +24,8 @@ import { ClinicalNote, GESY_PARTS, readProgram, type ActivityCode } from "@/app/
 import { requireMember } from "@/app/lib/onboarding/session";
 import { newProgramLink } from "@/app/lib/programs/actions";
 import { siteUrl } from "@/app/lib/site";
+import { saveTemplate } from "@/app/lib/templates/actions";
+import { TEMPLATE_NAME_MAX, type TemplateResult } from "@/app/lib/templates/load";
 
 import { ClearDraft } from "./ClearDraft";
 import { CopyButton } from "./CopyButton";
@@ -42,6 +45,8 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
   const noteId = z.uuid().safeParse(query.note);
   const justApproved = query.approved === "1";
   const linkResult = query.link === "new" || query.link === "failed" ? query.link : null;
+  // ?template: what happened to «Αποθήκευση ως πρότυπο».
+  const templateResult = (["saved", "taken", "badname", "failed"] as const).find((r) => r === query.template) ?? null;
   const { supabase, user, profile } = await requireMember();
 
   const { data: program } = await supabase
@@ -84,7 +89,8 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
     ? await supabase.from("rooms").select("name, beds").eq("id", session.room_id).maybeSingle()
     : { data: null };
 
-  const name = patient?.label ?? readProgram(program.program)?.patient_first_name ?? "Ο ασθενής";
+  const stored = readProgram(program.program);
+  const name = patient?.label ?? stored?.patient_first_name ?? "Ο ασθενής";
   const inRoom = Boolean(session && !session.finished_at);
   const where = room && session?.slot ? `${room.name} · ${slotLabel(room, session.slot)}` : null;
   // QR codes always point at the real address (NEXT_PUBLIC_SITE_URL), never a preview URL.
@@ -188,6 +194,16 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
           </Panel>
         )}
 
+        {isPhysio && stored && (
+          <SaveAsTemplate
+            clinicId={profile.clinic_id ?? ""}
+            programId={program.id}
+            noteId={noteId.success ? noteId.data : null}
+            title={stored.title}
+            result={templateResult}
+          />
+        )}
+
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
           <PaperLink href="/">
             Στην αίθουσα <span aria-hidden="true">→</span>
@@ -201,5 +217,64 @@ export default async function ApprovedPage({ params, searchParams }: PageProps<"
         </div>
       </div>
     </StaffSheet>
+  );
+}
+
+// «Αποθήκευση ως πρότυπο»: this program, under a name, into the clinic's library (/templates), without the
+// patient's name or next appointment. Saving twice gives two templates only under two names.
+function SaveAsTemplate({
+  clinicId,
+  programId,
+  noteId,
+  title,
+  result,
+}: {
+  clinicId: string;
+  programId: string;
+  noteId: string | null;
+  title: string;
+  result: Exclude<TemplateResult, "renamed" | "archived"> | null;
+}) {
+  return (
+    <Panel labelledBy="template-h" className="w-full">
+      <span id="template" />
+      <PanelTitle id="template-h">Αποθήκευση ως πρότυπο</PanelTitle>
+      <p className="text-muted">
+        Για να το ξαναχρησιμοποιήσετε σε άλλον ασθενή. Το πρότυπο κρατά τις ασκήσεις και τις οδηγίες, χωρίς το όνομα του ασθενή και το
+        επόμενο ραντεβού.
+      </p>
+      {result === "saved" ? (
+        <p role="status" className="bg-note-green px-4 py-3">
+          <span className="font-semibold">Αποθηκεύτηκε στα πρότυπα.</span>{" "}
+          <Link href="/templates">
+            Τα πρότυπα της κλινικής <span aria-hidden="true">→</span>
+          </Link>
+        </p>
+      ) : (
+        <form action={saveTemplate} className="flex flex-col gap-3">
+          <input type="hidden" name="clinicId" value={clinicId} />
+          <input type="hidden" name="programId" value={programId} />
+          {noteId && <input type="hidden" name="note" value={noteId} />}
+          <LineField
+            id="template-name"
+            name="name"
+            label="Όνομα προτύπου"
+            hint="Π.χ. «Γόνατο μετά ACL – εβδ. 1–2». Έτσι θα το βρίσκετε."
+            defaultValue={title}
+            required
+            maxLength={TEMPLATE_NAME_MAX}
+            error={
+              result === "taken"
+                ? "Υπάρχει ήδη πρότυπο με αυτό το όνομα. Δώστε άλλο όνομα."
+                : result === "badname"
+                  ? `Γράψτε ένα όνομα, έως ${TEMPLATE_NAME_MAX} χαρακτήρες.`
+                  : undefined
+            }
+          />
+          {result === "failed" && <FormAlert>Το πρότυπο δεν αποθηκεύτηκε. Δοκιμάστε ξανά σε λίγο.</FormAlert>}
+          <SubmitButton pending="Αποθήκευση…">Αποθήκευση ως πρότυπο</SubmitButton>
+        </form>
+      )}
+    </Panel>
   );
 }
