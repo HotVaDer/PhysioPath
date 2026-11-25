@@ -52,9 +52,10 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, lastProgr
   const calledBefore = useRef(new Set(initialCards.filter((c) => c.call).map((c) => c.id)));
   const [tour, setTour] = useState<Tour>({ step: 0 });
 
-  // What was opened of «Δείτε και αυτά» stays, whatever the step.
+  // What was opened of «Δείτε και αυτά» stays, whatever the step; closed sticky notes stay closed until
+  // «Από την αρχή».
   const go = (next: Tour) => {
-    const kept = { ...next, ...(tour.seen && { seen: tour.seen }) };
+    const kept = { ...next, ...(tour.seen && { seen: tour.seen }), ...(next.step !== 0 && tour.notes === false && { notes: false as const }) };
     setTour(kept);
     saveTour(clinicId, kept);
   };

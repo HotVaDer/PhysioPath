@@ -11,7 +11,8 @@
 export type TourStep = 0 | 1 | 2 | 3 | 4;
 export const EXTRAS = ["diary", "templates", "dictate", "print"] as const;
 export type TourExtra = (typeof EXTRAS)[number];
-export type Tour = { step: TourStep; since?: string; calledCard?: string; seen?: TourExtra[] };
+// notes: false once the visitor closed the sticky notes (TourNotes), until «Από την αρχή».
+export type Tour = { step: TourStep; since?: string; calledCard?: string; seen?: TourExtra[]; notes?: false };
 
 export const TOUR_EVENT = "physiopath:tour";
 const key = (clinicId: string) => `physiopath:demo-tour:${clinicId}`;
@@ -27,6 +28,7 @@ export function loadTour(clinicId: string): Tour {
         since: typeof value?.since === "string" ? value.since : undefined,
         calledCard: typeof value?.calledCard === "string" ? value.calledCard : undefined,
         ...(seen.length > 0 && { seen }),
+        ...(value?.notes === false && { notes: false as const }),
       };
     }
   } catch {
@@ -52,4 +54,28 @@ export function markSeen(clinicId: string, extra: TourExtra): Tour {
   const next = { ...tour, seen: EXTRAS.filter((e) => e === extra || tour.seen?.includes(e)) };
   saveTour(clinicId, next);
   return next;
+}
+
+// The patient's screen (/s/…) has no clinic of its own to look up: the staff pages of a demo leave a pointer
+// to their tour here, so the sticky notes can carry on there (same browser). Only for 2 hours: a later real
+// patient screen on this browser is left alone.
+const LAST = "physiopath:demo-tour:last";
+const LAST_MS = 2 * 60 * 60 * 1000;
+
+export function rememberTour(clinicId: string, lang: "el" | "en"): void {
+  try {
+    localStorage.setItem(LAST, JSON.stringify({ clinicId, lang, at: Date.now() }));
+  } catch {
+    // storage blocked
+  }
+}
+
+export function lastTour(now = Date.now()): { clinicId: string; lang: "el" | "en" } | null {
+  try {
+    const value = JSON.parse(localStorage.getItem(LAST) ?? "null") as { clinicId?: unknown; lang?: unknown; at?: unknown } | null;
+    if (typeof value?.clinicId !== "string" || typeof value.at !== "number" || now - value.at > LAST_MS) return null;
+    return { clinicId: value.clinicId, lang: value.lang === "en" ? "en" : "el" };
+  } catch {
+    return null;
+  }
 }

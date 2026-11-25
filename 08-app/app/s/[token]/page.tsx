@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
+import { TourNotes } from "@/app/components/demo/TourNotes";
 import { TEXT_SIZE_SCRIPT } from "@/app/components/patient/TextSize";
 import { loadPatientView } from "@/app/lib/board/patient";
 import { SessionScreen } from "@/app/s/[token]/SessionScreen";
@@ -26,6 +27,8 @@ export default async function SessionPage({ params }: PageProps<"/s/[token]">) {
     <>
       <script dangerouslySetInnerHTML={{ __html: TEXT_SIZE_SCRIPT }} />
       <SessionScreen token={token} initial={view} />
+      {/* The demo's sticky notes, only in the browser that is doing the demo's tour (nothing otherwise). */}
+      <TourNotes />
     </>
   );
 }

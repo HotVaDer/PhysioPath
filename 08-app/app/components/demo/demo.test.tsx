@@ -130,6 +130,16 @@ describe("DemoGuide", () => {
     expect(screen.getByRole("region", { name: /Αυτό είναι το PhysioPath/ })).toHaveTextContent("Ο φυσιοθεραπευτής αποφασίζει, το PhysioPath γράφει.");
   });
 
+  it("closed sticky notes stay closed through the steps, and come back with «Από την αρχή»", async () => {
+    const clinicId = `c-${++clinic}`;
+    localStorage.setItem(`physiopath:demo-tour:${clinicId}`, JSON.stringify({ step: 1, since: new Date().toISOString(), notes: false }));
+    render(guide({ clinicId }));
+    await userEvent.click(await screen.findByRole("button", { name: "Παράλειψη" }));
+    expect(JSON.parse(localStorage.getItem(`physiopath:demo-tour:${clinicId}`)!)).toMatchObject({ step: 2, notes: false });
+    await userEvent.click(screen.getByRole("button", { name: "Από την αρχή" }));
+    expect(JSON.parse(localStorage.getItem(`physiopath:demo-tour:${clinicId}`)!)).toEqual({ step: 0 });
+  });
+
   it("«Παράλειψη» moves on, and an empty board offers to fill the room again", async () => {
     render(guide({ initialCards: [], patientCard: null }));
     await userEvent.click(screen.getByRole("button", { name: /Ξεκινάμε/ }));

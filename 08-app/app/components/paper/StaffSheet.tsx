@@ -10,6 +10,7 @@ import { Suspense, type ReactNode } from "react";
 
 import { DemoCoach } from "@/app/components/demo/DemoCoach";
 import { DemoStrip } from "@/app/components/demo/DemoStrip";
+import { TourNotes } from "@/app/components/demo/TourNotes";
 import { Logo } from "@/app/components/paper/Logo";
 import { demoText } from "@/app/lib/demo/text";
 import { StepBar } from "@/app/components/paper/Sheet";
@@ -108,6 +109,7 @@ export function StaffSheet({ children, profile, current, step, width = "narrow" 
           {profile.demo && profile.clinic_id && (
             <Suspense fallback={null}>
               <DemoCoach lang={profile.demo.lang} clinicId={profile.clinic_id} />
+              <TourNotes lang={profile.demo.lang} clinicId={profile.clinic_id} />
             </Suspense>
           )}
           {step && (
