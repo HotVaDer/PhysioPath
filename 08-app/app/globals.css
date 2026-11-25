@@ -93,3 +93,24 @@
   background-size: 180px 180px;
 }
 
+
+/* The demo's guided tour: the one button to press next breathes a green ring (2026-11-25), so a visitor
+   sees which of the many buttons the tour means. Without motion (reduced motion) a still yellow ring. */
+@keyframes tour-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(30 90 67 / 0.5);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 14px rgb(30 90 67 / 0);
+  }
+}
+.tour-pulse {
+  animation: tour-pulse 1.8s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-pulse {
+    animation: none;
+    box-shadow: 0 0 0 5px var(--color-tab-yellow);
+  }
+}

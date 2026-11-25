@@ -2,12 +2,15 @@
 // «Ξενάγηση» on the board of a demo clinic: a short introduction, then one step at a time, each with one
 // big button that does it (app/lib/demo/tour.ts has the steps). On the other pages DemoCoach carries on
 // with a line saying what to do there. Steps tick themselves off as things happen on the live board
-// (BOARD_EVENT from RoomBoard): a new call from the patient's phone, then «Το είδα» on it.
-// The end adds «Δείτε και αυτά»: templates, «Πείτε τα πρότυπά σας» and the paper sheet, optional and quieter than
-// «Θέλω τη δική μου κλινική», each with a ✓ once opened (DemoCoach marks the pages; the sheet is marked here).
+// (BOARD_EVENT from RoomBoard): a new call from the patient's phone, then «Το είδα» on it (or on any other
+// call: the demo board starts with a question too, and a visitor who answers that one has got the point).
+// The button to press next pulses («tour-pulse» in globals.css).
+// The end adds «Δείτε και αυτά»: the home diary, templates, «Πείτε τα πρότυπά σας» and the paper sheet, optional
+// and quieter than «Θέλω τη δική μου κλινική», each with a ✓ once opened (DemoCoach marks the pages; the sheet
+// is marked here).
 import type { Route } from "next";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { QuietSubmit, SubmitButton } from "@/app/components/paper/Buttons";
 import { BOARD_EVENT } from "@/app/components/board/RoomBoard";
@@ -27,10 +30,14 @@ type Props = {
   lastProgramAt: string | null;
   // The paper sheet of the clinic's newest program («Χαρτί για τον ασθενή» at the end), or null without one.
   printHref: string | null;
+  // The page of the patient with the most worrying home diary («Ημερολόγιο στο σπίτι» at the end), or null.
+  diaryHref: string | null;
 };
 
 export const bigButton =
   "inline-flex min-h-14 items-center justify-center gap-2.5 bg-action px-6 text-[19px] font-bold text-white no-underline hover:bg-action-hover hover:text-white";
+// The tour's own buttons: big, and pulsing, so the visitor knows which one the tour means.
+const tourButton = cx(bigButton, "tour-pulse");
 const quiet = "min-h-11 cursor-pointer text-base text-action underline underline-offset-[3px] hover:text-ink";
 
 // On a phone one tab is everything: a link meant for a new tab opens here instead (Back returns).
@@ -38,9 +45,11 @@ const sameTabOnPhone = (event: React.MouseEvent<HTMLAnchorElement>) => {
   if (window.matchMedia?.("(max-width: 639px)").matches) event.currentTarget.removeAttribute("target");
 };
 
-export function DemoGuide({ lang, clinicId, initialCards, patientCard, lastProgramAt, printHref }: Props) {
+export function DemoGuide({ lang, clinicId, initialCards, patientCard, lastProgramAt, printHref, diaryHref }: Props) {
   const t = demoText(lang);
   const [cards, setCards] = useState(initialCards);
+  // The calls on the board before this update: step 3 ends when one of them is answered.
+  const calledBefore = useRef(new Set(initialCards.filter((c) => c.call).map((c) => c.id)));
   const [tour, setTour] = useState<Tour>({ step: 0 });
 
   // What was opened of «Δείτε και αυτά» stays, whatever the step.
@@ -76,8 +85,10 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, lastProgr
       if (called) go({ step: 3, calledCard: called.id });
     } else if (tour.step === 3 && tour.calledCard) {
       const card = cards.find((c) => c.id === tour.calledCard);
-      if (!card?.call) go({ step: 4 });
+      const answered = [...calledBefore.current].some((id) => !cards.find((c) => c.id === id)?.call);
+      if (!card?.call || answered) go({ step: 4 });
     }
+    calledBefore.current = new Set(cards.filter((c) => c.call).map((c) => c.id));
     // go is stable enough: it only writes what this effect decided
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tour, cards, lastProgramAt]);
@@ -117,7 +128,7 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, lastProgr
           </h2>
           <p className="text-lg leading-[1.45]">{t.introText}</p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <button type="button" onClick={() => next(1)} className={cx(bigButton, "cursor-pointer")}>
+            <button type="button" onClick={() => next(1)} className={cx(tourButton, "cursor-pointer")}>
               {t.introStart} <span aria-hidden="true">→</span>
             </button>
             <span className="text-base text-muted">
@@ -138,17 +149,17 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, lastProgr
           <p className="text-lg leading-[1.45]">{t.steps[tour.step - 1].text}</p>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             {tour.step === 1 && (
-              <Link href={"/notes/new" as Route} className={bigButton}>
+              <Link href={"/notes/new" as Route} className={tourButton}>
                 <span aria-hidden="true">🎙</span> {t.steps[0].action}
               </Link>
             )}
             {tour.step === 2 && patientCard && (
-              <a href={patientCard.href} target="_blank" rel="noopener" onClick={sameTabOnPhone} className={bigButton}>
+              <a href={patientCard.href} target="_blank" rel="noopener" onClick={sameTabOnPhone} className={tourButton}>
                 {t.steps[1].action} <span aria-hidden="true">→</span>
               </a>
             )}
             {tour.step === 3 && tour.calledCard && (
-              <a href={`#patient-${tour.calledCard}`} className={bigButton}>
+              <a href={`#patient-${tour.calledCard}`} className={tourButton}>
                 {t.steps[2].action} <span aria-hidden="true">↓</span>
               </a>
             )}
@@ -182,7 +193,7 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, lastProgr
           <Extras
             t={t}
             seen={tour.seen ?? []}
-            hrefs={{ templates: "/templates", dictate: "/templates/dictate", print: printHref }}
+            hrefs={{ diary: diaryHref, templates: "/templates", dictate: "/templates/dictate", print: printHref }}
             onPrint={() => setTour(markSeen(clinicId, "print"))}
           />
         </div>
@@ -199,7 +210,8 @@ export function DemoGuide({ lang, clinicId, initialCards, patientCard, lastProgr
   );
 }
 
-// «Δείτε και αυτά»: one line each, with «Άνοιγμα»; ✓ «Το είδατε» once opened. The sheet only with a program.
+// «Δείτε και αυτά»: one line each, with «Άνοιγμα»; ✓ «Το είδατε» once opened. The diary and the sheet only when
+// there is one.
 function Extras({
   t,
   seen,

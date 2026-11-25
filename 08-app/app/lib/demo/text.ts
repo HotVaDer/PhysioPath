@@ -57,39 +57,42 @@ const TEXT = {
     // the guided tour: on the board (DemoGuide) and a line on every other page (DemoCoach)
     tourLabel: "Ξενάγηση",
     stepOf: (n: number, of: number) => `Βήμα ${n} από ${of}`,
+    stepShort: (n: number, of: number) => `${n}/${of}`,
     introTitle: "Καλώς ήρθατε στο PhysioPath",
     introText:
-      "Το PhysioPath είναι ένα εργαλείο για φυσιοθεραπευτές. Στο τέλος της συνεδρίας λέτε τις ασκήσεις φωναχτά, και γράφει τη σημείωση για τον ΓεΣΥ και το πρόγραμμα του ασθενή για το σπίτι. Εσείς ελέγχετε και εγκρίνετε. Στην αίθουσα βλέπετε σε μία οθόνη ποιος ασκείται, ποιος έχει απορία και ποιος πονάει.",
-    introSmall: "Η ξενάγηση έχει 3 βήματα και παίρνει περίπου 2 λεπτά.",
-    introAfter: "Μετά την ξενάγηση: πρότυπα και χαρτί για τον ασθενή.",
+      "Μιλάτε 30 δευτερόλεπτα στο τέλος της συνεδρίας. Το PhysioPath γράφει τη σημείωση για τον ΓεΣΥ και το πρόγραμμα του ασθενή. Εσείς αποφασίζετε και εγκρίνετε.",
+    introSmall: "3 βήματα, περίπου 2 λεπτά.",
+    introAfter: "Μετά: το ημερολόγιο στο σπίτι, πρότυπα, χαρτί για τον ασθενή.",
     introStart: "Ξεκινάμε",
     steps: [
       {
         title: "Μιλάτε. Το PhysioPath γράφει.",
-        text: "Κάντε μια συνεδρία με τη φωνή σας: διαλέξτε ασθενή και πείτε τις ασκήσεις φωναχτά, όπως τις λέτε στον ασθενή. Σε περίπου 15 δευτερόλεπτα έχετε τη σημείωση για τον ΓεΣΥ και το πρόγραμμα για το σπίτι. Η δοκιμή έχει 5 προγράμματα και 5 ηχογραφήσεις: η κίτρινη γραμμή πάνω δείχνει πόσα μένουν.",
+        text: "Διαλέξτε τον Γιώργο Π., πατήστε «Αλλαγή προγράμματος» και πείτε τις ασκήσεις, ή πατήστε το έτοιμο δείγμα. Σε περίπου 15 δευτερόλεπτα έχετε τη σημείωση για τον ΓεΣΥ και το πρόγραμμα για το σπίτι.",
         action: "Νέα συνεδρία με φωνή",
       },
       {
         title: "Γίνετε ο ασθενής",
-        text: "Ανοίξτε την οθόνη που βλέπει ο ασθενής στο κινητό του. Πατήστε «Χρειάζομαι τον φυσιοθεραπευτή» και μετά «Πονάω». Γυρίστε στην αίθουσα: η κάρτα του γίνεται κόκκινη μέσα σε 3 δευτερόλεπτα.",
+        text: "Ανοίξτε την οθόνη του ασθενή στο κινητό. Πατήστε «Χρειάζομαι τον φυσιοθεραπευτή» και μετά «Πονάω». Γυρίστε στην αίθουσα: η κάρτα του γίνεται κόκκινη σε 3 δευτερόλεπτα.",
         action: "Άνοιξε την οθόνη του ασθενή",
       },
       {
         title: "Η αίθουσα σάς ειδοποιεί",
-        text: "Η κάρτα του ασθενή έγινε κόκκινη, και η σειρά του είναι στο «Σας χρειάζονται». Πατήστε «Το είδα» στην κάρτα του: το κινητό του δείχνει αμέσως ότι το είδατε.",
+        text: "Η κάρτα του ασθενή έγινε κόκκινη και μπήκε στο «Σας χρειάζονται». Πατήστε «Το είδα» στην κάρτα: το κινητό του δείχνει αμέσως ότι το είδατε.",
         action: "Δείξε μου την κάρτα",
       },
     ],
     // one line on the other pages, while step 1 or 2 is on
     coach: {
-      new: "Διαλέξτε έναν ασθενή, π.χ. τον Γιώργο Π., ή γράψτε ένα όνομα για νέο ασθενή, και πατήστε «Συνέχεια».",
+      new: "Διαλέξτε τον Γιώργο Π. και πατήστε «Συνέχεια».",
       program: "Πατήστε «Αλλαγή προγράμματος» για να πείτε νέες ασκήσεις.",
       record:
-        "Πατήστε «Έναρξη ηχογράφησης» και πείτε τις ασκήσεις φωναχτά, ή πατήστε ένα έτοιμο δείγμα πιο κάτω. Μετά «Δημιουργία προγράμματος».",
+        "Πατήστε «Έναρξη ηχογράφησης» και πείτε τις ασκήσεις φωναχτά. Χωρίς μικρόφωνο: πατήστε το δείγμα «Γιώργος · αριστερό γόνατο». Μετά «Δημιουργία προγράμματος».",
+      toSample: "Στο δείγμα",
       review:
-        "Το πρόγραμμα και η σημείωση γράφτηκαν από τη φωνή σας. Ρίξτε μια ματιά, διαλέξτε κρεβάτι στην αίθουσα και πατήστε «Έγκριση» στο τέλος.",
+        "Πάνω το πρόγραμμα του ασθενή, πιο κάτω η σημείωση για τον ΓεΣΥ σε 4 μέρη. Στο τέλος διαλέξτε κωδικό πράξης (π.χ. PHYS02) και κρεβάτι, και πατήστε «Έγκριση».",
+      toNote: "Η σημείωση ΓεΣΥ",
       programPage:
-        "Εγκρίθηκε! Αυτό παίρνει ο ασθενής. Ανοίξτε τον σύνδεσμο για το κινητό πιο κάτω (ή σκανάρετε το QR με το κινητό σας), πατήστε «Χρειάζομαι τον φυσιοθεραπευτή» → «Πονάω», και μετά γυρίστε στην «Αίθουσα».",
+        "Εγκρίθηκε! Ανοίξτε τον σύνδεσμο για το κινητό πιο κάτω (ή σκανάρετε το QR), πατήστε «Χρειάζομαι τον φυσιοθεραπευτή» → «Πονάω», και γυρίστε στην «Αίθουσα».",
       other: "Συνεχίστε την ξενάγηση από την αίθουσα.",
       back: "Στην ξενάγηση",
       // after the tour, on the pages of «Δείτε και αυτά»
@@ -97,11 +100,13 @@ const TEXT = {
         "Τα πρότυπα της κλινικής. Ανοίξτε ένα για να δείτε τις ασκήσεις. Στη «Νέα συνεδρία» ξεκινάτε από ένα και λέτε μόνο τι αλλάζει.",
       dictate: "Πατήστε το παράδειγμα «Τρία πρότυπα» και μετά «Δημιουργία προτύπων». Ελέγξτε τις κάρτες και αποθηκεύστε.",
       recordTemplate: "Διαλέξτε ένα πρότυπο πάνω, «Όπως είναι», και πείτε μόνο τι κάνατε σήμερα.",
+      diary: "Το ημερολόγιο του ασθενή: τι έκανε κάθε μέρα στο σπίτι και πόσο πονούσε. Πόνος 7 και πάνω σάς ειδοποιεί.",
     },
     // the end of the tour: optional, one line each (DemoGuide); ✓ once the page was opened
     extrasTitle: "Δείτε και αυτά",
     extrasNote: "προαιρετικά",
     extras: {
+      diary: { title: "Ημερολόγιο στο σπίτι", text: "Ποιος έκανε τις ασκήσεις του στο σπίτι, και ποιος πόνεσε." },
       templates: { title: "Πρότυπα", text: "Ξεκινήστε μια συνεδρία από έτοιμο πρότυπο της κλινικής και πείτε μόνο τι αλλάζει." },
       dictate: {
         title: "Πείτε τα πρότυπά σας",
@@ -112,7 +117,8 @@ const TEXT = {
     extraOpen: "Άνοιγμα",
     extraSeen: "Το είδατε",
     doneTitle: "Αυτό είναι το PhysioPath",
-    doneText: "Η σημείωση από τη φωνή σας, το κινητό του ασθενή και η αίθουσα σε μία οθόνη. Θέλετε το ίδιο για τη δική σας κλινική;",
+    doneText:
+      "Ο φυσιοθεραπευτής αποφασίζει, το PhysioPath γράφει. Η κλινική βλέπει όλη την αίθουσα σε μία οθόνη, και ποιος ασκείται στο σπίτι. Θέλετε το ίδιο για τη δική σας κλινική;",
     stepDone: "Έγινε",
     skip: "Παράλειψη",
     restart: "Από την αρχή",
@@ -154,38 +160,41 @@ const TEXT = {
     leaving: "One moment…",
     tourLabel: "Guided tour",
     stepOf: (n: number, of: number) => `Step ${n} of ${of}`,
+    stepShort: (n: number, of: number) => `${n}/${of}`,
     introTitle: "Welcome to PhysioPath",
     introText:
-      "PhysioPath is a tool for physiotherapists. At the end of a session you say the exercises out loud, and it writes the GeSY clinical note and the patient's home program. You check and approve. In the room, one screen shows who is exercising, who has a question and who is in pain.",
-    introSmall: "The tour has 3 steps and takes about 2 minutes.",
-    introAfter: "After the tour: templates, and a paper sheet for the patient.",
+      "You talk for 30 seconds at the end of the session. PhysioPath writes the GeSY clinical note and the patient's home program. You decide and approve.",
+    introSmall: "3 steps, about 2 minutes.",
+    introAfter: "Then: the home diary, templates, a paper sheet for the patient.",
     introStart: "Let's start",
     steps: [
       {
         title: "You speak. PhysioPath writes.",
-        text: "Do a session by voice: pick a patient and say the exercises out loud, the way you tell the patient. In about 15 seconds you have the GeSY note and the home program. The demo has 5 programs and 5 recordings: the yellow strip on top shows how many are left.",
+        text: "Pick George P., press «Αλλαγή προγράμματος» (“Change program”) and say the exercises, or tap the ready sample. In about 15 seconds you have the GeSY note and the home program.",
         action: "New session by voice",
       },
       {
         title: "Be the patient",
-        text: "Open the screen the patient sees on their phone. Press «Χρειάζομαι τον φυσιοθεραπευτή» (“I need the physio”), then «Πονάω» (“I'm in pain”). Come back to the room: their card turns red within 3 seconds.",
+        text: "Open the patient's phone screen. Press «Χρειάζομαι τον φυσιοθεραπευτή» (“I need the physio”), then «Πονάω» (“I'm in pain”). Come back to the room: their card turns red within 3 seconds.",
         action: "Open the patient's screen",
       },
       {
         title: "The room tells you",
-        text: "The patient's card turned red and they are listed under «Σας χρειάζονται» (“Need you”). Press «Το είδα» (“Seen”) on their card: their phone shows at once that you saw it.",
+        text: "The patient's card turned red and moved into «Σας χρειάζονται» (“Need you”). Press «Το είδα» (“Seen”) on the card: their phone shows at once that you saw it.",
         action: "Show me the card",
       },
     ],
     coach: {
-      new: "Pick a patient, e.g. Γιώργος Π., or type a name for a new patient, and press «Συνέχεια» (“Continue”).",
+      new: "Pick George P. and press «Συνέχεια» (“Continue”).",
       program: "Press «Αλλαγή προγράμματος» (“Change program”) to say new exercises.",
       record:
-        "Press «Έναρξη ηχογράφησης» (“Start recording”) and say the exercises out loud, or tap a ready sample below. Then «Δημιουργία προγράμματος» (“Create program”).",
+        "Press «Έναρξη ηχογράφησης» (“Start recording”) and say the exercises out loud. No microphone: tap the sample «Γιώργος · αριστερό γόνατο». Then «Δημιουργία προγράμματος» (“Create program”).",
+      toSample: "To the sample",
       review:
-        "The program and the note were written from your voice. Have a look, pick a bed in the room and press «Έγκριση» (“Approve”) at the end.",
+        "At the top the patient's program, further down the GeSY note in 4 parts. At the end pick a procedure code (e.g. PHYS02) and a bed, and press «Έγκριση» (“Approve”).",
+      toNote: "The GeSY note",
       programPage:
-        "Approved! This is what the patient gets. Open the phone link below (or scan the QR with your phone), press «Χρειάζομαι τον φυσιοθεραπευτή» → «Πονάω», then come back to «Αίθουσα» (“Room”).",
+        "Approved! Open the phone link below (or scan the QR), press «Χρειάζομαι τον φυσιοθεραπευτή» → «Πονάω», then come back to «Αίθουσα» (“Room”).",
       other: "Continue the tour from the room.",
       back: "Back to the tour",
       templates:
@@ -193,10 +202,12 @@ const TEXT = {
       dictate:
         "Tap the sample «Τρία πρότυπα» (“Three templates”), then «Δημιουργία προτύπων» (“Create templates”). Check the cards and save them.",
       recordTemplate: "Pick a template at the top, «Όπως είναι» (“As it is”), and say only what you did today.",
+      diary: "The patient's home diary: what they did each day at home and how much it hurt. Pain 7 or more alerts you.",
     },
     extrasTitle: "See these too",
     extrasNote: "optional",
     extras: {
+      diary: { title: "Home diary", text: "Who did their exercises at home, and who was in pain." },
       templates: { title: "Templates", text: "Start a session from one of the clinic's templates and say only what changes." },
       dictate: {
         title: "Say your templates",
@@ -207,7 +218,8 @@ const TEXT = {
     extraOpen: "Open",
     extraSeen: "Seen",
     doneTitle: "That's PhysioPath",
-    doneText: "The note from your voice, the patient's phone and the room on one screen. Want the same for your own clinic?",
+    doneText:
+      "The physio decides, PhysioPath writes. The clinic sees the whole room on one screen, and who exercises at home. Want the same for your own clinic?",
     stepDone: "Done",
     skip: "Skip",
     restart: "Start over",

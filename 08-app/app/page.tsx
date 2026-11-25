@@ -61,9 +61,12 @@ function NextStep({ n, href, title, text, done }: { n: number; href: Route; titl
 // What the demo's tour needs (only for a demo clinic). The patient's screen is the /s link of the newest card
 // that isn't calling (after step 1, the visitor's own patient), so step 2 makes a new call.
 async function loadTour(supabase: Awaited<ReturnType<typeof requireMember>>["supabase"]) {
-  const [{ data: open }, { data: newest }] = await Promise.all([
+  const [{ data: open }, { data: newest }, { data: worst }] = await Promise.all([
     supabase.from("sessions").select("id, token").is("finished_at", null).is("call_reason", null).order("created_at", { ascending: false }).limit(1),
     supabase.from("programs").select("id, approved_at").order("approved_at", { ascending: false }).limit(1),
+    // «Ημερολόγιο στο σπίτι» at the end of the tour: the patient with the highest pain at home (the demo's
+    // Ανδρέας, with a 7/10 and his own words), so the diary shows what it is for.
+    supabase.from("home_logs").select("patient_id").not("patient_id", "is", null).order("pain", { ascending: false, nullsFirst: false }).limit(1),
   ]);
   const card = open?.[0] as { id: string; token: string } | undefined;
   return {
@@ -72,6 +75,7 @@ async function loadTour(supabase: Awaited<ReturnType<typeof requireMember>>["sup
     lastProgramAt: (newest?.[0]?.approved_at as string | undefined) ?? null,
     // «Χαρτί για τον ασθενή» at the end of the tour: the newest program's paper sheet.
     printHref: newest?.[0]?.id ? `/programs/${newest[0].id as string}/print` : null,
+    diaryHref: worst?.[0]?.patient_id ? `/patients/${worst[0].patient_id as string}` : null,
   };
 }
 
@@ -116,7 +120,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const notices = (
     <>
       {profile.demo && tour && (
-        <DemoGuide lang={profile.demo.lang} clinicId={profile.clinic_id!} initialCards={board.cards} patientCard={tour.patientCard} lastProgramAt={tour.lastProgramAt} printHref={tour.printHref} />
+        <DemoGuide lang={profile.demo.lang} clinicId={profile.clinic_id!} initialCards={board.cards} patientCard={tour.patientCard} lastProgramAt={tour.lastProgramAt} printHref={tour.printHref} diaryHref={tour.diaryHref} />
       )}
       <InviteNotice invites={myInvites} />
       {welcome === "1" && (

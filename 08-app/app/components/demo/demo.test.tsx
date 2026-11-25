@@ -63,18 +63,20 @@ const guide = (over: Partial<React.ComponentProps<typeof DemoGuide>> = {}) => (
     patientCard={{ id: "a1", href: "/s/tok" }}
     lastProgramAt={inDays(-2)}
     printHref="/programs/p1/print"
+    diaryHref="/patients/a1"
     {...over}
   />
 );
 const sendBoard = (cards: BoardCard[]) => act(() => { window.dispatchEvent(new CustomEvent(BOARD_EVENT, { detail: cards })); });
 
 describe("DemoGuide", () => {
-  it("starts with a short introduction of PhysioPath and «Ξεκινάμε»", async () => {
+  it("starts with a short introduction of PhysioPath and a pulsing «Ξεκινάμε»", async () => {
     const { container } = render(guide());
     const tour = screen.getByRole("region", { name: "Καλώς ήρθατε στο PhysioPath" });
-    expect(tour).toHaveTextContent("εργαλείο για φυσιοθεραπευτές");
-    expect(within(tour).getByRole("button", { name: /Ξεκινάμε/ })).toBeInTheDocument();
-    expect(tour).toHaveTextContent("Μετά την ξενάγηση: πρότυπα και χαρτί για τον ασθενή.");
+    expect(tour).toHaveTextContent("Μιλάτε 30 δευτερόλεπτα στο τέλος της συνεδρίας.");
+    expect(tour).toHaveTextContent("Εσείς αποφασίζετε και εγκρίνετε.");
+    expect(within(tour).getByRole("button", { name: /Ξεκινάμε/ })).toHaveClass("tour-pulse");
+    expect(tour).toHaveTextContent("3 βήματα, περίπου 2 λεπτά. Μετά: το ημερολόγιο στο σπίτι, πρότυπα, χαρτί για τον ασθενή.");
     await expectNoA11yViolations(container);
   });
 
@@ -83,7 +85,13 @@ describe("DemoGuide", () => {
     await userEvent.click(screen.getByRole("button", { name: /Ξεκινάμε/ }));
     const tour = screen.getByRole("region", { name: /Μιλάτε/ });
     expect(tour).toHaveTextContent("Βήμα 1 από 3");
-    expect(within(tour).getByRole("link", { name: /Νέα συνεδρία με φωνή/ })).toHaveAttribute("href", "/notes/new");
+    expect(tour).toHaveTextContent("Διαλέξτε τον Γιώργο Π.");
+    expect(tour).not.toHaveTextContent("5 προγράμματα"); // the strip on top says what is left
+    const link = within(tour).getByRole("link", { name: /Νέα συνεδρία με φωνή/ });
+    expect(link).toHaveAttribute("href", "/notes/new");
+    expect(link).toHaveClass("tour-pulse");
+    // only the button to press pulses, not «Παράλειψη» or «Από την αρχή»
+    expect(within(tour).getByRole("button", { name: "Παράλειψη" })).not.toHaveClass("tour-pulse");
   });
 
   it("after a program of their own: be the patient; a new call on the board leads to «Το είδα»; then the end", async () => {
@@ -103,6 +111,23 @@ describe("DemoGuide", () => {
     sendBoard([andreas]);
     expect(screen.getByRole("region", { name: /Αυτό είναι το PhysioPath/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Θέλω τη δική μου κλινική/ })).toBeInTheDocument();
+  });
+
+  it("step 3 also ends with «Το είδα» on another call (the demo's question card)", async () => {
+    const helen = cardOf("h1", "Ελένη Κ.", { reason: "question", at: new Date(Date.now() - 60_000).toISOString() });
+    const props = { clinicId: `c-${++clinic}`, initialCards: [andreas, helen] };
+    const { rerender } = render(guide(props));
+    await userEvent.click(screen.getByRole("button", { name: /Ξεκινάμε/ }));
+    rerender(guide({ ...props, lastProgramAt: new Date(Date.now() + 1000).toISOString() }));
+    const call = { reason: "pain" as const, at: new Date(Date.now() + 1000).toISOString() };
+    sendBoard([{ ...andreas, call }, helen]);
+    expect(screen.getByRole("region", { name: /Η αίθουσα σάς ειδοποιεί/ })).toBeInTheDocument();
+    // a board update that answers nothing keeps step 3
+    sendBoard([{ ...andreas, call }, helen]);
+    expect(screen.getByRole("region", { name: /Η αίθουσα σάς ειδοποιεί/ })).toBeInTheDocument();
+    // «Το είδα» on Ελένη's question, not on the new call
+    sendBoard([{ ...andreas, call }, { ...helen, call: null }]);
+    expect(screen.getByRole("region", { name: /Αυτό είναι το PhysioPath/ })).toHaveTextContent("Ο φυσιοθεραπευτής αποφασίζει, το PhysioPath γράφει.");
   });
 
   it("«Παράλειψη» moves on, and an empty board offers to fill the room again", async () => {
@@ -126,37 +151,45 @@ describe("DemoGuide", () => {
     expect(screen.getByRole("region", { name: /Μιλάτε/ })).toHaveTextContent("Βήμα 1 από 3");
   });
 
-  it("the end offers «Δείτε και αυτά»: templates, say your templates, the paper sheet; ✓ once opened", async () => {
+  it("the end offers «Δείτε και αυτά»: the home diary, templates, say your templates, the paper sheet; ✓ once opened", async () => {
     const clinicId = `c-${++clinic}`;
     localStorage.setItem(`physiopath:demo-tour:${clinicId}`, JSON.stringify({ step: 4, seen: ["templates", "nonsense"] }));
     const { container } = render(guide({ clinicId }));
     const extras = await screen.findByRole("list", { name: /Δείτε και αυτά/ });
     const items = within(extras).getAllByRole("listitem");
-    expect(items.map((li) => within(li).getByRole("link").getAttribute("href"))).toEqual(["/templates", "/templates/dictate", "/programs/p1/print"]);
-    expect(items[0]).toHaveTextContent("Πρότυπα · Το είδατε");
-    expect(items[1]).not.toHaveTextContent("Το είδατε");
+    expect(items.map((li) => within(li).getByRole("link").getAttribute("href"))).toEqual([
+      "/patients/a1",
+      "/templates",
+      "/templates/dictate",
+      "/programs/p1/print",
+    ]);
+    expect(items[0]).toHaveTextContent("Ημερολόγιο στο σπίτι");
+    expect(items[0]).not.toHaveTextContent("Το είδατε");
+    expect(items[1]).toHaveTextContent("Πρότυπα · Το είδατε");
+    expect(items[2]).not.toHaveTextContent("Το είδατε");
     // still the main button: a clinic of their own
     expect(screen.getByRole("button", { name: /Θέλω τη δική μου κλινική/ })).toBeInTheDocument();
     // the paper sheet has no coach page: opening it from here ticks it
-    within(items[2]).getByRole("link").addEventListener("click", (e) => e.preventDefault());
-    await userEvent.click(within(items[2]).getByRole("link", { name: /Χαρτί για τον ασθενή/ }));
-    expect(items[2]).toHaveTextContent("Το είδατε");
+    within(items[3]).getByRole("link").addEventListener("click", (e) => e.preventDefault());
+    await userEvent.click(within(items[3]).getByRole("link", { name: /Χαρτί για τον ασθενή/ }));
+    expect(items[3]).toHaveTextContent("Το είδατε");
     expect(JSON.parse(localStorage.getItem(`physiopath:demo-tour:${clinicId}`)!).seen).toEqual(["templates", "print"]);
     await expectNoA11yViolations(container);
   });
 
-  it("without a program there is no paper sheet to open; what was opened stays after «Ξανά από την αρχή»", async () => {
+  it("without a program or a diary there is no sheet or diary to open; what was opened stays after «Ξανά από την αρχή»", async () => {
     const clinicId = `c-${++clinic}`;
     localStorage.setItem(`physiopath:demo-tour:${clinicId}`, JSON.stringify({ step: 4, seen: ["dictate"] }));
-    render(guide({ clinicId, printHref: null }));
-    expect(within(await screen.findByRole("list", { name: /Δείτε και αυτά/ })).getAllByRole("listitem")).toHaveLength(2);
+    render(guide({ clinicId, printHref: null, diaryHref: null }));
+    const items = within(await screen.findByRole("list", { name: /Δείτε και αυτά/ })).getAllByRole("listitem");
+    expect(items.map((li) => within(li).getByRole("link").getAttribute("href"))).toEqual(["/templates", "/templates/dictate"]);
     await userEvent.click(screen.getByRole("button", { name: "Ξανά από την αρχή" }));
     expect(JSON.parse(localStorage.getItem(`physiopath:demo-tour:${clinicId}`)!)).toEqual({ step: 0, seen: ["dictate"] });
   });
 
   it("in English", () => {
     render(guide({ lang: "en" }));
-    expect(screen.getByRole("region", { name: "Welcome to PhysioPath" })).toHaveTextContent("tool for physiotherapists");
+    expect(screen.getByRole("region", { name: "Welcome to PhysioPath" })).toHaveTextContent("You talk for 30 seconds at the end of the session.");
   });
 });
 

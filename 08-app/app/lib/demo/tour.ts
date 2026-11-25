@@ -6,10 +6,10 @@
 //                                             (the program page, or a newer program on the board)
 //   2 patient: be the patient, «Πονάω»      → done when a new call reaches the board
 //   3 board: «Το είδα» on that red card     → done when that call is cleared
-//   4 done: «Θέλω τη δική μου κλινική», and «Δείτε και αυτά» (optional, not steps): templates, say your
-//     templates, the paper sheet. seen: which of them the visitor opened (a ✓ on the board).
+//   4 done: «Θέλω τη δική μου κλινική», and «Δείτε και αυτά» (optional, not steps): the home diary, templates,
+//     say your templates, the paper sheet. seen: which of them the visitor opened (a ✓ on the board).
 export type TourStep = 0 | 1 | 2 | 3 | 4;
-export const EXTRAS = ["templates", "dictate", "print"] as const;
+export const EXTRAS = ["diary", "templates", "dictate", "print"] as const;
 export type TourExtra = (typeof EXTRAS)[number];
 export type Tour = { step: TourStep; since?: string; calledCard?: string; seen?: TourExtra[] };
 
