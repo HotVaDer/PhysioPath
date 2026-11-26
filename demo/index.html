@@ -4,228 +4,158 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta property="og:title" content="PhysioPath demo">
-<meta property="og:description" content="Σύντομο βίντεο με το πρωτότυπο PhysioPath (1:36).">
-<meta property="og:image" content="https://hotvader.github.io/PhysioPath/demo/poster.jpg">
+<meta property="og:description" content="Σύντομο βίντεο με το PhysioPath (1:42), από τη φωνή του φυσιοθεραπευτή στη σημείωση για τον ΓεΣΥ και το πρόγραμμα του ασθενή.">
+<meta property="og:image" content="https://hotvader.github.io/PhysioPath/demo/poster-2026-11.jpg">
 <title>PhysioPath demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;650&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;0,7..72,700;1,7..72,400&display=swap">
 <style>
-  /* Layout: one calm column, the video first, three short steps under it. Colours from the app's «Αίθουσα» look. */
+  /* The app's paper look (PhysioPath, 08-app/app/globals.css): the desk with faint «Φ» marks, one sheet of
+     paper on it, Literata, ink-coloured text, square corners, green actions, flat coloured boxes. No dark mode,
+     like the app. */
   :root {
-    --bg: #f6f8f7;
-    --surface: #ffffff;
-    --surface-muted: #eaf0ee;
-    --fg: #0f2523;
-    --muted: #38504d;
-    --border: #d5dfdb;
-    --accent: #0c5957;
-    --font: "Commissioner", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --desk: #e7e0d2;      /* the desk the sheet lies on */
+    --sheet: #fffdf7;     /* the paper */
+    --ink: #2b2420;       /* text                      15:1 */
+    --muted: #554a42;     /* labels, notes             8.4:1 */
+    --line: #6e655d;      /* the line you write on     5.6:1 */
+    --hairline: #cfc6b4;  /* decorative rules only */
+    --action: #1e5a43;    /* buttons, links            7.9:1 */
+    --action-hover: #15412f;
+    --error: #921f12;
+    --yellow: #f6e7a9; --pink: #f3d3d8; --green: #e3eedf;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #0c1716; --surface: #122120; --surface-muted: #1a2c2a;
-      --fg: #e8f0ee; --muted: #a8bbb7; --border: #233735; --accent: #86dad0;
-      color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #0c1716; --surface: #122120; --surface-muted: #1a2c2a;
-    --fg: #e8f0ee; --muted: #a8bbb7; --border: #233735; --accent: #86dad0;
-    color-scheme: dark;
-  }
-
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--fg);
-    font-family: var(--font);
-    font-size: 17px;
-    line-height: 1.6;
-  }
-  .wrap {
-    max-width: 880px;
-    margin: 0 auto;
-    padding-block: 40px 56px;
-    padding-left: max(16px, env(safe-area-inset-left, 0px));
-    padding-right: max(16px, env(safe-area-inset-right, 0px));
-    display: grid;
-    gap: 28px;
-  }
-  .brand {
-    display: flex; align-items: center; gap: 10px;
-    font-weight: 650; font-size: 15px; letter-spacing: .01em;
-  }
-  .brand i {
-    width: 14px; height: 14px; border-radius: 50%;
-    border: 3px solid var(--accent); display: block;
-  }
-  header { display: grid; gap: 10px; max-width: 62ch; }
-  h1 {
-    margin: 0; font-size: clamp(28px, 5vw, 40px); line-height: 1.15;
-    font-weight: 650; letter-spacing: -.01em; text-wrap: balance;
-  }
-  header p { margin: 0; color: var(--muted); }
-
-  .video {
-    border-radius: 14px; overflow: hidden;
-    background: var(--surface-muted);
-    border: 1px solid var(--border);
-  }
-  video { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; height: auto; background: #000; }
-  .meta { margin: 0; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
-
-  h2 { margin: 0 0 12px; font-size: 20px; font-weight: 650; }
-  ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; counter-reset: s; }
-  li {
-    counter-increment: s;
-    display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px;
-    padding: 16px 18px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 12px;
-  }
-  li::before {
-    content: counter(s);
-    width: 32px; height: 32px; border-radius: 50%;
-    display: grid; place-items: center;
-    border: 2px solid var(--accent); color: var(--accent);
-    font-weight: 650; font-size: 15px;
-  }
-  li b { display: block; font-weight: 650; }
-  li span { color: var(--muted); }
-
-  footer { border-top: 1px solid var(--border); padding-top: 20px; color: var(--muted); font-size: 15px; max-width: 62ch; }
-  footer p { margin: 0 0 6px; }
-
-  a { color: var(--accent); text-underline-offset: 3px; }
+  * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0; color: var(--ink);
+    font-family: "Literata", Georgia, serif; font-size: 18px; line-height: 1.5;
+    background-color: var(--desk);
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'><g fill='none' stroke-linecap='round'><g transform='translate(45 45)'><ellipse rx='16' ry='12.5' stroke='%23D5CBB7' stroke-width='4'/><line y1='-22' y2='22' stroke='%23C7D1BF' stroke-width='5'/></g><g transform='translate(135 135) rotate(-12)'><ellipse rx='16' ry='12.5' stroke='%23D5CBB7' stroke-width='4'/><line y1='-22' y2='22' stroke='%23C7D1BF' stroke-width='5'/></g></g></svg>");
+    background-size: 180px 180px;
+  }
+  a { color: var(--action); text-underline-offset: 3px; }
+  a:hover { color: var(--ink); }
+  :focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
 
-  /* Row under the video: details on the left, button to the questionnaire on the right (stacks on phones). */
-  .under-video {
-    margin-top: 12px;
-    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px;
+  /* One sheet of paper, the video first, three short steps, the questionnaire. */
+  .wrap {
+    max-width: 960px; margin: 24px auto 48px; padding: 28px 44px 40px;
+    background: var(--sheet);
+    box-shadow: 0 1px 0 #cfc6b4, 0 18px 40px -24px rgba(43, 36, 32, .45);
+    display: grid; gap: 32px;
   }
-  .cta {
-    display: inline-flex; align-items: center; justify-content: center;
-    min-height: 48px; padding: 0 24px; border-radius: 999px;
-    background: var(--accent); color: var(--bg);
-    font-weight: 650; text-decoration: none; white-space: nowrap;
-  }
-  .cta:hover { filter: brightness(1.08); }
+  @media (max-width: 639px) { .wrap { margin: 12px 10px 32px; padding: 20px 18px 28px; gap: 26px; } }
 
-  /* Draw the eye: the button pops in, then a soft ring pulses around it until it is clicked.
-     When the video ends it pops again. No motion for people who turned animations off. */
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 2px solid var(--hairline); }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 21px; font-weight: 600; }
+  .brand svg { flex: none; }
+  .lang-switch { display: inline-flex; gap: 4px; }
+  .lang-switch button {
+    min-width: 44px; min-height: 44px; padding: 0 10px; border: 0; background: transparent;
+    color: var(--action); font: inherit; font-size: 17px; font-weight: 600; cursor: pointer;
+  }
+  .lang-switch button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+
+  header { display: grid; gap: 10px; max-width: 64ch; }
+  h1 { margin: 0; font-size: clamp(30px, 5vw, 40px); line-height: 1.12; font-weight: 600; text-wrap: balance; }
+  header p { margin: 0; font-size: 19px; }
+  h2 { margin: 0 0 14px; font-size: 26px; line-height: 1.2; font-weight: 600; }
+
+  .video { border: 2px solid var(--hairline); background: #000; }
+  video { display: block; width: 100%; aspect-ratio: 16 / 9; height: auto; background: #000; }
+  .under-video { margin-top: 14px; display: grid; gap: 14px; }
+  .meta { margin: 0; font-size: 16px; color: var(--muted); }
+  .ctas { display: flex; flex-wrap: wrap; gap: 12px 16px; }
   .cta {
-    position: relative;
-    animation: cta-pop .6s cubic-bezier(.34, 1.56, .64, 1) .8s both;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    min-height: 56px; padding: 0 24px; background: var(--action); color: #fff;
+    font-size: 19px; font-weight: 700; text-decoration: none; white-space: nowrap;
   }
-  .cta::after {
-    content: ""; position: absolute; inset: 0; border-radius: inherit;
-    box-shadow: 0 0 0 0 var(--accent);
-    animation: cta-ring 2.2s ease-out 1.6s infinite;
-    pointer-events: none;
-  }
-  .cta.again { animation: cta-pop .6s cubic-bezier(.34, 1.56, .64, 1) both; }
-  .cta.seen::after { animation: none; }
-  @keyframes cta-pop {
-    0%   { transform: scale(.6); opacity: 0; }
-    100% { transform: scale(1);  opacity: 1; }
-  }
-  @keyframes cta-ring {
-    0%   { box-shadow: 0 0 0 0 var(--accent); opacity: .55; }
-    70%  { box-shadow: 0 0 0 14px var(--accent); opacity: 0; }
-    100% { box-shadow: 0 0 0 14px var(--accent); opacity: 0; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .cta, .cta.again, .cta::after { animation: none; }
-  }
-  .cta:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .cta:hover { background: var(--action-hover); color: #fff; }
+  .cta.try { background: var(--sheet); color: var(--action); box-shadow: inset 0 0 0 2px var(--action); }
+  .cta.try:hover { background: var(--green); color: var(--action-hover); }
+  /* The opinion button pops in, then a green ring breathes around it until it is pressed (as the tour's
+     buttons in the app); it pops again when the video ends. Still for people who turned motion off. */
+  .cta:not(.try) { animation: cta-pop .5s cubic-bezier(.34, 1.56, .64, 1) .8s both, cta-ring 1.8s ease-out 1.6s infinite; }
+  .cta.again { animation: cta-pop .5s cubic-bezier(.34, 1.56, .64, 1) both; }
+  .cta.seen { animation: none; }
+  @keyframes cta-pop { 0% { transform: scale(.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes cta-ring { 0% { box-shadow: 0 0 0 0 rgb(30 90 67 / .5); } 70%, 100% { box-shadow: 0 0 0 14px rgb(30 90 67 / 0); } }
+  @media (prefers-reduced-motion: reduce) { .cta, .cta.again { animation: none !important; } .cta:not(.try):not(.seen) { box-shadow: 0 0 0 5px var(--yellow); } }
   #gnomi { scroll-margin-top: 16px; }
 
-  /* Questionnaire: one card per question, pill buttons for choices, same tokens as above. */
-  :root { --danger: #a3261c; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --danger: #ff9b8f; } }
-  :root[data-theme="dark"] { --danger: #ff9b8f; }
-
-  .lead { margin: 0 0 16px; color: var(--muted); max-width: 62ch; }
-  form { display: grid; gap: 14px; }
-  fieldset {
-    margin: 0; min-width: 0;
-    padding: 16px 18px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 12px;
-    display: grid; gap: 12px;
+  /* The three steps: a green numbered circle, as the steps of the app's guided tour, and a rule between. */
+  ol { margin: 0; padding: 0; list-style: none; counter-reset: s; border-top: 2px solid var(--hairline); }
+  li { counter-increment: s; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--hairline); }
+  li::before {
+    content: counter(s); width: 36px; height: 36px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--action); color: #fff; font-weight: 600; font-size: 19px;
   }
-  .q-title { font-weight: 650; line-height: 1.45; }
-  .num { color: var(--accent); margin-right: 6px; font-variant-numeric: tabular-nums; }
+  li b { display: block; font-size: 20px; font-weight: 600; margin-bottom: 2px; }
 
-  .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+  /* Questionnaire: one box per question, boxed choices like the app's patient list, fields with the label above. */
+  .lead { margin: 0 0 18px; max-width: 64ch; }
+  form { display: grid; gap: 16px; }
+  fieldset { margin: 0; min-width: 0; padding: 18px 20px; border: 2px solid var(--hairline); display: grid; gap: 12px; }
+  .q-title { font-weight: 600; font-size: 19px; line-height: 1.4; }
+  .num { color: var(--action); margin-right: 8px; }
+  .choices { display: flex; flex-wrap: wrap; gap: 10px; }
   .choice { position: relative; }
   .choice input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
   .choice span {
-    display: inline-flex; align-items: center; justify-content: center;
-    min-height: 44px; padding: 0 16px; box-sizing: border-box;
-    border: 1px solid var(--border); border-radius: 999px;
-    background: var(--bg); cursor: pointer; user-select: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 48px; padding: 0 16px; border: 2px solid var(--line); background: #fff;
+    cursor: pointer; user-select: none;
   }
-  .choice input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 500; }
-  .choice input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .scale .choice span { width: 48px; padding: 0; font-variant-numeric: tabular-nums; }
-  .scale-ends { display: flex; justify-content: space-between; max-width: 272px; font-size: 14px; color: var(--muted); }
-
+  .choice span:hover { border-color: var(--action); }
+  .choice input:checked + span { border-color: var(--action); background: var(--green); font-weight: 600; }
+  .choice input:checked + span::before { content: "✓"; color: var(--action); font-weight: 700; }
+  .choice input:focus-visible + span { outline: 3px solid var(--action); outline-offset: 2px; }
+  .scale .choice span { width: 52px; padding: 0; }
+  .scale .choice input:checked + span::before { content: none; }
+  .scale-ends { display: flex; justify-content: space-between; max-width: 300px; font-size: 16px; color: var(--muted); }
+  /* a phone: the five numbers stay on one line */
+  @media (max-width: 639px) {
+    fieldset { padding: 16px 14px; }
+    .scale { gap: 6px; }
+    .scale .choice span { width: 46px; }
+    .scale-ends { max-width: 254px; }
+  }
   .field { display: grid; gap: 6px; }
-  .field label { font-size: 15px; color: var(--muted); }
+  .field label { font-weight: 600; }
   input[type="text"], textarea {
-    width: 100%; box-sizing: border-box; min-height: 44px;
-    padding: 10px 12px; font: inherit; color: var(--fg);
-    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    width: 100%; min-height: 48px; padding: 10px 12px; font: inherit; color: var(--ink);
+    background: #fff; border: 2px solid var(--line); border-radius: 0;
   }
-  textarea { min-height: 96px; resize: vertical; }
-  input[type="text"]:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
-
-  .consent { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; color: var(--muted); cursor: pointer; }
-  .consent input { width: 20px; height: 20px; margin: 3px 0 0; flex: none; accent-color: var(--accent); }
-
-  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
-  .submit {
-    min-height: 48px; padding: 0 28px; border: 0; border-radius: 999px;
-    background: var(--accent); color: var(--bg);
-    font: inherit; font-weight: 650; cursor: pointer;
-  }
-  .submit:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  textarea { min-height: 110px; resize: vertical; }
+  input[type="text"]:focus-visible, textarea:focus-visible { outline: 3px solid var(--action); outline-offset: 1px; border-color: var(--action); }
+  .consent { display: flex; gap: 12px; align-items: flex-start; font-size: 16px; color: var(--muted); cursor: pointer; }
+  .consent input { width: 22px; height: 22px; margin: 2px 0 0; flex: none; accent-color: var(--action); }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+  .submit { min-height: 56px; padding: 0 30px; border: 0; background: var(--action); color: #fff; font: inherit; font-size: 19px; font-weight: 700; cursor: pointer; }
+  .submit:hover { background: var(--action-hover); }
   .submit:disabled { opacity: .6; cursor: progress; }
-  .status { margin: 0; font-size: 15px; }
-  .status.error { color: var(--danger); }
-
-  .thanks {
-    padding: 20px 18px; background: var(--surface);
-    border: 1px solid var(--accent); border-radius: 12px;
-  }
+  .status { margin: 0; font-size: 16px; }
+  .status.error { color: var(--error); font-weight: 600; }
+  /* Thank-you: the app's green note, with its bar on the left. */
+  .thanks { padding: 16px 20px; background: var(--green); border-left: 6px solid var(--action); }
   .thanks:focus { outline: none; }
-  .thanks b { display: block; font-size: 20px; font-weight: 650; margin-bottom: 4px; }
-  .thanks p { margin: 0; color: var(--muted); }
-
+  .thanks b { display: block; font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .thanks p { margin: 0; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
   [hidden] { display: none !important; }
 
-  /* Top row: brand left, ΕΛ | EN switch right. */
-  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .lang-switch {
-    display: inline-flex; padding: 3px; gap: 2px;
-    border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
-  }
-  .lang-switch button {
-    min-width: 48px; min-height: 40px; padding: 0 12px;
-    border: 0; border-radius: 999px; background: transparent; color: var(--muted);
-    font: inherit; font-size: 15px; font-weight: 650; cursor: pointer;
-  }
-  .lang-switch button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
-  .lang-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  footer { border-top: 2px solid var(--hairline); padding-top: 18px; color: var(--muted); font-size: 16px; max-width: 70ch; }
+  footer p { margin: 0 0 6px; }
 </style>
 </head>
 <body>
 <main class="wrap">
   <div class="top">
-    <div class="brand"><i></i>PhysioPath</div>
+    <div class="brand"><svg width="22" height="30" viewBox="-20 -28 40 56" aria-hidden="true"><ellipse rx="16" ry="12.5" fill="none" stroke="#1e5a43" stroke-width="4"/><line y1="-24" y2="24" stroke="#1e5a43" stroke-width="5" stroke-linecap="round"/></svg>PhysioPath</div>
     <div class="lang-switch" role="group" aria-label="Γλώσσα / Language">
       <button type="button" data-lang="gr" aria-pressed="true">ΕΛ</button>
       <button type="button" data-lang="en" aria-pressed="false">EN</button>
@@ -234,29 +164,31 @@
 
   <header>
     <h1>Από τη φωνή σας στο πρόγραμμα του ασθενή</h1>
-    <p>Ένα σύντομο βίντεο με το πρωτότυπο που φτιάχνω στο Πανεπιστήμιο Κύπρου. Ο φυσιοθεραπευτής λέει τις ασκήσεις φωναχτά, όπως θα τις έλεγε στον ασθενή, και η εφαρμογή γράφει την κλινική σημείωση και το πρόγραμμα του ασθενή.</p>
+    <p>Ένα σύντομο βίντεο με το PhysioPath, που φτιάχνω στο Πανεπιστήμιο Κύπρου, σε μια κλινική δοκιμής με φανταστικούς ασθενείς. Ο φυσιοθεραπευτής λέει τις ασκήσεις φωναχτά, όπως θα τις έλεγε στον ασθενή, και η εφαρμογή γράφει την κλινική σημείωση για τον ΓεΣΥ και το πρόγραμμα του ασθενή.</p>
   </header>
 
   <section>
     <div class="video">
-      <video id="demo" controls playsinline preload="metadata" poster="poster.jpg">
-        <source src="physiopath-demo.mp4" type="video/mp4">
+      <video id="demo" controls playsinline preload="metadata" poster="poster-2026-11.jpg">
+        <source src="physiopath-demo-2026-11.mp4" type="video/mp4">
         Ο browser σας δεν μπορεί να παίξει το βίντεο.
       </video>
     </div>
     <div class="under-video">
-      <p class="meta">Διάρκεια 1:36 · Οι ασθενείς στο βίντεο είναι φανταστικοί.</p>
-      <a class="cta" href="#gnomi">Πείτε μας τη γνώμη σας ↓</a>
+      <p class="meta">Διάρκεια 1:42 · Ελληνικά με αγγλικούς υπότιτλους · Οι ασθενείς στο βίντεο είναι φανταστικοί.</p>
+      <div class="ctas">
+        <a class="cta try" id="try" href="https://physio-path-nine.vercel.app/try?r=video">Δοκιμάστε το μόνοι σας →</a>
+        <a class="cta" href="#gnomi">Πείτε μας τη γνώμη σας ↓</a>
+      </div>
     </div>
   </section>
 
   <section>
     <h2>Τι βλέπετε στο βίντεο</h2>
     <ol>
-      <li><div><b>Ηχογράφηση</b><span>Ο φυσιοθεραπευτής περιγράφει τις ασκήσεις με φωνητική σημείωση. Οι ιατρικοί όροι διορθώνονται αυτόματα και μπορείτε να αναιρέσετε κάθε διόρθωση.</span></div></li>
-      <li><div><b>Έλεγχος</b><span>Βλέπετε το πρόγραμμα και την κλινική σημείωση πριν φτάσει οτιδήποτε στον ασθενή. Τα πεδία που λείπουν σημειώνονται. Η κλινική σημείωση μένει μόνο στον φυσιοθεραπευτή.</span></div></li>
-      <li><div><b>Έναρξη και αίθουσα</b><span>Ο ασθενής σκανάρει έναν κωδικό QR και βλέπει τις ασκήσεις του στο κινητό, μία μία. Εσείς βλέπετε σε μία οθόνη ποιος ασκείται, ποιος έχει απορία και ποιος πονάει.</span></div></li>
-      <li><div><b>Πρόγραμμα για το σπίτι</b><span>Στο τέλος ο ασθενής παίρνει σύνδεσμο με το πρόγραμμά του για το σπίτι, με SMS ή WhatsApp.</span></div></li>
+      <li><div><b>Μιλάτε</b><span>Όποτε σας βολεύει, πριν, κατά τη διάρκεια ή μετά τη συνεδρία, λέτε τις ασκήσεις φωναχτά, όπως τις λέτε στον ασθενή. Το PhysioPath γράφει ό,τι είπατε· ξεκινάτε και από τα πρότυπα της κλινικής σας.</span></div></li>
+      <li><div><b>Σημείωση ΓεΣΥ και πρόγραμμα</b><span>Σε περίπου 15 δευτερόλεπτα: η κλινική σημείωση για τον ΓεΣΥ σε 4 μέρη και το πρόγραμμα του ασθενή σε απλά ελληνικά. Ό,τι λείπει ή δεν είναι σαφές, σας το ρωτάει. Εσείς εγκρίνετε· τίποτα δεν φτάνει στον ασθενή πριν από αυτό.</span></div></li>
+      <li><div><b>Ο ασθενής και η αίθουσα</b><span>Ο ασθενής ασκείται με το κινητό του. Η αίθουσα δείχνει σε μία οθόνη ποιος ασκείται, ποιος έχει απορία και ποιος πονάει, και το ημερολόγιο ποιος έκανε τις ασκήσεις του στο σπίτι και ποιος πόνεσε.</span></div></li>
     </ol>
   </section>
 
@@ -376,7 +308,7 @@
   </section>
 
   <footer>
-    <p>Είναι πρωτότυπο για έρευνα, όχι προϊόν προς πώληση. Δεν κάνει διάγνωση και δεν προτείνει θεραπεία· όλα τα γράφει και τα εγκρίνει ο φυσιοθεραπευτής.</p>
+    <p>Πρωτότυπο σε δοκιμή, με φανταστικούς ασθενείς. Δεν πωλείται ακόμα και δεν θα χρησιμοποιηθεί με πραγματικά δεδομένα πριν ολοκληρωθεί ο έλεγχος GDPR. Δεν κάνει διάγνωση και δεν προτείνει θεραπεία: ο φυσιοθεραπευτής αποφασίζει και εγκρίνει, το PhysioPath γράφει.</p>
     <p>Στυλιανός · Τμήμα Πληροφορικής, Πανεπιστήμιο Κύπρου</p>
   </footer>
 </main>
@@ -391,24 +323,22 @@
   const EN = {
     "PhysioPath demo": "PhysioPath demo",
     "Από τη φωνή σας στο πρόγραμμα του ασθενή": "From your voice to the patient's program",
-    "Ένα σύντομο βίντεο με το πρωτότυπο που φτιάχνω στο Πανεπιστήμιο Κύπρου. Ο φυσιοθεραπευτής λέει τις ασκήσεις φωναχτά, όπως θα τις έλεγε στον ασθενή, και η εφαρμογή γράφει την κλινική σημείωση και το πρόγραμμα του ασθενή.":
-      "A short video of the prototype I'm building at the University of Cyprus. The physiotherapist says the exercises out loud, just as they would tell the patient, and the app writes the clinical note and the patient's program.",
+    "Ένα σύντομο βίντεο με το PhysioPath, που φτιάχνω στο Πανεπιστήμιο Κύπρου, σε μια κλινική δοκιμής με φανταστικούς ασθενείς. Ο φυσιοθεραπευτής λέει τις ασκήσεις φωναχτά, όπως θα τις έλεγε στον ασθενή, και η εφαρμογή γράφει την κλινική σημείωση για τον ΓεΣΥ και το πρόγραμμα του ασθενή.":
+      "A short video of PhysioPath, which I'm building at the University of Cyprus, in a demo clinic with fictional patients. The physiotherapist says the exercises out loud, just as they would tell the patient, and the app writes the GeSY clinical note and the patient's program.",
     "Ο browser σας δεν μπορεί να παίξει το βίντεο.": "Your browser can't play this video.",
-    "Διάρκεια 1:36 · Οι ασθενείς στο βίντεο είναι φανταστικοί.": "1:36 · The video is in Greek. The patients in it are fictional.",
+    "Διάρκεια 1:42 · Ελληνικά με αγγλικούς υπότιτλους · Οι ασθενείς στο βίντεο είναι φανταστικοί.": "1:42 · In Greek with English subtitles · The patients in the video are fictional.",
+    "Δοκιμάστε το μόνοι σας →": "Try it yourself →",
     "Πείτε μας τη γνώμη σας ↓": "Tell us your opinion ↓",
     "Τι βλέπετε στο βίντεο": "What you see in the video",
-    "Ηχογράφηση": "Recording",
-    "Ο φυσιοθεραπευτής περιγράφει τις ασκήσεις με φωνητική σημείωση. Οι ιατρικοί όροι διορθώνονται αυτόματα και μπορείτε να αναιρέσετε κάθε διόρθωση.":
-      "The physiotherapist describes the exercises in a voice note. Medical terms are corrected automatically, and you can undo any correction.",
-    "Έλεγχος": "Review",
-    "Βλέπετε το πρόγραμμα και την κλινική σημείωση πριν φτάσει οτιδήποτε στον ασθενή. Τα πεδία που λείπουν σημειώνονται. Η κλινική σημείωση μένει μόνο στον φυσιοθεραπευτή.":
-      "You see the program and the clinical note before anything reaches the patient. Missing fields are flagged. The clinical note stays with the physiotherapist only.",
-    "Έναρξη και αίθουσα": "Start and room board",
-    "Ο ασθενής σκανάρει έναν κωδικό QR και βλέπει τις ασκήσεις του στο κινητό, μία μία. Εσείς βλέπετε σε μία οθόνη ποιος ασκείται, ποιος έχει απορία και ποιος πονάει.":
-      "The patient scans a QR code and sees their exercises on their phone, one at a time. You see on one screen who is exercising, who has a question and who is in pain.",
-    "Πρόγραμμα για το σπίτι": "Home program",
-    "Στο τέλος ο ασθενής παίρνει σύνδεσμο με το πρόγραμμά του για το σπίτι, με SMS ή WhatsApp.":
-      "At the end, the patient gets a link to their home program by SMS or WhatsApp.",
+    "Μιλάτε": "You talk",
+    "Όποτε σας βολεύει, πριν, κατά τη διάρκεια ή μετά τη συνεδρία, λέτε τις ασκήσεις φωναχτά, όπως τις λέτε στον ασθενή. Το PhysioPath γράφει ό,τι είπατε· ξεκινάτε και από τα πρότυπα της κλινικής σας.":
+      "Whenever it suits you, before, during or after the session, you say the exercises out loud, the way you tell the patient. PhysioPath writes down what you said; you can also start from your clinic's templates.",
+    "Σημείωση ΓεΣΥ και πρόγραμμα": "GeSY note and program",
+    "Σε περίπου 15 δευτερόλεπτα: η κλινική σημείωση για τον ΓεΣΥ σε 4 μέρη και το πρόγραμμα του ασθενή σε απλά ελληνικά. Ό,τι λείπει ή δεν είναι σαφές, σας το ρωτάει. Εσείς εγκρίνετε· τίποτα δεν φτάνει στον ασθενή πριν από αυτό.":
+      "In about 15 seconds: the GeSY clinical note in 4 parts and the patient's program in plain Greek. Anything missing or unclear, it asks you. You approve; nothing reaches the patient before that.",
+    "Ο ασθενής και η αίθουσα": "The patient and the room",
+    "Ο ασθενής ασκείται με το κινητό του. Η αίθουσα δείχνει σε μία οθόνη ποιος ασκείται, ποιος έχει απορία και ποιος πονάει, και το ημερολόγιο ποιος έκανε τις ασκήσεις του στο σπίτι και ποιος πόνεσε.":
+      "The patient exercises with their phone. The room board shows on one screen who is exercising, who has a question and who is in pain, and the diary shows who did their exercises at home and who was in pain.",
     "Πείτε μου τη γνώμη σας": "Tell me your opinion",
     "Περίπου 2 λεπτά. Απαντήστε όσες ερωτήσεις θέλετε, καμία δεν είναι υποχρεωτική. Η ειλικρινής γνώμη σας, θετική ή αρνητική, με βοηθά περισσότερο.":
       "About 2 minutes. Answer as many questions as you like, none are required. Your honest opinion, good or bad, helps me most.",
@@ -449,8 +379,8 @@
     "Γράψτε ένα email ή τηλέφωνο για τη συνάντηση, ή απαντήστε απλώς στο email μου.": "Add an email or phone for the meeting, or simply reply to my email.",
     "Τσεκάρετε το κουτάκι πάνω από το κουμπί για να σταλεί.": "Tick the box above the button to send.",
     "Η απάντηση δεν στάλθηκε. Δοκιμάστε ξανά σε λίγο ή απαντήστε απλώς στο email μου.": "Your answer wasn't sent. Please try again in a moment, or simply reply to my email.",
-    "Είναι πρωτότυπο για έρευνα, όχι προϊόν προς πώληση. Δεν κάνει διάγνωση και δεν προτείνει θεραπεία· όλα τα γράφει και τα εγκρίνει ο φυσιοθεραπευτής.":
-      "This is a research prototype, not a product for sale. It doesn't diagnose or suggest treatment; the physiotherapist writes and approves everything.",
+    "Πρωτότυπο σε δοκιμή, με φανταστικούς ασθενείς. Δεν πωλείται ακόμα και δεν θα χρησιμοποιηθεί με πραγματικά δεδομένα πριν ολοκληρωθεί ο έλεγχος GDPR. Δεν κάνει διάγνωση και δεν προτείνει θεραπεία: ο φυσιοθεραπευτής αποφασίζει και εγκρίνει, το PhysioPath γράφει.":
+      "A prototype in testing, with fictional patients. It isn't for sale yet, and it won't be used with real data before the GDPR check is complete. It doesn't diagnose or suggest treatment: the physiotherapist decides and approves, PhysioPath writes.",
     "Στυλιανός · Τμήμα Πληροφορικής, Πανεπιστήμιο Κύπρου": "Stylianos · Department of Computer Science, University of Cyprus",
   };
   let lang = "gr";
@@ -478,6 +408,8 @@
     btn.textContent = t(btn.disabled ? "Αποστολή…" : "Αποστολή");
     const tt = document.getElementById("thanks-text");
     tt.textContent = t(tt.dataset.meeting ? "Η γνώμη σας καταγράφηκε. Θα επικοινωνήσω μαζί σας σύντομα για τη συνάντηση." : "Η γνώμη σας καταγράφηκε.");
+    // «Δοκιμάστε το μόνοι σας» opens the demo in the same language (r=video: where the visitor came from)
+    document.getElementById("try").href = "https://physio-path-nine.vercel.app/try?r=video" + (lang === "en" ? "&lang=en" : "");
     if (remember) { try { localStorage.setItem("pp-lang", lang); } catch (e) {} }
   }
   for (const b of document.querySelectorAll(".lang-switch button"))
@@ -496,7 +428,7 @@
   }
 
   // Opinion button: stop the pulse once clicked; pop it again when the video finishes.
-  const cta = document.querySelector(".cta");
+  const cta = document.querySelector(".cta:not(.try)");
   cta.addEventListener("click", () => cta.classList.add("seen"));
   document.getElementById("demo").addEventListener("ended", () => {
     cta.classList.remove("again");
