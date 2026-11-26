@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { Card } from "@/app/components/paper/Card";
 import { PaperLink } from "@/app/components/paper/Buttons";
 import { cx } from "@/app/lib/cx";
+import { START_ERRORS } from "@/app/lib/demo/start";
 import { demoText, pickLang, pickRef, type DemoLang } from "@/app/lib/demo/text";
 import { currentUser, loadProfile } from "@/app/lib/onboarding/session";
 import { TryForm } from "@/app/try/TryForm";
@@ -51,6 +52,9 @@ export default async function TryPage({ searchParams }: PageProps<"/try">) {
   const lang = pickLang(query.lang);
   const refCode = pickRef(query.r);
   const t = demoText(lang);
+  // Back from POST /try/start with a problem (?e=…), or from the board with no login (?lost=1).
+  const error = START_ERRORS.find((name) => name === query.e);
+  const message = error ? t[error] : query.lost === "1" ? t.lost : undefined;
 
   const { supabase, user } = await currentUser();
   if (user?.is_anonymous) {
@@ -90,7 +94,7 @@ export default async function TryPage({ searchParams }: PageProps<"/try">) {
             <PaperLink href="/">{t.toApp}</PaperLink>
           </div>
         ) : (
-          <TryForm lang={lang} refCode={refCode} />
+          <TryForm lang={lang} refCode={refCode} message={message} />
         )}
         <p className="text-base text-muted">{t.fine}</p>
       </Card>

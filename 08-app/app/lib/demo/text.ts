@@ -45,6 +45,8 @@ const TEXT = {
     busy: "Πολλές δοκιμές από το ίδιο δίκτυο μέσα σε μία ώρα. Δοκιμάστε ξανά αργότερα.",
     captchaWait: "Περιμένετε να ολοκληρωθεί ο έλεγχος ασφαλείας (το κουτάκι πάνω από το κουμπί) και πατήστε ξανά.",
     captchaFailed: "Ο έλεγχος ασφαλείας δεν ολοκληρώθηκε. Ανανεώστε τη σελίδα και δοκιμάστε ξανά.",
+    // ?lost=1: the board got no login right after the button (a browser inside an app that didn't keep it)
+    lost: "Η κλινική δοκιμής ετοιμάστηκε, αλλά αυτός ο browser δεν κράτησε τη σύνδεση. Πατήστε ξανά το κουμπί. Αν ξαναγίνει, πατήστε τις τρεις τελείες πάνω δεξιά και «Άνοιγμα σε Chrome» ή «Άνοιγμα σε Safari».",
     // the strip on top of every page of the demo
     stripTitle: "Κλινική δοκιμής",
     stripText: (days: number) => `Φανταστικοί ασθενείς · διαγράφεται σε ${days === 1 ? "1 μέρα" : `${days} μέρες`}`,
@@ -170,6 +172,7 @@ const TEXT = {
     busy: "Too many demos from the same network in one hour. Please try again later.",
     captchaWait: "Wait for the security check (the box above the button) to finish, then press again.",
     captchaFailed: "The security check didn't finish. Reload the page and try again.",
+    lost: "Your demo clinic was set up, but this browser didn't keep you signed in. Press the button again. If it happens again, tap the three dots at the top right and choose «Open in Chrome» or «Open in Safari».",
     stripTitle: "Demo clinic",
     stripText: (days: number) => `Fictional patients · deleted in ${days === 1 ? "1 day" : `${days} days`}`,
     stripAppInGreek: "The app's screens are in Greek for now; your demo patients are in English.",

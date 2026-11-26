@@ -12,8 +12,19 @@ const green =
   "inline-flex min-h-14 items-center gap-2.5 bg-action px-6 text-[19px] font-bold text-white no-underline hover:bg-action-hover hover:text-white disabled:cursor-wait disabled:opacity-80";
 
 // className: extra classes where one place needs it smaller (e.g. the demo strip on a phone).
-export function SubmitButton({ children, pending: pendingLabel, className }: { children: ReactNode; pending: string; className?: string }) {
-  const { pending } = useFormStatus();
+// busy: for a form posted the normal way (no server action), where useFormStatus can't tell; its page says when.
+export function SubmitButton({
+  children,
+  pending: pendingLabel,
+  className,
+  busy = false,
+}: {
+  children: ReactNode;
+  pending: string;
+  className?: string;
+  busy?: boolean;
+}) {
+  const pending = useFormStatus().pending || busy;
   return (
     <button type="submit" disabled={pending} className={cx(green, "cursor-pointer self-start", className)}>
       {pending ? pendingLabel : children}

@@ -1,7 +1,8 @@
 // Home: «Η αίθουσα», the room board (every role), «Νέα συνεδρία» for owner/physio and, for the owner,
 // «Επόμενα βήματα» after sign-up: ① the rooms (/settings/rooms) and ② the team (/settings/team), each
 // with ✓ once done. The clinic's details moved to «Κλινική» (/settings) on 2026-11-18.
-// Not signed in → the welcome page; signed in without a clinic → the last sign-up step.
+// Not signed in → the welcome page (or /try?lost=1 right after the demo button); signed in without a clinic →
+// the last sign-up step.
 import type { Route } from "next";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -80,8 +81,10 @@ async function loadTour(supabase: Awaited<ReturnType<typeof requireMember>>["sup
 }
 
 export default async function HomePage({ searchParams }: PageProps<"/">) {
-  const { supabase, profile } = await requireMember();
-  const { welcome, saved, stale } = await searchParams;
+  const { welcome, saved, stale, demo } = await searchParams;
+  // Sent here by the «Δοκιμάστε το» button (?demo=1) but no login came with it: a browser inside an app
+  // that didn't keep the cookie. Back to /try with a message, not the welcome page (2026-11-25).
+  const { supabase, profile } = await requireMember(demo === "1" ? "/try?lost=1" : "/welcome");
   const isOwner = profile.role === "owner";
   const isPhysio = profile.role !== "assistant";
   const [{ data: clinic }, board, { count: invited }, myInvites, painAlerts] = await Promise.all([

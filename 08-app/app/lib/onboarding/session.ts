@@ -135,9 +135,10 @@ export async function requireFormUser() {
 
 // For pages that need a clinic member. Signed in but in no clinic (taken out of a team, left, or
 // stopped before the clinic step) → /start: a welcome, their invites, and registering a clinic if they want.
-export async function requireMember() {
+// noLogin: where someone with no login goes (the welcome page, unless the page knows better).
+export async function requireMember(noLogin: "/welcome" | "/try?lost=1" = "/welcome") {
   const { supabase, user } = await currentUser();
-  if (!user) redirect("/welcome");
+  if (!user) redirect(noLogin);
   const profile = await loadProfile(supabase, user.id);
   if (!profile?.onboarded_at || !profile.clinic_id) redirect("/start");
   return { supabase, user, profile };

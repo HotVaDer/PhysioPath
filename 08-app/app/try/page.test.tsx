@@ -8,7 +8,6 @@ vi.mock("@/app/lib/onboarding/session", () => ({
   currentUser: async () => ({ supabase: {}, user: session.user }),
   loadProfile: async () => session.profile,
 }));
-vi.mock("@/app/lib/demo/actions", () => ({ startDemo: vi.fn() }));
 vi.mock("@/app/components/paper/Captcha", () => ({ Captcha: () => null }));
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
@@ -45,6 +44,29 @@ describe("/try", () => {
     expect(container.querySelector('input[name="lang"]')).toHaveValue("en");
     expect(screen.getByRole("link", { name: "ΕΛ" })).toHaveAttribute("href", "/try?r=blueatlas");
     expect(screen.getByRole("link", { name: "EN" })).toHaveAttribute("aria-current", "true");
+  });
+
+  it("the button is a normal form post to /try/start (built-in browsers keep the login that way)", async () => {
+    const { container } = await open();
+    const form = container.querySelector("form");
+    expect(form).toHaveAttribute("method", "post");
+    expect(form).toHaveAttribute("action", "/try/start");
+  });
+
+  it("back from /try/start with a problem: its message, in the page's language", async () => {
+    await open({ e: "busy", lang: "en" });
+    expect(screen.getByText(/Too many demos from the same network/)).toBeInTheDocument();
+  });
+
+  it("back from the board with no login (?lost=1): what to do, never the welcome page", async () => {
+    await open({ lost: "1" });
+    expect(screen.getByText(/δεν κράτησε τη σύνδεση/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Δοκιμάστε το τώρα/ })).toBeInTheDocument();
+  });
+
+  it("an unknown ?e= shows nothing", async () => {
+    const { container } = await open({ e: "constructor" });
+    expect(container.querySelector('[role="alert"]')).toBeNull();
   });
 
   it("a bad code is not carried along", async () => {

@@ -625,3 +625,23 @@ No database changes. Each step was tested by the user in Firefox, Safari and Chr
   `update_template(clinic, template, name, area, program)` with the checks of `create_template` + 'template not
   found' (other clinic, archived). `rls_check.sql` +11.
 - Checks: `tsc` clean, **365 tests**, `next build` OK.
+
+## 2026-11-25 · «Δοκιμάστε το» works inside WhatsApp, Viber and Messenger (`POST /try/start`)
+- **Bug (found by the user on his phone):** the `/try` link opened from a messaging app ended on the welcome page.
+  The demo clinic *was* made (the database had it), but the login was lost: the server action sent the new
+  cookie with a background request and then changed page in the browser, and the browsers built into those apps
+  hadn't stored it yet.
+- **Fix:** the button is now a normal form post to the route `app/try/start/route.ts`, answered with a 303
+  redirect that carries the login cookies with a full page load. The logic moved from the server action
+  `startDemo` to `beginDemo` (`app/lib/demo/start.ts`), which returns `{ to }` or `{ error }`; problems come back
+  as `/try?e=<name>` with the language and r= code kept. `SubmitButton` got `busy` for normal form posts
+  (`useFormStatus` can't see them); the button resets on `pageshow` (back button).
+- **Safety net:** `/?demo=1` with no login → `/try?lost=1` (`requireMember(noLogin)`), which says to press again
+  or open the link in Chrome/Safari. Never the welcome page.
+- No origin check on the route on purpose (see its comment): some built-in browsers send `Origin: null`.
+- Found while testing: a POST with **no captcha token** started a demo on the live project, so the live
+  Supabase **captcha is not enforced** right now (it also guards the sign-in/sign-up email codes). Not changed:
+  needs the user's OK (Supabase dashboard → Auth → Bot protection). A test demo with ref `blueatlas` (en,
+  25 Nov 19:57) came from that test, not from the clinic.
+- Checks: `tsc` clean, **403 tests**, `next build` OK; local check: form posts to `/try/start`, 303 to `/?demo=1`,
+  `?e=` messages, `/?demo=1` without login → `/try?lost=1`. Not yet tried on a real phone.
